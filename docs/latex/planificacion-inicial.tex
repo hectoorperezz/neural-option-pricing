@@ -10,7 +10,13 @@
 \usepackage{parskip}
 \usepackage{csquotes}
 \usepackage{xcolor}
+\usepackage{titlesec}
 \usepackage{hyperref}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries}{\thesection}{1em}{}[{\titlerule[0.6pt]}]
+\titleformat{name=\section,numberless}
+  {\normalfont\Large\bfseries}{}{0pt}{}[{\vspace{-0.4em}\titlerule[0.6pt]}]
 
 \hypersetup{
   colorlinks=true,
@@ -64,7 +70,11 @@ Más allá de estos cinco pilares, hemos echado un vistazo a un grupo de papers 
 
 Después de revisar todo este material, la conclusión a la que hemos llegado es que el paper de deep surrogates es el que mejor encaja con lo que queremos hacer y, además, el que más nos ha gustado. La razón principal es que el enfoque de surrogates aborda un problema que en la práctica de la industria es muy real e importante, que es mejorar el coste computacional de los modelos de pricing y reducir los tiempos de calibración y estimación de parámetros. Esos son temas que están muy de actualidad en mesas de derivados y en research cuantitativo, sobre todo a medida que los modelos se vuelven más realistas y por tanto más caros de evaluar. Y desde el punto de vista de métodos numéricos, que es la asignatura en la que estamos haciendo este trabajo, nos parece más interesante y más alineado con el temario explorar este tipo de problemas que centrarnos en optimal stopping, en resolver PDEs directamente con redes o en aprender estrategias de cobertura. Con los surrogates estamos haciendo aproximación de funciones en alta dimensión, controlando errores por regiones del dominio, calculando derivadas por diferenciación automática y discutiendo ganancias de eficiencia computacional, que es exactamente lo que cabe esperar de un trabajo de la asignatura. Por eso, aunque los demás papers nos han servido para entender el panorama, el de Chen, Didisheim y Scheidegger es el que vamos a usar como ancla del proyecto.
 
-\section*{Qué hacen exactamente en el paper}
+\section*{Análisis del paper de deep surrogates}
+
+Como el paper de Chen, Didisheim y Scheidegger es la referencia central del trabajo, conviene dedicarle un análisis detallado en lugar de despacharlo en un par de párrafos. En las siguientes subsecciones repasamos primero qué proponen y a qué modelo lo aplican, después por qué eligen redes neuronales frente a otras alternativas de aproximación numérica, las decisiones técnicas concretas que toman al construir el surrogate, cómo validan que funciona, y por último las aplicaciones empíricas que se abren gracias a tener un surrogate operativo.
+
+\subsection*{¿Qué proponen en el paper?}
 
 El paper aplica todo esto al modelo de Bates extendido, que es una versión más realista del Bates clásico. Este modelo combina volatilidad estocástica al estilo Heston con saltos en el precio del activo, donde los saltos siguen una distribución doble exponencial asimétrica en lugar de la normal del Bates original. Esto les permite capturar cosas que Black-Scholes no puede capturar bien, como el leverage effect, que es el fenómeno por el cual cuando el mercado cae la volatilidad suele subir, o la asimetría entre saltos positivos y negativos, que es importante porque en realidad las caídas extremas y las subidas extremas no se comportan igual. La distribución doble exponencial permite modelar colas más pesadas que la normal y separar el comportamiento de saltos hacia arriba y hacia abajo.
 
@@ -72,13 +82,13 @@ Cuando llevan Bates al framework del surrogate, acaban con un input de dimensió
 
 Aquí hay algo importante que conviene tener muy presente, y es que el tamaño final de la muestra de entrenamiento que usan es de mil millones de observaciones. Aunque parece una barbaridad, los autores recalcan que en un espacio de dimensión trece eso sigue siendo una muestra muy dispersa. Si hicieras una malla cartesiana con solo diez valores por dimensión, necesitarías diez elevado a trece puntos, que es mucho más. Esa observación es relevante porque demuestra que la red no está memorizando una tabla densa, sino que realmente está aprendiendo una estructura funcional. Y aquí entra una de las justificaciones teóricas más fuertes del enfoque: para ciertos tipos de modelos financieros, en particular los modelos afines como Bates, hay resultados teóricos que muestran que el número de parámetros entrenables y el tamaño de la muestra necesarios para aproximar bien la solución crecen polinómicamente con la dimensión del input, no exponencialmente. Eso ayuda a aliviar la maldición de la dimensionalidad y es justo la razón por la que las redes neuronales son una herramienta interesante en este contexto.
 
-\section*{Por qué redes neuronales y no otra cosa}
+\subsection*{Comparación de redes neuronales con otras alternativas}
 
 El paper compara explícitamente las redes neuronales profundas con otros métodos de aproximación que serían candidatos naturales, como polinomios, splines, sparse grids y Gaussian processes. La comparación es bastante clarificadora. Los polinomios funcionan razonablemente en funciones suaves pero les cuesta capturar rasgos locales fuertes como kinks, y eso en opciones es un problema serio porque el payoff tiene un kink claro en el strike. Si intentas aproximar eso con polinomios globales aparecen oscilaciones no deseadas, que es el famoso fenómeno de Runge. Los splines capturan bien rasgos locales porque trabajan por tramos, pero escalan muy mal en alta dimensión. Los sparse grids resuelven parcialmente el problema de las mallas cartesianas, pero funcionan peor en dominios irregulares, y los modelos financieros muchas veces tienen restricciones entre parámetros que generan dominios complicados. Los Gaussian processes son potentes y elegantes, pero escalan fatal con muchos datos porque las operaciones matriciales son del orden de n al cubo, así que con millones de observaciones se vuelven inviables. Las redes neuronales cumplen los cuatro criterios de forma razonable: funcionan en alta dimensión, capturan no linealidades, admiten dominios irregulares y escalan bien con muchos datos.
 
 Hay además otra ventaja muy importante de las redes que el paper subraya y que conecta directamente con el espíritu de métodos numéricos, que es que el Jacobiano de la red está disponible casi gratis mediante diferenciación automática o backpropagation. Esto es crítico en finanzas porque muchas magnitudes que importan no son el precio en sí sino sus derivadas. La Delta es la derivada del precio respecto al subyacente, la Vega respecto a la volatilidad, la Rho respecto al tipo de interés, y todas son fundamentales para cobertura y gestión de riesgo. Si trabajas con el modelo original como una caja negra muchas veces tienes que calcular derivadas mediante diferencias finitas, lo que multiplica el coste computacional. Con una red neuronal las derivadas salen prácticamente gratis al pasar gradientes hacia atrás. Y lo mismo ocurre cuando quieres estimar parámetros con GMM o calibrar el modelo: si la función objetivo se evalúa rápido y sus gradientes se obtienen automáticamente, la calibración se vuelve muchísimo más barata. De hecho el paper documenta que estimar los parámetros con el método tradicional vía FFT lleva alrededor de ciento veinticinco horas, mientras que con el surrogate lleva poco más de dos horas en CPU y unas decenas de minutos en GPU. Es decir, no es una mejora marginal, es una reducción de órdenes de magnitud.
 
-\section*{Decisiones clave de diseño que tomamos del paper}
+\subsection*{Decisiones clave de diseño}
 
 Hay cuatro decisiones técnicas en el paper que nos parecen especialmente importantes y que queremos incorporar a nuestro propio enfoque. Como son discretas y conviene tenerlas separadas para no perderlas de vista cuando luego implementemos, en este caso sí merece la pena enumerarlas:
 
@@ -92,13 +102,13 @@ Hay cuatro decisiones técnicas en el paper que nos parecen especialmente import
 \item \textbf{Lógica de entrenamiento distinta a la del ML clásico.} En machine learning normal se suele usar early stopping, dropout y otras técnicas de regularización para evitar overfitting. En un surrogate eso no es tan necesario porque los datos son sintéticos y casi sin ruido, ya que el target viene del propio modelo, y si la red empieza a fallar en alguna zona siempre se pueden generar más datos. No estamos intentando aprender patrones inciertos a partir de datos limitados y ruidosos, sino aproximando una función determinista conocida pero cara de evaluar. Esa diferencia conceptual es la que justifica que los hiperparámetros y la lógica de entrenamiento sean distintos a los de un problema típico de ML.
 \end{itemize}
 
-\section*{Cómo validan que el surrogate es bueno}
+\subsection*{Cómo validar la precisión de los surrogates}
 
 La validación que hacen en el paper también nos parece muy buena de copiar como plantilla. La hacen en dos niveles. En el primer nivel suponen que los parámetros verdaderos son conocidos y comparan precio del modelo Bates resuelto con FFT contra precio del surrogate. Para hacerlo de forma seria dividen las opciones en doce grupos según vencimiento y moneyness, con cuatro categorías de tiempo a vencimiento y tres niveles de moneyness, y dentro de cada grupo generan veinte mil opciones aleatorias. Esa estructura por bins permite ver si el surrogate funciona bien en distintas zonas del mercado, no solo en promedio. Los resultados son muy buenos: el percentil noventa y cinco del error absoluto en volatilidad implícita y en Delta está por debajo de cero coma cero cero cero ocho para opciones con más de siete días a vencimiento, que es minúsculo. Los errores son algo mayores en opciones muy cortas, lo cual tiene sentido porque ahí el payoff está más cerca, hay más no linealidad y las sensibilidades son más bruscas, pero incluso ahí los errores siguen siendo pequeños en términos relativos.
 
 En el segundo nivel de validación van más allá y estudian si los errores de aproximación se traducen en errores de estimación de parámetros. La idea es que en la realidad nadie te da los parámetros verdaderos, hay que estimarlos, y eso introduce una nueva fuente de error. Hacen un experimento de simulación donde fijan parámetros verdaderos, simulan precios, usan GMM con el surrogate para estimar los parámetros, y luego miden el error de pricing fuera de muestra usando esos parámetros estimados frente a los verdaderos, todo evaluado con el solver original para aislar el efecto de la estimación. Encuentran que el impacto económico es pequeño en general. Hay un detalle muy interesante que conviene retener, que es que algunos parámetros pueden estar débilmente identificados, en el sentido de que los precios no son muy sensibles a ellos. En esos casos el error de estimación del parámetro puede parecer grande pero su impacto sobre los precios es pequeño porque la sensibilidad también es pequeña.
 
-\section*{Aplicaciones empíricas que abren los surrogates}
+\subsection*{Aplicaciones práctricas}
 
 Una parte del paper que no vamos a replicar pero que conviene entender es cómo el surrogate abre la puerta a aplicaciones empíricas que antes eran demasiado costosas. Como el surrogate permite reestimar Bates diariamente, los autores construyen un índice llamado TailRisk que mide la pérdida esperada bajo medida neutral al riesgo asociada a un salto negativo del índice durante la próxima semana. La idea es que las opciones contienen información sobre cuánto miedo a caídas extremas hay descontado en los precios, y los parámetros del modelo permiten cuantificar eso. Después comprueban si TailRisk predice eventos extremos reales del S\&P 500 mediante regresión logística y encuentran que el pseudo R cuadrado casi se duplica frente a una medida no paramétrica anterior basada en opciones.
 
@@ -129,8 +139,6 @@ De ahí salen varias subpreguntas naturales que son las que vamos a intentar res
 \end{itemize}
 
 Estas preguntas convierten el trabajo en algo más interesante que una mera implementación, lo convierten en un análisis metodológico sobre cómo se diseña y se valida un surrogate financiero.
-
-\section*{Dónde podemos innovar y diferenciarnos}
 
 Hemos identificado cinco elementos diferenciales que no son simplemente repetir el paper y que pueden aportar valor propio. El primero es comparar de forma sistemática el error en precio frente al error en volatilidad implícita. El paper hace esto, pero nosotros podemos plantearlo como una pregunta metodológica explícita: hasta qué punto puede un surrogate tener un error en precio aparentemente bajo pero un error relevante en implied volatility en ciertas zonas del dominio. Esto acerca el trabajo a la práctica real del mercado, donde la volatilidad implícita es la unidad natural de comparación.
 
