@@ -1,5 +1,7 @@
 # Planificación inicial del trabajo
 
+**Autores:** Ángel Fernández Sánchez, Jorge Alfageme Sotillos, Héctor Pérez Ledesma
+
 ## Introducción
 
 ---
