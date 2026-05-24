@@ -1,0 +1,31 @@
+AGENTS.md
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Generated LaTeX files
+docs/latex/*.aux
+docs/latex/*.log
+docs/latex/*.out
+docs/latex/*.toc
+texput.log
+
+# Generated experiment artifacts
+data/
+results/checkpoints/
+results/**/*.pt
+results/**/*.pth
+results/**/*.ckpt
+results/**/*.npz
+results/**/*.npy

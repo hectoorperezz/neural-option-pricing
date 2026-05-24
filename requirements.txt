@@ -1,0 +1,9 @@
+# Pinned for Python 3.11 to avoid NumPy/SciPy/PyTorch ABI collisions.
+numpy==1.26.4
+scipy==1.11.4
+pandas==2.2.2
+matplotlib==3.8.4
+torch==2.2.2
+pytest==8.2.2
+PyYAML==6.0.2
+tqdm==4.66.4
