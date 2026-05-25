@@ -4,6 +4,7 @@ import argparse
 import json
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -61,6 +62,16 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=5,
         help="Print progress every N accepted batches.",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Parallel worker processes. 1 (default) preserves bit-identical output of "
+             "the original sequential implementation. With workers>1, n_samples is split "
+             "across workers and sub-seeds are spawned deterministically via "
+             "np.random.SeedSequence.spawn(workers). Same (seed, workers) reproduces "
+             "the exact same dataset; different workers values give different datasets.",
     )
     return parser.parse_args()
 
@@ -361,11 +372,117 @@ def fill_balanced_dataset(
     return accepted_total, attempted_total, rejected_total, elapsed
 
 
+def _worker_chunk(
+    family: str,
+    sampler_type: str,
+    chunk_n: int,
+    batch_size: int,
+    seed: int,
+    include_delta: bool,
+) -> dict[str, Any]:
+    """Run inside a worker process. Generate `chunk_n` accepted samples and return arrays."""
+    domain = make_black_scholes_domain() if family == "black_scholes" else make_heston_domain()
+    solver = BlackScholesSolver() if family == "black_scholes" else HestonSolver()
+    if sampler_type == "focused":
+        sampler = FocusedSampler(domain)
+    else:
+        sampler = UniformSampler(domain)
+
+    rng = np.random.default_rng(seed)
+    raw_parts: list[np.ndarray] = []
+    price_parts: list[np.ndarray] = []
+    delta_parts: list[np.ndarray] = []
+    accepted_total = 0
+    attempted_total = 0
+    rejected_total = 0
+
+    while accepted_total < chunk_n:
+        remaining = chunk_n - accepted_total
+        draw_count = min(batch_size, max(remaining, int(np.ceil(1.1 * remaining))))
+        batch = generate_batch(solver, domain, sampler, family, draw_count, rng, include_delta)
+        attempted_total += batch.attempted_count
+        rejected_total += batch.rejected_count
+        take = min(remaining, batch.accepted_count)
+        if take == 0:
+            continue
+        raw_parts.append(batch.raw_inputs[:take])
+        price_parts.append(batch.prices[:take])
+        if batch.deltas is not None:
+            delta_parts.append(batch.deltas[:take])
+        accepted_total += take
+
+    return {
+        "raw_inputs": np.concatenate(raw_parts, axis=0),
+        "prices": np.concatenate(price_parts, axis=0),
+        "deltas": None if not delta_parts else np.concatenate(delta_parts, axis=0),
+        "attempted": attempted_total,
+        "accepted": accepted_total,
+        "rejected": rejected_total,
+    }
+
+
+def _worker_balanced_bins(
+    family: str,
+    bin_ids: list[int],
+    samples_per_bin: int,
+    batch_size: int,
+    seed: int,
+    include_delta: bool,
+) -> list[dict[str, Any]]:
+    """Run inside a worker process. Generate full bins for the given bin_ids."""
+    domain = make_black_scholes_domain() if family == "black_scholes" else make_heston_domain()
+    solver = BlackScholesSolver() if family == "black_scholes" else HestonSolver()
+    sampler = BalancedBinSampler(domain, samples_per_bin=samples_per_bin)
+
+    rng = np.random.default_rng(seed)
+    bin_id_set = set(bin_ids)
+    results: list[dict[str, Any]] = []
+
+    for bin_id, m_idx, t_idx, m_bounds, t_bounds in sampler.iter_bins():
+        if bin_id not in bin_id_set:
+            continue
+        accepted_in_bin = 0
+        raw_parts: list[np.ndarray] = []
+        price_parts: list[np.ndarray] = []
+        delta_parts: list[np.ndarray] = []
+        attempted = 0
+        rejected = 0
+        while accepted_in_bin < samples_per_bin:
+            remaining = samples_per_bin - accepted_in_bin
+            draw_count = min(batch_size, remaining)
+            raw_batch = sampler.sample_bin(m_bounds, t_bounds, draw_count, rng)
+            prices, deltas = price_batch(solver, domain, family, raw_batch, include_delta)
+            mask = valid_mask(raw_batch, prices, deltas)
+            attempted += draw_count
+            rejected += int(draw_count - mask.sum())
+            take = min(remaining, int(mask.sum()))
+            if take == 0:
+                continue
+            raw_parts.append(raw_batch[mask][:take])
+            price_parts.append(prices[mask][:take])
+            if deltas is not None:
+                delta_parts.append(deltas[mask][:take])
+            accepted_in_bin += take
+        results.append({
+            "bin_id": bin_id,
+            "m_idx": m_idx,
+            "t_idx": t_idx,
+            "raw_inputs": np.concatenate(raw_parts, axis=0),
+            "prices": np.concatenate(price_parts, axis=0),
+            "deltas": None if not delta_parts else np.concatenate(delta_parts, axis=0),
+            "attempted": attempted,
+            "rejected": rejected,
+        })
+    return results
+
+
 def main() -> None:
     args = parse_args()
     n_samples = validate_args(args)
     if args.batch_size <= 0:
         raise ValueError("--batch-size must be strictly positive")
+    if args.workers < 1:
+        raise ValueError("--workers must be >= 1")
     if args.output.suffix != ".npz":
         raise ValueError("--output must end with .npz")
     if args.output.exists() and not args.overwrite:
@@ -389,56 +506,157 @@ def main() -> None:
         include_bins=args.sampler == "balanced",
     )
 
-    if args.sampler == "balanced":
-        accepted_total, attempted_total, rejected_total, elapsed = fill_balanced_dataset(
-            args,
-            solver,
-            domain,
-            sampler,
-            arrays,
-            dtype,
-        )
-    else:
-        rng = np.random.default_rng(args.seed)
-        accepted_total = 0
-        attempted_total = 0
-        rejected_total = 0
-        accepted_batches = 0
-        started_at = time.perf_counter()
-
-        while accepted_total < n_samples:
-            remaining = n_samples - accepted_total
-            draw_count = min(args.batch_size, max(remaining, int(np.ceil(1.1 * remaining))))
-            batch = generate_batch(
+    if args.workers == 1:
+        if args.sampler == "balanced":
+            accepted_total, attempted_total, rejected_total, elapsed = fill_balanced_dataset(
+                args,
                 solver,
                 domain,
                 sampler,
-                args.family,
-                draw_count,
-                rng,
-                args.include_delta,
+                arrays,
+                dtype,
             )
-            attempted_total += batch.attempted_count
-            rejected_total += batch.rejected_count
+        else:
+            rng = np.random.default_rng(args.seed)
+            accepted_total = 0
+            attempted_total = 0
+            rejected_total = 0
+            accepted_batches = 0
+            started_at = time.perf_counter()
 
-            take = min(remaining, batch.accepted_count)
-            if take == 0:
-                continue
-
-            write_slice = slice(accepted_total, accepted_total + take)
-            write_batch(arrays, batch, write_slice, take, dtype)
-
-            accepted_total += take
-            accepted_batches += 1
-            if accepted_batches % args.progress_every == 0 or accepted_total == n_samples:
-                elapsed = time.perf_counter() - started_at
-                throughput = accepted_total / max(elapsed, 1e-12)
-                print(
-                    f"accepted={accepted_total}/{n_samples} "
-                    f"attempted={attempted_total} rejected={rejected_total} "
-                    f"throughput={throughput:.2f} samples/s",
-                    flush=True,
+            while accepted_total < n_samples:
+                remaining = n_samples - accepted_total
+                draw_count = min(args.batch_size, max(remaining, int(np.ceil(1.1 * remaining))))
+                batch = generate_batch(
+                    solver,
+                    domain,
+                    sampler,
+                    args.family,
+                    draw_count,
+                    rng,
+                    args.include_delta,
                 )
+                attempted_total += batch.attempted_count
+                rejected_total += batch.rejected_count
+
+                take = min(remaining, batch.accepted_count)
+                if take == 0:
+                    continue
+
+                write_slice = slice(accepted_total, accepted_total + take)
+                write_batch(arrays, batch, write_slice, take, dtype)
+
+                accepted_total += take
+                accepted_batches += 1
+                if accepted_batches % args.progress_every == 0 or accepted_total == n_samples:
+                    elapsed = time.perf_counter() - started_at
+                    throughput = accepted_total / max(elapsed, 1e-12)
+                    print(
+                        f"accepted={accepted_total}/{n_samples} "
+                        f"attempted={attempted_total} rejected={rejected_total} "
+                        f"throughput={throughput:.2f} samples/s",
+                        flush=True,
+                    )
+            elapsed = time.perf_counter() - started_at
+    else:
+        seed_seqs = np.random.SeedSequence(args.seed).spawn(args.workers)
+        worker_seeds = [int(seq.generate_state(1, dtype=np.uint32)[0]) for seq in seed_seqs]
+        accepted_total = 0
+        attempted_total = 0
+        rejected_total = 0
+        started_at = time.perf_counter()
+
+        if args.sampler == "balanced":
+            all_bin_ids = list(range(sampler.n_bins))
+            chunks = [all_bin_ids[i::args.workers] for i in range(args.workers)]
+            chunks = [c for c in chunks if c]
+            print(
+                f"parallel: {len(chunks)} workers, "
+                f"bins per worker={[len(c) for c in chunks]}",
+                flush=True,
+            )
+            with ProcessPoolExecutor(max_workers=len(chunks)) as ex:
+                futures = [
+                    ex.submit(
+                        _worker_balanced_bins,
+                        args.family,
+                        bin_ids,
+                        args.samples_per_bin,
+                        args.batch_size,
+                        seed,
+                        args.include_delta,
+                    )
+                    for bin_ids, seed in zip(chunks, worker_seeds)
+                ]
+                completed_bins = 0
+                for fut in as_completed(futures):
+                    for bin_result in fut.result():
+                        n_bin = int(bin_result["prices"].shape[0])
+                        write_slice = slice(accepted_total, accepted_total + n_bin)
+                        arrays["raw_inputs"][write_slice] = bin_result["raw_inputs"].astype(dtype, copy=False)
+                        arrays["features"][write_slice] = domain.normalize(bin_result["raw_inputs"]).astype(dtype, copy=False)
+                        arrays["prices"][write_slice] = bin_result["prices"].astype(dtype, copy=False)
+                        if "deltas" in arrays and bin_result["deltas"] is not None:
+                            arrays["deltas"][write_slice] = bin_result["deltas"].astype(dtype, copy=False)
+                        arrays["bin_id"][write_slice] = bin_result["bin_id"]
+                        arrays["moneyness_bin"][write_slice] = bin_result["m_idx"]
+                        arrays["maturity_bin"][write_slice] = bin_result["t_idx"]
+                        accepted_total += n_bin
+                        attempted_total += bin_result["attempted"]
+                        rejected_total += bin_result["rejected"]
+                        completed_bins += 1
+                        elapsed = time.perf_counter() - started_at
+                        throughput = accepted_total / max(elapsed, 1e-12)
+                        print(
+                            f"bin={completed_bins}/{sampler.n_bins} accepted={accepted_total} "
+                            f"attempted={attempted_total} rejected={rejected_total} "
+                            f"throughput={throughput:.2f} samples/s",
+                            flush=True,
+                        )
+        else:
+            base = n_samples // args.workers
+            extras = n_samples % args.workers
+            chunks_n = [base + (1 if i < extras else 0) for i in range(args.workers)]
+            pairs = [(n, s) for n, s in zip(chunks_n, worker_seeds) if n > 0]
+            print(
+                f"parallel: {len(pairs)} workers, samples per worker={[n for n, _ in pairs]}",
+                flush=True,
+            )
+            with ProcessPoolExecutor(max_workers=len(pairs)) as ex:
+                futures = [
+                    ex.submit(
+                        _worker_chunk,
+                        args.family,
+                        args.sampler,
+                        n,
+                        args.batch_size,
+                        seed,
+                        args.include_delta,
+                    )
+                    for n, seed in pairs
+                ]
+                completed_workers = 0
+                for fut in as_completed(futures):
+                    res = fut.result()
+                    n_chunk = int(res["accepted"])
+                    write_slice = slice(accepted_total, accepted_total + n_chunk)
+                    arrays["raw_inputs"][write_slice] = res["raw_inputs"].astype(dtype, copy=False)
+                    arrays["features"][write_slice] = domain.normalize(res["raw_inputs"]).astype(dtype, copy=False)
+                    arrays["prices"][write_slice] = res["prices"].astype(dtype, copy=False)
+                    if "deltas" in arrays and res["deltas"] is not None:
+                        arrays["deltas"][write_slice] = res["deltas"].astype(dtype, copy=False)
+                    accepted_total += n_chunk
+                    attempted_total += res["attempted"]
+                    rejected_total += res["rejected"]
+                    completed_workers += 1
+                    elapsed = time.perf_counter() - started_at
+                    throughput = accepted_total / max(elapsed, 1e-12)
+                    print(
+                        f"worker={completed_workers}/{len(pairs)} accepted={accepted_total}/{n_samples} "
+                        f"attempted={attempted_total} rejected={rejected_total} "
+                        f"throughput={throughput:.2f} samples/s",
+                        flush=True,
+                    )
         elapsed = time.perf_counter() - started_at
 
     flush_memmaps(arrays)
@@ -450,6 +668,7 @@ def main() -> None:
         "samples_per_bin": args.samples_per_bin,
         "batch_size": args.batch_size,
         "seed": args.seed,
+        "workers": args.workers,
         "include_delta": args.include_delta,
         "dtype": args.dtype,
         "compression": args.compression,
