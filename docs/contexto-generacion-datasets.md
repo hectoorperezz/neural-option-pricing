@@ -19,7 +19,7 @@ La suite local validada actualmente pasa con:
 python -m pytest
 ```
 
-Resultado esperado aproximado: `58 passed`.
+Resultado esperado aproximado: `60 passed`.
 
 La validación externa de solvers debe pasar antes de lanzar datasets grandes:
 
@@ -31,7 +31,9 @@ Resultado esperado aproximado: `26 passed`.
 
 ## Entorno Recomendado
 
-Usar Python 3.11. Las versiones están fijadas en `requirements.txt` para evitar colisiones NumPy/SciPy/PyTorch.
+Usar Python 3.11. Las versiones están fijadas para evitar colisiones NumPy/SciPy/PyTorch.
+
+Para entorno local o CPU:
 
 ```bash
 python3.11 -m venv .venv
@@ -39,6 +41,23 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 python -m pytest tests/solvers/test_quantlib_reference.py
 ```
+
+Para el PC de oficina con RTX/NVIDIA:
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-gpu.txt
+python - <<'PY'
+import torch
+print(torch.__version__)
+print(torch.cuda.is_available())
+print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "no cuda")
+PY
+python -m pytest tests/solvers/test_quantlib_reference.py
+```
+
+Resultado esperado en el PC con RTX: `torch.cuda.is_available()` debe imprimir `True`.
 
 Si el equipo solo tiene Python 3.12, usar `pyenv`, `conda` o Docker con Python 3.11. No actualizar versiones sin repetir los tests contra QuantLib.
 
@@ -234,6 +253,50 @@ También se pueden cambiar rutas sin tocar el script:
 DATA_DIR=/mnt/datasets LOG_DIR=/mnt/logs bash scripts/generate_all_datasets.sh
 ```
 
+## Entrenamiento
+
+Cuando los datasets estén generados, se puede lanzar toda la tanda de surrogates con:
+
+```bash
+tmux new -s train_all
+source .venv/bin/activate
+bash scripts/train_all_surrogates.sh
+```
+
+El script entrena los once modelos del plan (`BS-1..4`, `H-1..5`, `H-3-small`, `H-6-small`) y guarda checkpoints en `results/checkpoints/` y logs en `results/logs/`.
+
+Variables útiles para una RTX 4060:
+
+```bash
+DEVICE=cuda \
+BS_BATCH_SIZE=8192 \
+HESTON_BATCH_SIZE=8192 \
+SMALL_BATCH_SIZE=4096 \
+bash scripts/train_all_surrogates.sh
+```
+
+Para una prueba corta:
+
+```bash
+BS_EPOCHS=1 HESTON_EPOCHS=1 SMALL_EPOCHS=1 bash scripts/train_all_surrogates.sh
+```
+
+Para entrenar un único surrogate, usar `scripts/train_surrogate.py` directamente. Ejemplo:
+
+```bash
+python scripts/train_surrogate.py \
+  --train data/heston_train_500k_uniform.npz \
+  --validation data/heston_validation_50k_uniform.npz \
+  --output-dir results/checkpoints/H-3 \
+  --experiment-id H-3 \
+  --loss price \
+  --activation swish \
+  --epochs 100 \
+  --batch-size 8192 \
+  --learning-rate 0.001 \
+  --device cuda
+```
+
 ## Formato de Salida
 
 Cada `.npz` contiene:
@@ -256,7 +319,8 @@ Cada `.npz` tiene un `.json` asociado con metadatos, dominio, semilla, batch siz
 5. Ejecutar benchmark Heston 5k con Delta.
 6. Revisar throughput y tasa de rechazo.
 7. Lanzar datasets grandes en `tmux`.
-8. Guardar logs de consola y `.json` de cada dataset.
+8. Lanzar entrenamientos en `tmux`.
+9. Guardar logs de consola, `.json` de cada dataset, `config.json`, `history.csv` y checkpoints.
 
 ## Reglas Importantes
 

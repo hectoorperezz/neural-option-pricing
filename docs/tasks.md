@@ -192,6 +192,7 @@ La razón por la que esta fase es la primera y se cierra contra valores tabulado
 | ☑ | `mlp.py`: MLP parametrizable por activación | `src/models/mlp.py` |
 | ☑ | `greeks.py`: Delta del surrogate por autograd y regla de cadena | `src/models/greeks.py` con tests |
 | ☑ | `trainer.py`: loop con pérdida de precio y término de Delta opcional | `src/training/trainer.py` |
+| ☑ | Script reproducible de entrenamiento | `scripts/train_surrogate.py` con checkpoint, config e historial |
 | ☐ | Smoke test: entrenar BS-3 hasta convergencia | Reporte con curvas de pérdida |
 
 **Criterio de salida:** ☐ BS-3 converge a `MAE_precio < 1e-4` en validación.

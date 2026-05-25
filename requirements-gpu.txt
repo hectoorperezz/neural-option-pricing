@@ -1,0 +1,13 @@
+# Pinned for Python 3.11 on Linux x86_64 with NVIDIA CUDA 12.1.
+# Use this on the RTX workstation instead of requirements.txt.
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+numpy==1.26.4
+scipy==1.11.4
+pandas==2.2.2
+matplotlib==3.8.4
+torch==2.2.2+cu121
+pytest==8.2.2
+PyYAML==6.0.2
+tqdm==4.66.4
+QuantLib==1.42.1

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
+from typing import Callable
 
 import torch
 from torch import nn
@@ -33,7 +34,11 @@ class Trainer:
         self.best_state_dict: dict[str, torch.Tensor] | None = None
         self.best_validation_mae = float("inf")
 
-    def fit(self, epochs: int) -> list[dict[str, float]]:
+    def fit(
+        self,
+        epochs: int,
+        on_epoch_end: Callable[[dict[str, float]], None] | None = None,
+    ) -> list[dict[str, float]]:
         if epochs <= 0:
             raise ValueError("epochs must be strictly positive")
 
@@ -45,12 +50,14 @@ class Trainer:
                 self.best_validation_mae = validation_mae
                 self.best_state_dict = deepcopy(self.model.state_dict())
             history.append(
-                {
+                record := {
                     "epoch": float(epoch + 1),
                     "validation_price_mae": validation_mae,
                     **train_metrics,
                 }
             )
+            if on_epoch_end is not None:
+                on_epoch_end(record)
         return history
 
     def load_best(self) -> None:
@@ -92,4 +99,8 @@ class Trainer:
         return total_error / total_items
 
     def _move_batch(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        return {name: value.to(self.device) for name, value in batch.items()}
+        return {
+            name: value.to(self.device)
+            for name, value in batch.items()
+            if name != "raw_inputs"
+        }
