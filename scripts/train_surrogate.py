@@ -5,11 +5,67 @@ import csv
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+
+
+def _torch_compile_available() -> bool:
+    """torch.compile()'s default Inductor backend requires Triton.
+
+    Triton has no official Windows wheel, so torch.compile is effectively
+    Linux/Mac-only on stock PyTorch. We probe with importlib to avoid
+    paying the cost of an actual compile only to fail at first step.
+    """
+    if sys.platform == "win32":
+        try:
+            import importlib
+
+            importlib.import_module("triton")
+            return True
+        except ImportError:
+            return False
+    return True
+
+
+class GPUBatchIterator:
+    """Iterable yielding batches from tensors kept on ``device``.
+
+    Bypasses DataLoader (and its host->device transfer per batch) when the
+    full dataset comfortably fits in VRAM. Yields dicts with the same keys
+    as ``OptionDataset.__getitem__`` so it is a drop-in replacement.
+    """
+
+    def __init__(
+        self,
+        tensors: dict[str, torch.Tensor],
+        batch_size: int,
+        shuffle: bool,
+        device: str,
+        seed: int = 42,
+    ) -> None:
+        if batch_size <= 0:
+            raise ValueError("batch_size must be strictly positive")
+        self.tensors = {name: value.to(device) for name, value in tensors.items()}
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.device = device
+        self.n = int(next(iter(self.tensors.values())).shape[0])
+        self._generator = torch.Generator(device=device).manual_seed(seed)
+
+    def __iter__(self) -> Iterator[dict[str, torch.Tensor]]:
+        if self.shuffle:
+            indices = torch.randperm(self.n, device=self.device, generator=self._generator)
+        else:
+            indices = torch.arange(self.n, device=self.device)
+        for start in range(0, self.n, self.batch_size):
+            idx = indices[start : start + self.batch_size]
+            yield {name: value[idx] for name, value in self.tensors.items()}
+
+    def __len__(self) -> int:
+        return (self.n + self.batch_size - 1) // self.batch_size
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -41,6 +97,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--delta-weight", type=float, default=1.0)
     parser.add_argument("--moneyness-min", type=float, default=0.4)
     parser.add_argument("--moneyness-max", type=float, default=2.0)
+    parser.add_argument(
+        "--compile",
+        action="store_true",
+        help="Wrap the model with torch.compile() for kernel fusion. Reduces per-step "
+             "launch overhead at the cost of a one-off compilation on the first step.",
+    )
+    parser.add_argument(
+        "--preload-to-device",
+        action="store_true",
+        help="Move full train + validation datasets to the target device upfront and "
+             "iterate them via a GPU-native batch iterator. Eliminates host->device "
+             "transfer per batch; safe when datasets fit in VRAM.",
+    )
     return parser.parse_args()
 
 
@@ -124,20 +193,41 @@ def main() -> None:
         raise ValueError("train and validation input dimensions do not match")
 
     pin_memory = device.startswith("cuda")
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=args.num_workers,
-        pin_memory=pin_memory,
-    )
-    validation_loader = DataLoader(
-        validation_dataset,
-        batch_size=args.batch_size,
-        shuffle=False,
-        num_workers=args.num_workers,
-        pin_memory=pin_memory,
-    )
+    if args.preload_to_device:
+        train_tensors: dict[str, torch.Tensor] = {
+            "features": train_dataset.features,
+            "price": train_dataset.prices,
+        }
+        if train_dataset.deltas is not None:
+            train_tensors["delta"] = train_dataset.deltas
+        train_loader = GPUBatchIterator(
+            train_tensors, args.batch_size, shuffle=True, device=device, seed=args.seed
+        )
+        validation_loader = GPUBatchIterator(
+            {
+                "features": validation_dataset.features,
+                "price": validation_dataset.prices,
+            },
+            args.batch_size,
+            shuffle=False,
+            device=device,
+            seed=args.seed + 1,
+        )
+    else:
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=args.num_workers,
+            pin_memory=pin_memory,
+        )
+        validation_loader = DataLoader(
+            validation_dataset,
+            batch_size=args.batch_size,
+            shuffle=False,
+            num_workers=args.num_workers,
+            pin_memory=pin_memory,
+        )
 
     model = MLP(
         input_dim=train_dataset.features.shape[1],
@@ -145,6 +235,16 @@ def main() -> None:
         hidden_layers=args.hidden_layers,
         activation=args.activation,
     )
+    if args.compile:
+        if _torch_compile_available():
+            model = torch.compile(model)
+        else:
+            print(
+                "warning: --compile requested but torch.compile backend is unavailable "
+                "on this platform (Triton not installed). Running uncompiled.",
+                flush=True,
+            )
+            args.compile = False
     loss_fn = make_loss(args)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     trainer = Trainer(
@@ -176,6 +276,8 @@ def main() -> None:
         "price_weight": args.price_weight,
         "delta_weight": args.delta_weight,
         "moneyness_range": [args.moneyness_min, args.moneyness_max],
+        "compile": args.compile,
+        "preload_to_device": args.preload_to_device,
     }
     write_config(args.output_dir, config)
 
