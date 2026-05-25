@@ -7,6 +7,22 @@ import numpy as np
 from src.datasets.domain import Domain
 
 
+MONEYNESS_BINS: tuple[tuple[float, float], ...] = (
+    (0.4, 0.7),
+    (0.7, 0.9),
+    (0.9, 1.1),
+    (1.1, 1.3),
+    (1.3, 2.0),
+)
+MATURITY_BINS: tuple[tuple[float, float], ...] = (
+    (7.0 / 365.0, 14.0 / 365.0),
+    (14.0 / 365.0, 1.0 / 12.0),
+    (1.0 / 12.0, 0.25),
+    (0.25, 1.0),
+    (1.0, 2.0),
+)
+
+
 @dataclass(frozen=True)
 class UniformSampler:
     """Uniform sampler in the financial scale defined by the domain."""
@@ -90,3 +106,64 @@ class FocusedSampler:
         if lower <= 0.0 or upper <= lower:
             raise ValueError("log-uniform bounds must satisfy 0 < lower < upper")
         return np.exp(rng.uniform(np.log(lower), np.log(upper), size=n_samples))
+
+
+@dataclass(frozen=True)
+class BalancedBinSampler:
+    """Sampler with equal observations in each moneyness x maturity bin."""
+
+    domain: Domain
+    samples_per_bin: int
+    seed: int | None = None
+    moneyness_bins: tuple[tuple[float, float], ...] = MONEYNESS_BINS
+    maturity_bins: tuple[tuple[float, float], ...] = MATURITY_BINS
+
+    @property
+    def n_bins(self) -> int:
+        return len(self.moneyness_bins) * len(self.maturity_bins)
+
+    @property
+    def total_samples(self) -> int:
+        return self.samples_per_bin * self.n_bins
+
+    def iter_bins(self):
+        for maturity_index, maturity_bounds in enumerate(self.maturity_bins):
+            for moneyness_index, moneyness_bounds in enumerate(self.moneyness_bins):
+                bin_id = maturity_index * len(self.moneyness_bins) + moneyness_index
+                yield bin_id, moneyness_index, maturity_index, moneyness_bounds, maturity_bounds
+
+    def sample(self, n_samples: int, rng: np.random.Generator | None = None) -> np.ndarray:
+        if n_samples != self.total_samples:
+            raise ValueError("n_samples must equal samples_per_bin * number_of_bins")
+
+        rng = np.random.default_rng(self.seed) if rng is None else rng
+        parts = [
+            self.sample_bin(moneyness_bounds, maturity_bounds, self.samples_per_bin, rng)
+            for _, _, _, moneyness_bounds, maturity_bounds in self.iter_bins()
+        ]
+        samples = np.concatenate(parts, axis=0)
+        rng.shuffle(samples)
+        return samples
+
+    def sample_bin(
+        self,
+        moneyness_bounds: tuple[float, float],
+        maturity_bounds: tuple[float, float],
+        n_samples: int,
+        rng: np.random.Generator,
+    ) -> np.ndarray:
+        if self.samples_per_bin <= 0:
+            raise ValueError("samples_per_bin must be strictly positive")
+        if n_samples <= 0:
+            raise ValueError("n_samples must be strictly positive")
+
+        samples = self.domain.sample_uniform(n_samples, rng)
+        moneyness_index = self.domain.input_names.index("moneyness")
+        maturity_index = self.domain.input_names.index("maturity")
+        samples[:, moneyness_index] = rng.uniform(
+            moneyness_bounds[0], moneyness_bounds[1], size=n_samples
+        )
+        samples[:, maturity_index] = rng.uniform(
+            maturity_bounds[0], maturity_bounds[1], size=n_samples
+        )
+        return samples

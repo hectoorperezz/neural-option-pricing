@@ -17,7 +17,7 @@ def _to_output(value: np.ndarray) -> float | np.ndarray:
 class HestonSolver:
     """Fourier pricer for European calls under the Heston model."""
 
-    integration_upper_bound: float = 100.0
+    integration_upper_bound: float = float("inf")
     integration_lower_bound: float = 1e-8
     absolute_tolerance: float = 1e-8
     relative_tolerance: float = 1e-8
@@ -79,6 +79,38 @@ class HestonSolver:
             deltas[index] = np.exp(-q * t) * p1
 
         return _to_output(deltas)
+
+    def call_price_and_delta(
+        self,
+        spot: Any,
+        strike: Any,
+        maturity: Any,
+        rate: Any,
+        v0: Any,
+        theta: Any,
+        kappa: Any,
+        xi: Any,
+        rho: Any,
+        dividend_yield: Any = 0.0,
+    ) -> tuple[float | np.ndarray, float | np.ndarray]:
+        arrays = self._as_arrays(
+            spot, strike, maturity, rate, v0, theta, kappa, xi, rho, dividend_yield
+        )
+        prices = np.empty_like(arrays[0], dtype=float)
+        deltas = np.empty_like(arrays[0], dtype=float)
+
+        for index in np.ndindex(prices.shape):
+            p1, p2 = self._call_probabilities_scalar(*[float(value[index]) for value in arrays])
+            s = float(arrays[0][index])
+            k = float(arrays[1][index])
+            t = float(arrays[2][index])
+            r = float(arrays[3][index])
+            q = float(arrays[9][index])
+            raw_price = s * np.exp(-q * t) * p1 - k * np.exp(-r * t) * p2
+            prices[index] = self._apply_call_bounds(raw_price, s, k, t, r, q)
+            deltas[index] = np.exp(-q * t) * p1
+
+        return _to_output(prices), _to_output(deltas)
 
     def call_probabilities(
         self,

@@ -40,6 +40,17 @@ class OptionDataset(Dataset):
 
 
 @dataclass(frozen=True)
+class GeneratedBatch:
+    raw_inputs: np.ndarray
+    features: np.ndarray
+    prices: np.ndarray
+    deltas: np.ndarray | None
+    attempted_count: int
+    accepted_count: int
+    rejected_count: int
+
+
+@dataclass(frozen=True)
 class DatasetGenerator:
     """Generate synthetic option datasets from a solver and a sampler."""
 
@@ -64,15 +75,13 @@ class DatasetGenerator:
 
         for _ in range(10):
             draw_count = max(remaining, int(np.ceil(1.2 * remaining)))
-            raw_batch = self.sampler.sample(draw_count, rng=rng)
-            price_batch, delta_batch = self._price(raw_batch)
-            valid_mask = self._valid_mask(raw_batch, price_batch, delta_batch)
-            accepted = min(remaining, int(valid_mask.sum()))
+            batch = self.generate_batch(draw_count, rng)
+            accepted = min(remaining, batch.accepted_count)
             if accepted > 0:
-                raw_parts.append(raw_batch[valid_mask][:accepted])
-                price_parts.append(price_batch[valid_mask][:accepted])
-                if delta_batch is not None:
-                    delta_parts.append(delta_batch[valid_mask][:accepted])
+                raw_parts.append(batch.raw_inputs[:accepted])
+                price_parts.append(batch.prices[:accepted])
+                if batch.deltas is not None:
+                    delta_parts.append(batch.deltas[:accepted])
                 remaining -= accepted
             if remaining == 0:
                 break
@@ -84,6 +93,34 @@ class DatasetGenerator:
         prices = np.concatenate(price_parts, axis=0)
         deltas = None if not delta_parts else np.concatenate(delta_parts, axis=0)
 
+        return self.to_dataset(raw_inputs, prices, deltas)
+
+    def generate_batch(self, draw_count: int, rng: np.random.Generator) -> GeneratedBatch:
+        if draw_count <= 0:
+            raise ValueError("draw_count must be strictly positive")
+
+        raw_batch = self.sampler.sample(draw_count, rng=rng)
+        price_batch, delta_batch = self._price(raw_batch)
+        valid_mask = self._valid_mask(raw_batch, price_batch, delta_batch)
+        raw_inputs = raw_batch[valid_mask]
+        prices = price_batch[valid_mask]
+        deltas = None if delta_batch is None else delta_batch[valid_mask]
+        return GeneratedBatch(
+            raw_inputs=raw_inputs,
+            features=self.domain.normalize(raw_inputs),
+            prices=prices,
+            deltas=deltas,
+            attempted_count=draw_count,
+            accepted_count=int(valid_mask.sum()),
+            rejected_count=int(draw_count - valid_mask.sum()),
+        )
+
+    def to_dataset(
+        self,
+        raw_inputs: np.ndarray,
+        prices: np.ndarray,
+        deltas: np.ndarray | None = None,
+    ) -> OptionDataset:
         features = self.domain.normalize(raw_inputs)
         return OptionDataset(
             features=torch.as_tensor(features, dtype=self.dtype),
@@ -114,21 +151,8 @@ class DatasetGenerator:
                     dividend_yield=self.domain.dividend_yield,
                 )
         elif self.model_family == "heston":
-            prices = self.solver.call_price(
-                spot=raw_inputs[:, 0],
-                strike=self.strike,
-                maturity=raw_inputs[:, 1],
-                rate=raw_inputs[:, 2],
-                v0=raw_inputs[:, 3],
-                theta=raw_inputs[:, 4],
-                kappa=raw_inputs[:, 5],
-                xi=raw_inputs[:, 6],
-                rho=raw_inputs[:, 7],
-                dividend_yield=self.domain.dividend_yield,
-            )
-            deltas = None
             if self.include_delta:
-                deltas = self.solver.call_delta(
+                prices, deltas = self.solver.call_price_and_delta(
                     spot=raw_inputs[:, 0],
                     strike=self.strike,
                     maturity=raw_inputs[:, 1],
@@ -140,6 +164,20 @@ class DatasetGenerator:
                     rho=raw_inputs[:, 7],
                     dividend_yield=self.domain.dividend_yield,
                 )
+            else:
+                prices = self.solver.call_price(
+                    spot=raw_inputs[:, 0],
+                    strike=self.strike,
+                    maturity=raw_inputs[:, 1],
+                    rate=raw_inputs[:, 2],
+                    v0=raw_inputs[:, 3],
+                    theta=raw_inputs[:, 4],
+                    kappa=raw_inputs[:, 5],
+                    xi=raw_inputs[:, 6],
+                    rho=raw_inputs[:, 7],
+                    dividend_yield=self.domain.dividend_yield,
+                )
+                deltas = None
         else:
             raise ValueError("model_family must be 'black_scholes' or 'heston'")
 

@@ -174,8 +174,9 @@ Cada tarea y cada criterio de salida lleva un cuadro `☐` en la columna de esta
 | ☑ | IV inverter: Newton sobre BS | `src/solvers/iv.py` con tests |
 | ☑ | Heston solver: Fourier semi-cerrado con `P1`, `P2` y Delta `P1` | `src/solvers/heston.py` con tests |
 | ☑ | Validación de Delta Heston contra diferencias finitas centrales | Test en grid representativa |
+| ☑ | Validación cruzada con QuantLib | Grid de precio, Delta y Vega BS; precio Heston; Delta Heston por diferencias finitas QuantLib |
 
-**Criterio de salida:** ☐ Black-Scholes y Heston reproducen valores tabulados de referencia con error inferior a `1e-6` en precio y `1e-4` en Delta; el inversor de IV recupera la volatilidad de referencia en casos cerrados de Black-Scholes.
+**Criterio de salida:** ☑ Black-Scholes y Heston reproducen valores de referencia externos con error inferior a `1e-6` en precio y `1e-4` en Delta; el inversor de IV recupera la volatilidad de referencia en casos cerrados de Black-Scholes.
 
 La razón por la que esta fase es la primera y se cierra contra valores tabulados conocidos es que un fallo silencioso en el solver contaminaría todo el resto del proyecto sin que nos enteremos. Si la red está aprendiendo de targets erróneos, ningún entrenamiento posterior tiene sentido. La inversión inicial en validar los solvers compensa con creces el coste de descubrir el problema más tarde, y por eso el criterio de salida es estricto y verificable, no una métrica cualitativa.
 
@@ -185,6 +186,7 @@ La razón por la que esta fase es la primera y se cierra contra valores tabulado
 |---|---|---|
 | ☑ | `sampler.py`: muestreo uniforme y enfocado del hipercubo | `src/datasets/sampler.py` |
 | ☑ | `generator.py`: produce `(x, precio, Delta opcional)` | `src/datasets/generator.py` |
+| ☑ | Script reproducible de generación | `scripts/generate_dataset.py` con salida `.npz`, metadatos `.json` y modo test balanceado |
 | ☐ | Datasets train BS-200k y Heston-500k uniformes | Ficheros en `data/`, gitignored |
 | ☐ | Datasets validation 50k y test balanceado 125k por familia | Ficheros reproducibles en `data/` |
 | ☑ | `mlp.py`: MLP parametrizable por activación | `src/models/mlp.py` |

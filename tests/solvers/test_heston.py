@@ -72,6 +72,26 @@ def test_call_probabilities_reconstruct_call_price_and_delta() -> None:
     assert delta == pytest.approx(p1, abs=1e-12)
 
 
+def test_call_price_and_delta_matches_separate_calls() -> None:
+    solver = HestonSolver()
+    params = {
+        "spot": 100.0,
+        "strike": 100.0,
+        "maturity": 1.0,
+        "rate": 0.03,
+        "v0": 0.04,
+        "theta": 0.04,
+        "kappa": 1.5,
+        "xi": 0.4,
+        "rho": -0.7,
+    }
+
+    price, delta = solver.call_price_and_delta(**params)
+
+    assert price == pytest.approx(solver.call_price(**params), abs=1e-12)
+    assert delta == pytest.approx(solver.call_delta(**params), abs=1e-12)
+
+
 def test_call_delta_matches_central_finite_differences() -> None:
     solver = HestonSolver(absolute_tolerance=1e-9, relative_tolerance=1e-9)
     grid = [

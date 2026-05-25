@@ -7,3 +7,4 @@ torch==2.2.2
 pytest==8.2.2
 PyYAML==6.0.2
 tqdm==4.66.4
+QuantLib==1.42.1

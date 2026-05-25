@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from src.datasets import DatasetGenerator, UniformSampler, make_black_scholes_domain
@@ -32,6 +33,26 @@ def test_black_scholes_generator_returns_normalized_features_price_and_delta() -
     assert float(dataset.features.max()) <= 1.0
     assert sample["price"].item() == pytest.approx(reference_price, abs=1e-6)
     assert sample["delta"].item() == pytest.approx(reference_delta, abs=1e-6)
+
+
+def test_generate_batch_returns_validity_counters_and_numpy_arrays() -> None:
+    domain = make_black_scholes_domain()
+    generator = DatasetGenerator(
+        solver=BlackScholesSolver(),
+        domain=domain,
+        sampler=UniformSampler(domain),
+        model_family="black_scholes",
+        include_delta=False,
+    )
+
+    batch = generator.generate_batch(32, rng=np.random.default_rng(123))
+
+    assert batch.attempted_count == 32
+    assert batch.accepted_count + batch.rejected_count == 32
+    assert batch.features.shape == (batch.accepted_count, domain.dimension)
+    assert batch.raw_inputs.shape == (batch.accepted_count, domain.dimension)
+    assert batch.prices.shape == (batch.accepted_count,)
+    assert batch.deltas is None
 
 
 def test_generator_rejects_unknown_model_family() -> None:
