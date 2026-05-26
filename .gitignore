@@ -24,6 +24,7 @@ texput.log
 # Generated experiment artifacts
 data/
 results/checkpoints/
+results/logs/
 results/**/*.pt
 results/**/*.pth
 results/**/*.ckpt
