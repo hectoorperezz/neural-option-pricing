@@ -1,4 +1,4 @@
-# Experimento de escalado de datos (50x)
+# Experimento de escalado de datos
 
 **Autores:** Ángel Fernández Sánchez, Jorge Alfageme Sotillos, Héctor Pérez Ledesma
 
