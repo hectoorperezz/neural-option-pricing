@@ -6,11 +6,8 @@ The bin boundaries are imported from :mod:`src.datasets.sampler` so that
 they stay aligned with the boundaries used to draw the balanced test set.
 
 Binning convention: ``[low, high)`` for all bins except the topmost one on
-each axis, which is ``[low, high]``. The documentation also lists ATM as
-``[0.9, 1.1]`` (closed on both sides), but the uniform sampler used to
-generate the test set never lands exactly on a boundary, so adopting the
-plain right-open convention everywhere keeps the implementation simpler
-without changing the assignment of any actually-sampled point.
+each axis, which is ``[low, high]``. This keeps boundary assignment
+deterministic and matches the convention documented in the methodology.
 
 The ``bin_id`` returned by :meth:`BinPartition.assign` follows the same
 layout used by :class:`src.datasets.sampler.BalancedBinSampler.iter_bins`::

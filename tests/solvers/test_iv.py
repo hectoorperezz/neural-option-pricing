@@ -29,3 +29,20 @@ def test_implied_volatility_rejects_prices_outside_no_arbitrage_bounds() -> None
 
     with pytest.raises(ValueError, match="bounds"):
         inverter.solve_call(101.0, 100.0, 100.0, 1.0, 0.01)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        (float("nan"), 100.0, 100.0, 1.0, 0.01),
+        (10.0, float("nan"), 100.0, 1.0, 0.01),
+        (10.0, 100.0, float("nan"), 1.0, 0.01),
+        (10.0, 100.0, 100.0, float("nan"), 0.01),
+        (10.0, 100.0, 100.0, 1.0, float("nan")),
+    ],
+)
+def test_implied_volatility_rejects_non_finite_inputs(args: tuple[float, ...]) -> None:
+    inverter = ImpliedVolatilityInverter()
+
+    with pytest.raises(ValueError, match="finite"):
+        inverter.solve_call(*args)

@@ -95,6 +95,17 @@ class ImpliedVolatilityInverter:
         rate: float,
         dividend_yield: float,
     ) -> None:
+        if not (
+            np.isfinite(price)
+            and np.isfinite(spot)
+            and np.isfinite(strike)
+            and np.isfinite(maturity)
+            and np.isfinite(rate)
+            and np.isfinite(dividend_yield)
+        ):
+            raise ValueError(
+                "price, spot, strike, maturity, rate and dividend_yield must be finite"
+            )
         if spot <= 0.0:
             raise ValueError("spot must be strictly positive")
         if strike <= 0.0:
@@ -103,8 +114,6 @@ class ImpliedVolatilityInverter:
             raise ValueError("maturity must be strictly positive")
         if price < 0.0:
             raise ValueError("price must be non-negative")
-        if not np.isfinite(rate) or not np.isfinite(dividend_yield):
-            raise ValueError("rate and dividend_yield must be finite")
 
     def _lower_bound(
         self,

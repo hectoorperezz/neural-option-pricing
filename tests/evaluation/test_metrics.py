@@ -246,6 +246,32 @@ def test_invert_iv_marks_negative_price_as_failure() -> None:
     assert np.isnan(iv[0])
 
 
+@pytest.mark.parametrize(
+    ("prices", "moneyness", "maturity", "rate"),
+    [
+        ([np.nan], [1.0], [0.5], [0.02]),
+        ([0.1], [np.nan], [0.5], [0.02]),
+        ([0.1], [1.0], [np.nan], [0.02]),
+        ([0.1], [1.0], [0.5], [np.nan]),
+    ],
+)
+def test_invert_iv_marks_non_finite_inputs_as_failure(
+    prices: list[float],
+    moneyness: list[float],
+    maturity: list[float],
+    rate: list[float],
+) -> None:
+    iv, ok = invert_implied_volatility_call(
+        prices=np.array(prices),
+        moneyness=np.array(moneyness),
+        maturity=np.array(maturity),
+        rate=np.array(rate),
+    )
+
+    assert not bool(ok[0])
+    assert np.isnan(iv[0])
+
+
 def test_invert_iv_marks_above_intrinsic_as_failure() -> None:
     # A call cannot be worth more than the discounted spot (strike=1, q=0).
     iv, ok = invert_implied_volatility_call(

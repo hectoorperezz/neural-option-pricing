@@ -143,6 +143,7 @@ def predict_surrogate_prices_and_deltas(
         features_tensor = features.detach().float()
 
     n_samples = int(features_tensor.shape[0])
+    model = model.to(device)
     model.eval()
     price_parts: list[np.ndarray] = []
     delta_parts: list[np.ndarray] = []
@@ -219,6 +220,13 @@ def invert_implied_volatility_call(
     flat_rate = rate_arr.reshape(-1)
 
     for i in range(n_samples):
+        if not (
+            np.isfinite(flat_prices[i])
+            and np.isfinite(flat_moneyness[i])
+            and np.isfinite(flat_maturity[i])
+            and np.isfinite(flat_rate[i])
+        ):
+            continue
         try:
             iv[i] = inverter.solve_call(
                 price=float(flat_prices[i]),

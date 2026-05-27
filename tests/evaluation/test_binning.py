@@ -71,6 +71,16 @@ def test_assign_left_boundary_is_inclusive() -> None:
     assert int(m_idx) == 2
 
 
+def test_assign_internal_right_boundary_moves_to_next_bin() -> None:
+    partition = BinPartition.default()
+
+    _, m_idx_11, _ = partition.assign(1.1, 0.5)
+    _, m_idx_13, _ = partition.assign(1.3, 0.5)
+
+    assert int(m_idx_11) == 3  # ITM
+    assert int(m_idx_13) == 4  # deep_itm
+
+
 def test_assign_upper_extreme_falls_in_last_bin() -> None:
     partition = BinPartition.default()
 
