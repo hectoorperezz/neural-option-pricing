@@ -108,20 +108,14 @@
 \begin{titlepage}
 \thispagestyle{empty}
 
-% Bandas amarillas a sangre arriba y abajo + barra lateral fina
+% Bandas amarillas a sangre arriba y abajo
 \begin{tikzpicture}[remember picture, overlay]
-  % Banda superior
   \fill[uniyellow]
     (current page.north west) rectangle
     ([yshift=-1.1cm]current page.north east);
-  % Banda inferior
   \fill[uniyellow]
     (current page.south west) rectangle
     ([yshift=0.9cm]current page.south east);
-  % Marca lateral izquierda fina
-  \fill[uniyellow]
-    ([xshift=1.0cm,yshift=-1.1cm]current page.north west) rectangle
-    ([xshift=1.18cm,yshift=0.9cm]current page.south west);
 \end{tikzpicture}
 
 \vspace*{0.4cm}
@@ -164,9 +158,10 @@ Héctor Pérez Ledesma\par}
 
 \vspace{\stretch{1.4}}
 
-% --- Pie con lema institucional --------------------------------------------
+% --- Pie con asignatura y curso --------------------------------------------
 \begin{center}
-{\itshape\small\color{black!70}«Libre de aprender a ser libre»}
+{\footnotesize\scshape Métodos numéricos}\\[3pt]
+{\footnotesize\itshape Curso 2025/2026}
 \end{center}
 
 \end{titlepage}
