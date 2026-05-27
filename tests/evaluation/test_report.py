@@ -236,3 +236,102 @@ def test_csv_round_trip_with_numpy_genfromtxt(tmp_path: Path) -> None:
 
     assert len(data) == 25
     np.testing.assert_allclose(data["price_mae_mean"], 1e-3)
+
+
+# --- Report.to_heatmap ----------------------------------------------------
+
+
+def test_to_heatmap_writes_png_for_price(tmp_path: Path) -> None:
+    report = _build_full_report()
+    output = tmp_path / "price.png"
+
+    report.to_heatmap("price", output)
+
+    assert output.exists()
+    assert output.stat().st_size > 0
+
+
+def test_to_heatmap_writes_png_for_iv(tmp_path: Path) -> None:
+    report = _build_full_report()
+    output = tmp_path / "iv.png"
+
+    report.to_heatmap("iv", output)
+
+    assert output.exists()
+
+
+def test_to_heatmap_writes_png_for_iv_failure_rate(tmp_path: Path) -> None:
+    report = _build_full_report()
+    output = tmp_path / "iv_failure.png"
+
+    report.to_heatmap("iv_failure_rate", output)
+
+    assert output.exists()
+
+
+def test_to_heatmap_rejects_unknown_metric(tmp_path: Path) -> None:
+    report = _build_full_report()
+    with pytest.raises(ValueError, match="unknown metric"):
+        report.to_heatmap("vega", tmp_path / "x.png")
+
+
+def test_to_heatmap_rejects_missing_aggregate(tmp_path: Path) -> None:
+    partition = BinPartition.default()
+    report = Report(
+        surrogate_id="BS-3",
+        test_path="x",
+        n_samples=10,
+        partition=partition,
+        price=_full_aggregate(partition.n_bins),
+        delta=None,
+        iv=None,
+        iv_failure_rate_per_bin=None,
+    )
+
+    with pytest.raises(ValueError, match="not populated"):
+        report.to_heatmap("delta", tmp_path / "x.png")
+
+    with pytest.raises(ValueError, match="not populated"):
+        report.to_heatmap("iv", tmp_path / "x.png")
+
+    with pytest.raises(ValueError, match="not available"):
+        report.to_heatmap("iv_failure_rate", tmp_path / "x.png")
+
+
+def test_to_heatmap_rejects_unknown_statistic(tmp_path: Path) -> None:
+    report = _build_full_report()
+    with pytest.raises(ValueError, match="not available"):
+        report.to_heatmap("price", tmp_path / "x.png", statistic="p25")
+
+
+def test_to_heatmap_supports_p95_statistic(tmp_path: Path) -> None:
+    report = _build_full_report()
+    output = tmp_path / "price_p95.png"
+
+    report.to_heatmap("price", output, statistic="p95")
+
+    assert output.exists()
+
+
+def test_to_heatmap_renders_nan_cells_without_crashing(tmp_path: Path) -> None:
+    partition = BinPartition.default()
+    price = _full_aggregate(partition.n_bins, fill=1e-3)
+    # Wipe a couple of cells so they show as empty bins
+    price["mean"][0] = np.nan
+    price["mean"][12] = np.nan
+
+    report = Report(
+        surrogate_id="BS-3",
+        test_path="x",
+        n_samples=10,
+        partition=partition,
+        price=price,
+        delta=None,
+        iv=None,
+        iv_failure_rate_per_bin=None,
+    )
+    output = tmp_path / "with_nans.png"
+
+    report.to_heatmap("price", output)
+
+    assert output.exists()
