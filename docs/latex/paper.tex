@@ -124,7 +124,7 @@
 \begin{titlepage}
 \thispagestyle{empty}
 
-% Bandas amarillas a sangre arriba y abajo + watermark .h en la esquina
+% Bandas amarillas a sangre, watermark .h y patrón geométrico decorativo
 \begin{tikzpicture}[remember picture, overlay]
   % Watermark grande del monograma .h, cortado a sangre por la esquina
   \node[anchor=south east, inner sep=0pt]
@@ -135,14 +135,23 @@
             font=\fontsize{260pt}{260pt}\fontfamily{lmss}\selectfont\bfseries]
         at (1.5cm,0) {h};
     \end{tikzpicture}};
-  % Banda superior
+  % Banda superior amarilla
   \fill[uniyellow]
     (current page.north west) rectangle
     ([yshift=-1.1cm]current page.north east);
-  % Banda inferior
+  % Banda inferior amarilla
   \fill[uniyellow]
     (current page.south west) rectangle
     ([yshift=0.9cm]current page.south east);
+  % Patrón geométrico: cuadrados amarillos+negros escalonados en esquina sup. derecha
+  \begin{scope}[shift={([xshift=-2.6cm, yshift=-2.0cm]current page.north east)}]
+    \fill[uniblack]   (0.0cm,0.0cm) rectangle (0.45cm,0.45cm);
+    \fill[uniyellow]  (0.55cm,0.0cm) rectangle (1.0cm,0.45cm);
+    \fill[uniyellow]  (0.0cm,-0.55cm) rectangle (0.45cm,-0.10cm);
+    \fill[uniblack]   (0.55cm,-0.55cm) rectangle (1.0cm,-0.10cm);
+    \fill[uniyellow]  (0.0cm,-1.10cm) rectangle (0.45cm,-0.65cm);
+    \fill[uniblack]   (0.55cm,-1.10cm) rectangle (1.0cm,-0.65cm);
+  \end{scope}
 \end{tikzpicture}
 
 \vspace*{0.4cm}
@@ -158,7 +167,11 @@
 Redes neuronales\\[6pt]
 como aproximadores numéricos\par}
 
-\vspace{20pt}
+\vspace{14pt}
+% Barra negra corta como acento de tinta debajo del título
+\noindent{\color{uniblack}\rule{0.12\textwidth}{2.2pt}}\par
+\vspace{16pt}
+
 {\large\itshape\color{black!72}
 para pricing de opciones bajo\\[2pt]
 Black-Scholes y Heston\par}
@@ -205,14 +218,25 @@ Black-Scholes y Heston\par}
 
 \vspace{\stretch{0.55}}
 
-% --- Autores ----------------------------------------------------------------
+% --- Tarjeta de autores: cabecera amarilla + cuerpo blanco con borde negro -
 \begin{center}
-{\footnotesize\scshape\bfseries\color{black!72} Autores}\par
-\vspace{10pt}
-{\large
-Ángel Fernández Sánchez\\[3pt]
-Jorge Alfageme Sotillos\\[3pt]
-Héctor Pérez Ledesma\par}
+\begin{tikzpicture}[inner sep=0pt]
+  % Cabecera amarilla con texto en negro
+  \node[fill=uniyellow, draw=uniblack, line width=1.2pt,
+        minimum width=8.4cm, minimum height=0.85cm,
+        font=\small\scshape\bfseries\color{uniblack},
+        anchor=south] (head) at (0,0) {Autores};
+  % Cuerpo blanco con la lista de autores
+  \node[fill=white, draw=uniblack, line width=1.2pt,
+        minimum width=8.4cm, inner ysep=14pt,
+        align=center,
+        anchor=north] (body) at (head.south) {%
+    \large
+    Ángel Fernández Sánchez\\[4pt]
+    Jorge Alfageme Sotillos\\[4pt]
+    Héctor Pérez Ledesma
+  };
+\end{tikzpicture}
 \end{center}
 
 \vspace{\stretch{1.4}}
