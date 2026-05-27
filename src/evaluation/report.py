@@ -156,3 +156,99 @@ class Report:
         if not np.isfinite(value):
             return ""
         return value
+
+    def to_heatmap(
+        self,
+        metric: str,
+        path: str | Path,
+        statistic: str = "mean",
+    ) -> None:
+        """Save a 5x5 heatmap PNG of ``statistic`` for ``metric``.
+
+        ``metric`` must be one of ``"price"``, ``"delta"``, ``"iv"`` or
+        ``"iv_failure_rate"``. ``statistic`` is one of ``"mean"``, ``"p50"``,
+        ``"p95"``, ``"p99"`` (ignored for ``iv_failure_rate``, which has no
+        percentiles). Empty bins are rendered in light grey to be visually
+        distinguishable from numeric zero.
+        """
+        values = self._values_for_heatmap(metric, statistic)
+        n_rows = self.partition.n_maturity_bins
+        n_cols = self.partition.n_moneyness_bins
+        grid = np.asarray(values, dtype=np.float64).reshape(n_rows, n_cols)
+
+        import matplotlib
+
+        matplotlib.use("Agg", force=True)
+        import matplotlib.pyplot as plt
+
+        masked = np.ma.masked_invalid(grid)
+        figure, axis = plt.subplots(figsize=(8.0, 6.0))
+        cmap = plt.get_cmap("viridis").copy()
+        cmap.set_bad(color="#dddddd")
+        image = axis.imshow(masked, cmap=cmap, aspect="auto", origin="upper")
+
+        axis.set_xticks(range(n_cols))
+        axis.set_xticklabels(self.partition.moneyness_labels, rotation=30, ha="right")
+        axis.set_yticks(range(n_rows))
+        axis.set_yticklabels(self.partition.maturity_labels)
+        axis.set_xlabel("moneyness bin")
+        axis.set_ylabel("maturity bin")
+        title_metric = metric if metric == "iv_failure_rate" else f"{metric} MAE"
+        title_statistic = "" if metric == "iv_failure_rate" else f" ({statistic})"
+        axis.set_title(f"{self.surrogate_id} — {title_metric}{title_statistic}")
+
+        finite_mean = float(masked.mean()) if masked.count() > 0 else 0.0
+        for row in range(n_rows):
+            for col in range(n_cols):
+                cell = masked[row, col]
+                if np.ma.is_masked(cell):
+                    continue
+                axis.text(
+                    col,
+                    row,
+                    f"{float(cell):.2e}",
+                    ha="center",
+                    va="center",
+                    fontsize=8,
+                    color="white" if float(cell) > finite_mean else "black",
+                )
+
+        figure.colorbar(image, ax=axis)
+        figure.tight_layout()
+
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        figure.savefig(output_path, dpi=120)
+        plt.close(figure)
+
+    def _values_for_heatmap(self, metric: str, statistic: str) -> np.ndarray:
+        if metric == "iv_failure_rate":
+            if self.iv_failure_rate_per_bin is None:
+                raise ValueError(
+                    "iv_failure_rate is not available in this report; "
+                    "the evaluator must run with compute_iv=True"
+                )
+            return np.asarray(self.iv_failure_rate_per_bin)
+
+        aggregate_by_metric: dict[str, dict[str, np.ndarray] | None] = {
+            "price": self.price,
+            "delta": self.delta,
+            "iv": self.iv,
+        }
+        if metric not in aggregate_by_metric:
+            raise ValueError(
+                f"unknown metric {metric!r}; expected one of "
+                f"{sorted(list(aggregate_by_metric) + ['iv_failure_rate'])}"
+            )
+        aggregate = aggregate_by_metric[metric]
+        if aggregate is None:
+            raise ValueError(
+                f"metric {metric!r} is not populated in this report "
+                "(was the dataset/evaluator configured to compute it?)"
+            )
+        if statistic not in aggregate:
+            raise ValueError(
+                f"statistic {statistic!r} not available; "
+                f"choose one of {sorted(aggregate)}"
+            )
+        return np.asarray(aggregate[statistic])

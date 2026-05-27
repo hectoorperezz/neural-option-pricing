@@ -32,6 +32,8 @@ Conventions inherited from the dataset generator (``src/datasets/generator.py``)
 
 from __future__ import annotations
 
+import math
+from concurrent.futures import ProcessPoolExecutor
 from typing import Iterable
 
 import numpy as np
@@ -179,6 +181,8 @@ def invert_implied_volatility_call(
     rate: np.ndarray,
     inverter: ImpliedVolatilityInverter | None = None,
     initial_guess: float = 0.2,
+    workers: int = 1,
+    progress: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Invert call prices to Black-Scholes implied volatility, point by point.
 
@@ -193,6 +197,13 @@ def invert_implied_volatility_call(
     bisection fallback, and any other ``ValueError`` raised by the inverter.
     The methodology document mandates that these failures are reported as
     diagnostic rather than silently dropped.
+
+    ``workers > 1`` parallelises the loop across CPU cores using
+    ``concurrent.futures.ProcessPoolExecutor``. The same input ordering and
+    return values are preserved bit-for-bit relative to ``workers=1``; the
+    inverter is stateless and the work is embarrassingly parallel.
+    ``progress=True`` shows a ``tqdm`` bar (per-point in serial mode,
+    per-chunk in parallel mode).
     """
     prices_arr = np.asarray(prices, dtype=np.float64)
     moneyness_arr = np.asarray(moneyness, dtype=np.float64)
@@ -206,42 +217,133 @@ def invert_implied_volatility_call(
         raise ValueError(
             "prices, moneyness, maturity and rate must all share the same shape"
         )
+    if workers < 1:
+        raise ValueError("workers must be a positive integer")
 
     if inverter is None:
         inverter = ImpliedVolatilityInverter()
-
-    n_samples = int(prices_arr.size)
-    iv = np.full(n_samples, np.nan, dtype=np.float64)
-    ok = np.zeros(n_samples, dtype=bool)
 
     flat_prices = prices_arr.reshape(-1)
     flat_moneyness = moneyness_arr.reshape(-1)
     flat_maturity = maturity_arr.reshape(-1)
     flat_rate = rate_arr.reshape(-1)
 
-    for i in range(n_samples):
+    if workers == 1 or flat_prices.size == 0:
+        iv, ok = _invert_iv_serial(
+            flat_prices, flat_moneyness, flat_maturity, flat_rate,
+            inverter, initial_guess, progress,
+        )
+    else:
+        iv, ok = _invert_iv_parallel(
+            flat_prices, flat_moneyness, flat_maturity, flat_rate,
+            inverter, initial_guess, workers, progress,
+        )
+
+    return iv.reshape(shape), ok.reshape(shape)
+
+
+def _invert_iv_serial(
+    prices: np.ndarray,
+    moneyness: np.ndarray,
+    maturity: np.ndarray,
+    rate: np.ndarray,
+    inverter: ImpliedVolatilityInverter,
+    initial_guess: float,
+    progress: bool,
+) -> tuple[np.ndarray, np.ndarray]:
+    n_samples = int(prices.size)
+    iv = np.full(n_samples, np.nan, dtype=np.float64)
+    ok = np.zeros(n_samples, dtype=bool)
+
+    iterator: Iterable[int] = range(n_samples)
+    if progress:
+        from tqdm import tqdm
+
+        iterator = tqdm(iterator, total=n_samples, desc="IV inversion", unit="pt", leave=False)
+
+    for i in iterator:
         if not (
-            np.isfinite(flat_prices[i])
-            and np.isfinite(flat_moneyness[i])
-            and np.isfinite(flat_maturity[i])
-            and np.isfinite(flat_rate[i])
+            np.isfinite(prices[i])
+            and np.isfinite(moneyness[i])
+            and np.isfinite(maturity[i])
+            and np.isfinite(rate[i])
         ):
             continue
         try:
             iv[i] = inverter.solve_call(
-                price=float(flat_prices[i]),
-                spot=float(flat_moneyness[i]),
+                price=float(prices[i]),
+                spot=float(moneyness[i]),
                 strike=1.0,
-                maturity=float(flat_maturity[i]),
-                rate=float(flat_rate[i]),
+                maturity=float(maturity[i]),
+                rate=float(rate[i]),
                 dividend_yield=0.0,
                 initial_guess=initial_guess,
             )
             ok[i] = True
         except (ValueError, RuntimeError, FloatingPointError):
             pass
+    return iv, ok
 
-    return iv.reshape(shape), ok.reshape(shape)
+
+def _invert_iv_parallel(
+    prices: np.ndarray,
+    moneyness: np.ndarray,
+    maturity: np.ndarray,
+    rate: np.ndarray,
+    inverter: ImpliedVolatilityInverter,
+    initial_guess: float,
+    workers: int,
+    progress: bool,
+) -> tuple[np.ndarray, np.ndarray]:
+    n = int(prices.size)
+    chunk_size = max(1, math.ceil(n / workers))
+    chunks = []
+    for start in range(0, n, chunk_size):
+        end = min(start + chunk_size, n)
+        chunks.append((
+            np.ascontiguousarray(prices[start:end]),
+            np.ascontiguousarray(moneyness[start:end]),
+            np.ascontiguousarray(maturity[start:end]),
+            np.ascontiguousarray(rate[start:end]),
+            inverter,
+            initial_guess,
+        ))
+
+    iv_parts: list[np.ndarray] = []
+    ok_parts: list[np.ndarray] = []
+    progress_bar = None
+    if progress:
+        from tqdm import tqdm
+
+        progress_bar = tqdm(
+            total=len(chunks), desc=f"IV inversion ({workers} workers)",
+            unit="chunk", leave=False,
+        )
+
+    try:
+        with ProcessPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(_invert_iv_chunk, chunk) for chunk in chunks]
+            for future in futures:
+                iv_chunk, ok_chunk = future.result()
+                iv_parts.append(iv_chunk)
+                ok_parts.append(ok_chunk)
+                if progress_bar is not None:
+                    progress_bar.update(1)
+    finally:
+        if progress_bar is not None:
+            progress_bar.close()
+
+    return np.concatenate(iv_parts), np.concatenate(ok_parts)
+
+
+def _invert_iv_chunk(
+    args: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, ImpliedVolatilityInverter, float],
+) -> tuple[np.ndarray, np.ndarray]:
+    """Worker entrypoint for the parallel path. Top-level so it pickles."""
+    prices, moneyness, maturity, rate, inverter, initial_guess = args
+    return _invert_iv_serial(
+        prices, moneyness, maturity, rate, inverter, initial_guess, progress=False
+    )
 
 
 def _to_numpy(value: np.ndarray | torch.Tensor) -> np.ndarray:

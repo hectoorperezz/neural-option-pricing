@@ -68,6 +68,8 @@ class BinEvaluator:
     batch_size: int = 32768
     moneyness_range: tuple[float, float] = (0.4, 2.0)
     moneyness_index: int = 0
+    iv_workers: int = 1
+    iv_progress: bool = False
 
     def evaluate(
         self,
@@ -128,6 +130,8 @@ class BinEvaluator:
                 maturity=maturity,
                 rate=rate,
                 inverter=inverter,
+                workers=self.iv_workers,
+                progress=self.iv_progress,
             )
             target_iv, ok_target = invert_implied_volatility_call(
                 prices=target_prices,
@@ -135,6 +139,8 @@ class BinEvaluator:
                 maturity=maturity,
                 rate=rate,
                 inverter=inverter,
+                workers=self.iv_workers,
+                progress=self.iv_progress,
             )
             ok_both = ok_pred & ok_target
             iv_err = np.full(n_samples, np.nan, dtype=np.float64)
