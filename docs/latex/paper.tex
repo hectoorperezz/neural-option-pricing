@@ -18,22 +18,26 @@
 % --- Tablas y figuras --------------------------------------------------------
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
 \captionsetup{font=small,labelfont=bf,margin=1em}
 
 % --- Color, hyperref ---------------------------------------------------------
 \usepackage{xcolor}
-% Paleta de marca de la universidad
-\definecolor{uniyellow}{HTML}{FFD100}      % amarillo institucional puro (UC3M)
-\definecolor{paperblue}{HTML}{8A6D00}      % versión oscura legible del amarillo (texto, bordes)
-\definecolor{papercyan}{HTML}{C49A00}      % dorado intermedio (links secundarios)
+% Paleta institucional Universidad de las Hespérides:
+%   #FFD100 amarillo principal, negro como tinta, #FFF5CA crema suave.
+\definecolor{uniyellow}{HTML}{FFD100}      % amarillo Hespérides
+\definecolor{uniyellowsoft}{HTML}{FDEA99}  % crema suave de la paleta web
+\definecolor{uniblack}{HTML}{0E0E0E}       % negro institucional
+\definecolor{paperblue}{HTML}{1A1A1A}      % tinta principal (texto, bordes) -- negro casi puro
+\definecolor{papercyan}{HTML}{8A6D00}      % links secundarios en dorado oscuro
 \definecolor{paperred}{HTML}{B83A3A}
 \definecolor{papergreen}{HTML}{3E8E41}
-\definecolor{paperorange}{HTML}{D96B1C}    % naranja un poco más rojizo para separarlo del amarillo
+\definecolor{paperorange}{HTML}{D96B1C}
 \definecolor{paperpurple}{HTML}{6F3FAE}
 \definecolor{papergrey}{HTML}{3A3A3A}
-\definecolor{paperbg}{HTML}{FFF8DC}        % fondo crema suave que acompaña al amarillo
+\definecolor{paperbg}{HTML}{FFF8DC}        % fondo crema
 
 \usepackage{hyperref}
 \hypersetup{
@@ -98,43 +102,118 @@
 
 \begin{document}
 
+% =============================================================================
+% PORTADA con identidad Universidad de las Hespérides
+% =============================================================================
+\begin{titlepage}
 \thispagestyle{empty}
 
-% --- Cabecera tipo journal ---------------------------------------------------
-\begingroup
-\setlength{\parskip}{0pt}
-\noindent\rule{\textwidth}{0.6pt}\\[2pt]
-{\footnotesize\itshape Proyecto de investigación \textbullet{} Métodos numéricos \textbullet{} Universidad Carlos III de Madrid\hfill\today}\\[2pt]
-\noindent\rule{\textwidth}{0.2pt}
-\endgroup
+% Bandas amarillas a sangre arriba y abajo + barra lateral fina
+\begin{tikzpicture}[remember picture, overlay]
+  % Banda superior
+  \fill[uniyellow]
+    (current page.north west) rectangle
+    ([yshift=-1.1cm]current page.north east);
+  % Banda inferior
+  \fill[uniyellow]
+    (current page.south west) rectangle
+    ([yshift=0.9cm]current page.south east);
+  % Marca lateral izquierda fina
+  \fill[uniyellow]
+    ([xshift=1.0cm,yshift=-1.1cm]current page.north west) rectangle
+    ([xshift=1.18cm,yshift=0.9cm]current page.south west);
+\end{tikzpicture}
 
-\vspace{2.2em}
+\vspace*{0.4cm}
 
+% --- Cabecera: logo institucional a la izquierda + meta a la derecha --------
+\noindent
+\begin{minipage}[c]{0.55\textwidth}
+  \includegraphics[width=5.4cm]{assets/logo_hesperides.png}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.40\textwidth}
+  \raggedleft
+  {\footnotesize\scshape Proyecto de investigación}\\[2pt]
+  {\footnotesize\itshape Métodos numéricos --- Curso 2025/2026}
+\end{minipage}
+
+\vspace{\stretch{1.1}}
+
+% --- Bloque de título -------------------------------------------------------
 \begin{center}
-{\LARGE\bfseries Redes neuronales como aproximadores numéricos\\[3pt]
-para pricing de opciones bajo Black-Scholes y Heston\par}
+{\color{uniyellow}\rule{0.18\textwidth}{2.4pt}}\par
+\vspace{20pt}
+{\Huge\bfseries\color{uniblack}
+Redes neuronales\\[4pt]
+como aproximadores numéricos\par}
 
-\vspace{1.4em}
+\vspace{20pt}
+{\large\itshape\color{black!75}
+para pricing de opciones bajo\\[2pt]
+Black-Scholes y Heston\par}
 
-{\large
-Ángel Fernández Sánchez \quad\textbullet\quad Jorge Alfageme Sotillos \quad\textbullet\quad Héctor Pérez Ledesma\par}
+\vspace{20pt}
+{\color{uniyellow}\rule{0.18\textwidth}{2.4pt}}
 \end{center}
 
-\vspace{1.8em}
+\vspace{\stretch{1.0}}
 
-% --- Abstract ----------------------------------------------------------------
+% --- Autores ----------------------------------------------------------------
+\begin{center}
+{\footnotesize\scshape\bfseries\color{black!70} Autores}\par
+\vspace{6pt}
+\noindent{\color{uniyellow}\rule{0.06\textwidth}{1pt}}\par
+\vspace{10pt}
+{\large
+Ángel Fernández Sánchez\\[3pt]
+Jorge Alfageme Sotillos\\[3pt]
+Héctor Pérez Ledesma\par}
+\end{center}
+
+\vspace{\stretch{1.4}}
+
+% --- Pie con lema institucional --------------------------------------------
+\begin{center}
+{\itshape\small\color{black!70}«Libre de aprender a ser libre»}
+\end{center}
+
+\end{titlepage}
+
+% =============================================================================
+% RESUMEN + ÍNDICE en página 2
+% =============================================================================
+\thispagestyle{empty}
+
+% --- Resumen ----------------------------------------------------------------
 \begingroup
-\leftskip=1.2em \rightskip=1.2em
-\noindent{\scshape\bfseries\small Resumen.}\enspace\small
-Este trabajo estudia bajo qué condiciones una red neuronal profunda puede actuar como un \emph{surrogate} preciso, rápido y diferenciable de una función de pricing de opciones, entendida como sustituto numérico de un solver matemático ya conocido. La motivación no es predecir nada sobre el mercado sino abaratar la evaluación de modelos cuya solución analítica no existe o es cara: una vez entrenada offline a partir de datos sintéticos generados por el propio solver, la red puede sustituir al modelo original en tareas que exigen millones de evaluaciones, como la calibración diaria, el cálculo de Greeks o la simulación masiva de escenarios. Tomamos como referencia central el trabajo de Chen, Didisheim y Scheidegger sobre \emph{deep surrogates}~\cite{chen2025} y como complemento metodológico el de Huge y Savine sobre \emph{differential machine learning}~\cite{huge2020}. Nuestro objeto de estudio son las opciones europeas vainilla bajo dos modelos: Black-Scholes como caso de validación con solución cerrada y Heston como caso principal, donde la integración por Fourier semi-cerrada es lo suficientemente costosa como para justificar el surrogate. El trabajo se articula en torno a cinco experimentos comparativos que varían cada uno una sola dimensión del problema: la elección de métrica de evaluación, la activación de la red, la distribución del muestreo, la eficiencia computacional y el uso de información diferencial en la pérdida. Este documento describe la revisión bibliográfica que sustenta el planteamiento, la metodología experimental, el diseño concreto de cada comparación y la estructura del código que la implementa.
+\noindent
+\begin{tikzpicture}
+  \node[draw=uniyellow, line width=1.4pt, rounded corners=2pt,
+        fill=uniyellowsoft!30, inner sep=14pt,
+        text width=\dimexpr\textwidth-30pt\relax]{%
+    {\bfseries\scshape\large Resumen}\par
+    \vspace{4pt}
+    {\color{uniyellow}\rule{0.12\textwidth}{1.4pt}}\par
+    \vspace{8pt}
+    \small\setlength{\parskip}{4pt}
+    Este trabajo estudia bajo qué condiciones una red neuronal profunda puede actuar como un \emph{surrogate} preciso, rápido y diferenciable de una función de pricing de opciones, entendida como sustituto numérico de un solver matemático ya conocido. La motivación no es predecir nada sobre el mercado sino abaratar la evaluación de modelos cuya solución analítica no existe o es cara: una vez entrenada offline a partir de datos sintéticos generados por el propio solver, la red puede sustituir al modelo original en tareas que exigen millones de evaluaciones, como la calibración diaria, el cálculo de Greeks o la simulación masiva de escenarios. Tomamos como referencia central el trabajo de Chen, Didisheim y Scheidegger sobre \emph{deep surrogates}~\cite{chen2025} y como complemento metodológico el de Huge y Savine sobre \emph{differential machine learning}~\cite{huge2020}. Nuestro objeto de estudio son las opciones europeas vainilla bajo dos modelos: Black-Scholes como caso de validación con solución cerrada y Heston como caso principal, donde la integración por Fourier semi-cerrada es lo suficientemente costosa como para justificar el surrogate. El trabajo se articula en torno a cinco experimentos comparativos que varían cada uno una sola dimensión del problema: métrica de evaluación, activación de la red, distribución del muestreo, eficiencia computacional y uso de información diferencial en la pérdida.
 
-\vspace{0.6em}
-\noindent{\scshape\bfseries\small Palabras clave.}\enspace\small \emph{deep surrogates}, pricing de opciones, Heston, Black-Scholes, \emph{differential machine learning}, métodos numéricos.
+    \smallskip
+    {\bfseries\scshape Palabras clave.}\enspace
+    \emph{deep surrogates}, pricing de opciones, Heston, Black-Scholes, \emph{differential machine learning}, métodos numéricos.
+  };
+\end{tikzpicture}
 \endgroup
 
-\vspace{1.4em}
-\noindent\rule{\textwidth}{0.2pt}
-\vspace{0.8em}
+\vspace{1.2em}
+
+% --- Índice general --------------------------------------------------------
+\renewcommand{\contentsname}{Índice general}
+\begingroup
+  \hypersetup{linkcolor=uniblack}
+  \tableofcontents
+\endgroup
+\newpage
 
 % =============================================================================
 \section{Introducción}
