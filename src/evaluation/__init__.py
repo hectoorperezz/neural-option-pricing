@@ -1,3 +1,4 @@
+from src.evaluation.binevaluator import BinEvaluator
 from src.evaluation.binning import BinPartition
 from src.evaluation.metrics import (
     absolute_errors,
@@ -8,6 +9,7 @@ from src.evaluation.metrics import (
 from src.evaluation.report import Report
 
 __all__ = [
+    "BinEvaluator",
     "BinPartition",
     "Report",
     "absolute_errors",
