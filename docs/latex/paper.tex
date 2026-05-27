@@ -143,7 +143,7 @@
   \fill[uniyellow]
     (current page.south west) rectangle
     ([yshift=0.9cm]current page.south east);
-  % Patrón geométrico: cuadrados amarillos+negros escalonados en esquina sup. derecha
+  % Patrón geométrico: cuadrados amarillos+negros en esquina sup. derecha
   \begin{scope}[shift={([xshift=-2.6cm, yshift=-2.0cm]current page.north east)}]
     \fill[uniblack]   (0.0cm,0.0cm) rectangle (0.45cm,0.45cm);
     \fill[uniyellow]  (0.55cm,0.0cm) rectangle (1.0cm,0.45cm);
@@ -151,6 +151,15 @@
     \fill[uniblack]   (0.55cm,-0.55cm) rectangle (1.0cm,-0.10cm);
     \fill[uniyellow]  (0.0cm,-1.10cm) rectangle (0.45cm,-0.65cm);
     \fill[uniblack]   (0.55cm,-1.10cm) rectangle (1.0cm,-0.65cm);
+  \end{scope}
+  % Patrón espejo en esquina inferior izquierda (colores invertidos, 3x2)
+  \begin{scope}[shift={([xshift=1.6cm, yshift=1.8cm]current page.south west)}]
+    \fill[uniyellow]  (0.0cm,0.0cm) rectangle (0.40cm,0.40cm);
+    \fill[uniblack]   (0.50cm,0.0cm) rectangle (0.90cm,0.40cm);
+    \fill[uniyellow]  (1.00cm,0.0cm) rectangle (1.40cm,0.40cm);
+    \fill[uniblack]   (0.0cm,0.50cm) rectangle (0.40cm,0.90cm);
+    \fill[uniyellow]  (0.50cm,0.50cm) rectangle (0.90cm,0.90cm);
+    \fill[uniblack]   (1.00cm,0.50cm) rectangle (1.40cm,0.90cm);
   \end{scope}
 \end{tikzpicture}
 
