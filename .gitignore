@@ -33,3 +33,6 @@ results/**/*.pth
 results/**/*.ckpt
 results/**/*.npz
 results/**/*.npy
+
+# Training results synced from the remote server
+remote_training_results/
