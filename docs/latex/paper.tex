@@ -96,23 +96,45 @@
 \newcommand{\param}[1]{\texttt{#1}}
 \newcommand{\eq}[1]{\ensuremath{#1}}
 
-\title{Redes neuronales como aproximadores numéricos\\ \large para pricing de opciones bajo Black-Scholes y Heston}
-\author{Ángel Fernández Sánchez \and Jorge Alfageme Sotillos \and Héctor Pérez Ledesma}
-\date{Proyecto de investigación --- Métodos numéricos}
-
 \begin{document}
 
-\maketitle
+\thispagestyle{empty}
 
-\begin{abstract}
-Este trabajo estudia bajo qué condiciones una red neuronal profunda puede actuar como un \emph{surrogate} preciso, rápido y diferenciable de una función de pricing de opciones, entendida como sustituto numérico de un solver matemático ya conocido. La motivación no es predecir nada sobre el mercado sino abaratar la evaluación de modelos cuya solución analítica no existe o es cara: una vez entrenada offline a partir de datos sintéticos generados por el propio solver, la red puede sustituir al modelo original en tareas que exigen millones de evaluaciones, como la calibración diaria, el cálculo de Greeks o la simulación masiva de escenarios. Tomamos como referencia central el trabajo de Chen, Didisheim y Scheidegger sobre \emph{deep surrogates}~\cite{chen2025} y como complemento metodológico el de Huge y Savine sobre \emph{differential machine learning}~\cite{huge2020}. Nuestro objeto de estudio son las opciones europeas vainilla bajo dos modelos, Black-Scholes como caso de validación con solución cerrada y Heston como caso principal, donde la integración por Fourier semi-cerrada es lo suficientemente costosa como para justificar el surrogate. El trabajo se articula en torno a cinco experimentos comparativos que varían cada uno una sola dimensión del problema: la elección de métrica de evaluación, la activación de la red, la distribución del muestreo, la eficiencia computacional y el uso de información diferencial en la pérdida. Este documento describe la revisión bibliográfica que sustenta el planteamiento, la metodología experimental, el diseño concreto de cada comparación y la estructura del código que la implementa.
-\end{abstract}
+% --- Cabecera tipo journal ---------------------------------------------------
+\begingroup
+\setlength{\parskip}{0pt}
+\noindent\rule{\textwidth}{0.6pt}\\[2pt]
+{\footnotesize\itshape Proyecto de investigación \textbullet{} Métodos numéricos \textbullet{} Universidad Carlos III de Madrid\hfill\today}\\[2pt]
+\noindent\rule{\textwidth}{0.2pt}
+\endgroup
 
-\vspace{0.5em}
-\noindent\textbf{Palabras clave:} \emph{deep surrogates}, pricing de opciones, Heston, Black-Scholes, \emph{differential machine learning}, métodos numéricos.
+\vspace{2.2em}
 
-\tableofcontents
-\vspace{1em}
+\begin{center}
+{\LARGE\bfseries Redes neuronales como aproximadores numéricos\\[3pt]
+para pricing de opciones bajo Black-Scholes y Heston\par}
+
+\vspace{1.4em}
+
+{\large
+Ángel Fernández Sánchez \quad\textbullet\quad Jorge Alfageme Sotillos \quad\textbullet\quad Héctor Pérez Ledesma\par}
+\end{center}
+
+\vspace{1.8em}
+
+% --- Abstract ----------------------------------------------------------------
+\begingroup
+\leftskip=1.2em \rightskip=1.2em
+\noindent{\scshape\bfseries\small Resumen.}\enspace\small
+Este trabajo estudia bajo qué condiciones una red neuronal profunda puede actuar como un \emph{surrogate} preciso, rápido y diferenciable de una función de pricing de opciones, entendida como sustituto numérico de un solver matemático ya conocido. La motivación no es predecir nada sobre el mercado sino abaratar la evaluación de modelos cuya solución analítica no existe o es cara: una vez entrenada offline a partir de datos sintéticos generados por el propio solver, la red puede sustituir al modelo original en tareas que exigen millones de evaluaciones, como la calibración diaria, el cálculo de Greeks o la simulación masiva de escenarios. Tomamos como referencia central el trabajo de Chen, Didisheim y Scheidegger sobre \emph{deep surrogates}~\cite{chen2025} y como complemento metodológico el de Huge y Savine sobre \emph{differential machine learning}~\cite{huge2020}. Nuestro objeto de estudio son las opciones europeas vainilla bajo dos modelos: Black-Scholes como caso de validación con solución cerrada y Heston como caso principal, donde la integración por Fourier semi-cerrada es lo suficientemente costosa como para justificar el surrogate. El trabajo se articula en torno a cinco experimentos comparativos que varían cada uno una sola dimensión del problema: la elección de métrica de evaluación, la activación de la red, la distribución del muestreo, la eficiencia computacional y el uso de información diferencial en la pérdida. Este documento describe la revisión bibliográfica que sustenta el planteamiento, la metodología experimental, el diseño concreto de cada comparación y la estructura del código que la implementa.
+
+\vspace{0.6em}
+\noindent{\scshape\bfseries\small Palabras clave.}\enspace\small \emph{deep surrogates}, pricing de opciones, Heston, Black-Scholes, \emph{differential machine learning}, métodos numéricos.
+\endgroup
+
+\vspace{1.4em}
+\noindent\rule{\textwidth}{0.2pt}
+\vspace{0.8em}
 
 % =============================================================================
 \section{Introducción}
