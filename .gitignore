@@ -19,6 +19,9 @@ docs/latex/*.aux
 docs/latex/*.log
 docs/latex/*.out
 docs/latex/*.toc
+docs/latex/*.fdb_latexmk
+docs/latex/*.fls
+docs/latex/*.synctex.gz
 texput.log
 
 # Generated experiment artifacts
