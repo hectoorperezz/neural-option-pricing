@@ -137,6 +137,8 @@ def _vega_proxy_per_bin(
         maturity=maturity,
         rate=rate,
         inverter=inverter,
+        workers=surrogate_input.evaluator.iv_workers,
+        progress=surrogate_input.evaluator.iv_progress,
     )
 
     n_points = target_prices.shape[0]
