@@ -18,6 +18,7 @@ layout used by :class:`src.datasets.sampler.BalancedBinSampler.iter_bins`::
     bin_id = maturity_idx * n_moneyness_bins + moneyness_idx
 """
 
+
 from __future__ import annotations
 
 from dataclasses import dataclass
