@@ -140,9 +140,11 @@ Los bins de moneyness serán deep OTM, OTM, ATM, ITM y deep ITM. Los bins de ven
 |---|---|
 | Deep OTM `[0.4, 0.7)` | Weekly `[7/365, 14/365)` |
 | OTM `[0.7, 0.9)` | Short `[14/365, 1/12)` |
-| ATM `[0.9, 1.1]` | Medium-short `[1/12, 0.25)` |
-| ITM `(1.1, 1.3]` | Medium `[0.25, 1.0)` |
-| Deep ITM `(1.3, 2.0]` | Long `[1.0, 2.0]` |
+| ATM `[0.9, 1.1)` | Medium-short `[1/12, 0.25)` |
+| ITM `[1.1, 1.3)` | Medium `[0.25, 1.0)` |
+| Deep ITM `[1.3, 2.0]` | Long `[1.0, 2.0]` |
+
+La convención de fronteras es semiabierta: cada bin incluye su extremo inferior y excluye su extremo superior, salvo el último bin de cada eje, que incluye también el extremo superior del dominio. Así, por ejemplo, `m = 1.1` cae en ITM y `m = 2.0` cae en deep ITM.
 
 ## Experimento E1 — Precio frente a volatilidad implícita
 

@@ -151,11 +151,13 @@ Evaluamos por bins porque las métricas globales como el MAE promedio esconden l
 |---|---|
 | Deep OTM `[0.4, 0.7)` | Weekly `[7/365, 14/365)` |
 | OTM `[0.7, 0.9)` | Short `[14/365, 1/12)` |
-| ATM `[0.9, 1.1]` | Medium-short `[1/12, 0.25)` |
-| ITM `(1.1, 1.3]` | Medium `[0.25, 1.0)` |
-| Deep ITM `(1.3, 2.0]` | Long `[1.0, 2.0]` |
+| ATM `[0.9, 1.1)` | Medium-short `[1/12, 0.25)` |
+| ITM `[1.1, 1.3)` | Medium `[0.25, 1.0)` |
+| Deep ITM `[1.3, 2.0]` | Long `[1.0, 2.0]` |
 
 Cinco niveles de moneyness por cinco de vencimiento dan veinticinco bins. Esta partición es más granular que la de Chen porque queremos separar explícitamente wings profundas y opciones semanales, dos regiones relevantes para trading y numéricamente más delicadas. Con cinco mil opciones por bin, el test set completo tendría ciento veinticinco mil puntos, un tamaño asumible para evaluación y suficiente para reportar percentiles cincuenta, noventa y cinco y noventa y nueve con confianza. Reportar percentiles altos en lugar de solo el MAE es importante porque la cola de la distribución de errores es donde aparecen los problemas operativos: una opción con error grande puntual puede arruinar un cálculo de cobertura aunque el promedio de errores esté bien.
+
+La convención de fronteras es semiabierta: cada bin incluye su extremo inferior y excluye su extremo superior, salvo el último bin de cada eje, que incluye también el extremo superior del dominio. Así, por ejemplo, `m = 1.1` cae en ITM y `m = 2.0` cae en deep ITM.
 
 ## Tareas por fase
 
