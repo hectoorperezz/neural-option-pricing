@@ -164,7 +164,46 @@ para pricing de opciones bajo\\[2pt]
 Black-Scholes y Heston\par}
 \end{center}
 
-\vspace{\stretch{1.0}}
+\vspace{\stretch{0.55}}
+
+% --- Mini red neuronal estilizada como detalle temático --------------------
+\begin{center}
+\begin{tikzpicture}[
+  x=12pt, y=10pt,
+  inode/.style={circle, inner sep=0pt, minimum size=8pt,
+                fill=uniyellow, draw=uniblack, line width=0.5pt},
+  hnode/.style={circle, inner sep=0pt, minimum size=6pt,
+                fill=white, draw=uniblack, line width=0.5pt},
+  onode/.style={circle, inner sep=0pt, minimum size=9pt,
+                fill=uniblack, draw=uniblack, line width=0.5pt},
+  link/.style={draw=papergrey!45, line width=0.25pt}
+]
+  % Input layer (3 nodos amarillos)
+  \node[inode] (i1) at (0, 4) {};
+  \node[inode] (i2) at (0, 2) {};
+  \node[inode] (i3) at (0, 0) {};
+  % Hidden 1 (5 nodos)
+  \foreach \i in {1,...,5} {\node[hnode] (a\i) at (5, {5 - (\i-1)*1.25}) {};}
+  % Hidden 2 (5 nodos)
+  \foreach \i in {1,...,5} {\node[hnode] (b\i) at (10, {5 - (\i-1)*1.25}) {};}
+  % Hidden 3 (5 nodos)
+  \foreach \i in {1,...,5} {\node[hnode] (c\i) at (15, {5 - (\i-1)*1.25}) {};}
+  % Output (1 nodo negro grande)
+  \node[onode] (o) at (20, 2) {};
+  % Conexiones
+  \foreach \src in {i1,i2,i3}{\foreach \i in {1,...,5}{\draw[link] (\src) -- (a\i);}}
+  \foreach \i in {1,...,5}{\foreach \j in {1,...,5}{\draw[link] (a\i) -- (b\j);}}
+  \foreach \i in {1,...,5}{\foreach \j in {1,...,5}{\draw[link] (b\i) -- (c\j);}}
+  \foreach \i in {1,...,5}{\draw[link] (c\i) -- (o);}
+  % Etiquetas debajo (theta -> P)
+  \node[font=\scriptsize\itshape, text=black!65] at (0,-2.0) {$\boldsymbol{\theta}$};
+  \node[font=\scriptsize\itshape, text=black!65] at (20,-2.0) {$P$};
+  \draw[-{Stealth[length=2mm,width=1.5mm]}, draw=black!50, line width=0.3pt]
+    (1.4,-2.0) -- (18.6,-2.0);
+\end{tikzpicture}
+\end{center}
+
+\vspace{\stretch{0.55}}
 
 % --- Autores ----------------------------------------------------------------
 \begin{center}
