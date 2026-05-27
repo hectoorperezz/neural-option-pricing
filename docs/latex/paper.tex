@@ -727,7 +727,7 @@ La comparación de métodos de muestreo se concentra únicamente en el experimen
 
 \subsection{Particiones y evaluación por bins}
 
-La partición de datos tiene tres niveles. El entrenamiento usa la distribución propia de cada surrogate. La validación usa una muestra independiente uniforme de cincuenta mil puntos por familia de modelo y sirve para monitorizar convergencia, activar el \emph{scheduler} y seleccionar el \emph{checkpoint}. La regla de selección es siempre el menor $\text{MAE}(C/K)$ en validación, incluso cuando la pérdida de entrenamiento incluye Delta. Mantener la regla fija es importante para que las comparaciones sean limpias: si el surrogate entrenado con DML se seleccionase con una métrica combinada de precio y Delta, no sabríamos si la mejora viene de la pérdida diferencial o de haber escogido otro punto de la trayectoria de entrenamiento.
+La partición de datos tiene tres niveles. El entrenamiento usa la distribución propia de cada surrogate. La validación usa una muestra independiente uniforme de cincuenta mil puntos por familia de modelo y sirve para monitorizar convergencia y seleccionar el \emph{checkpoint}. La regla de selección es siempre el menor $\text{MAE}(C/K)$ en validación, incluso cuando la pérdida de entrenamiento incluye Delta. Mantener la regla fija es importante para que las comparaciones sean limpias: si el surrogate entrenado con DML se seleccionase con una métrica combinada de precio y Delta, no sabríamos si la mejora viene de la pérdida diferencial o de haber escogido otro punto de la trayectoria de entrenamiento.
 
 El test final es independiente y balanceado por \emph{bins}, y se comparte por todos los surrogates de una misma familia. Cada uno de los veinticinco \emph{bins} tiene cinco mil puntos, para un total de ciento veinticinco mil observaciones. Esta decisión es especialmente importante en E3: si evaluásemos H-5 en una muestra con la misma concentración con la que entrena, confundiríamos precisión local con mejora global. El test balanceado permite ver exactamente dónde gana y dónde pierde el \emph{sampler} enfocado.
 
@@ -793,7 +793,7 @@ Parámetro & Valor \\
 \midrule
 Arquitectura & MLP, 4 capas ocultas, 128 unidades \\
 Activación por defecto & Swish \\
-Optimizador & Adam, $\text{lr}=10^{-3}$, \emph{scheduler} reduce-on-plateau \\
+Optimizador & Adam, $\text{lr}=10^{-3}$ fijo \\
 \emph{Batch size} & 1024 (\emph{baseline}) \\
 Épocas máximas & 100 \\
 Regularización & ninguna (datos sintéticos) \\
@@ -809,7 +809,7 @@ Semilla & fijada por configuración \\
 \label{tab:constantes}
 \end{table}
 
-Un MLP \emph{feed-forward} simple es suficiente porque el teorema universal de aproximación garantiza que basta para funciones suaves en dimensión moderada, y Chen et al. confirman empíricamente que funciona en Bates en dimensión trece. Cuatro capas ocultas y 128 unidades por capa dan del orden de cincuenta mil parámetros. Swish entra como activación por defecto porque, según Chen, es la decisión clave para que las Deltas obtenidas por \emph{autograd} sean estables. Adam con $\text{lr}=10^{-3}$ es el \emph{default} de PyTorch y converge sin sintonización en la inmensa mayoría de problemas de regresión, y el \emph{scheduler} \emph{reduce-on-plateau} divide el \emph{learning rate} por dos cuando la pérdida de validación se estanca.
+Un MLP \emph{feed-forward} simple es suficiente porque el teorema universal de aproximación garantiza que basta para funciones suaves en dimensión moderada, y Chen et al. confirman empíricamente que funciona en Bates en dimensión trece. Cuatro capas ocultas y 128 unidades por capa dan del orden de cincuenta mil parámetros. Swish entra como activación por defecto porque, según Chen, es la decisión clave para que las Deltas obtenidas por \emph{autograd} sean estables. Adam con $\text{lr}=10^{-3}$ es el \emph{default} de PyTorch y converge sin sintonización en la inmensa mayoría de problemas de regresión. El \emph{learning rate} se mantiene fijo durante el entrenamiento; la estabilidad final se controla escogiendo el \emph{checkpoint} con menor $\text{MAE}(C/K)$ en validación.
 
 La ausencia de regularización es la decisión metodológica más importante y viene directamente de Chen. En aprendizaje automático clásico la regularización existe porque los datos llevan ruido y la red tendería a memorizarlo. En un surrogate, los \emph{targets} vienen del propio solver, son deterministas y no hay nada que memorizar; la pérdida de validación nunca empeora por \emph{overfitting}, solo se estanca cuando la red llega al límite de su capacidad expresiva. Por eso no usamos \emph{early stopping}, \emph{dropout} ni \emph{weight decay}. El tope de cien épocas funciona como límite práctico.
 
