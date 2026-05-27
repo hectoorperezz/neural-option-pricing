@@ -21,6 +21,7 @@
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{titlesec}
 \captionsetup{font=small,labelfont=bf,margin=1em}
 
 % --- Color, hyperref ---------------------------------------------------------
@@ -100,6 +101,21 @@
 \newcommand{\param}[1]{\texttt{#1}}
 \newcommand{\eq}[1]{\ensuremath{#1}}
 
+% --- Personalización de \section: barrita amarilla a la izquierda ----------
+\titleformat{\section}[hang]
+  {\normalfont\Large\bfseries\color{uniblack}}
+  {\colorbox{uniyellow}{\makebox[1.05em]{\strut\color{uniblack}\thesection}}\hspace{0.6em}}
+  {0pt}
+  {}
+\titlespacing*{\section}{0pt}{2.0ex plus 1ex minus .2ex}{1.2ex plus .2ex}
+
+% --- \subsection con un acento amarillo más sutil ---------------------------
+\titleformat{\subsection}[hang]
+  {\normalfont\large\bfseries\color{uniblack}}
+  {\textcolor{uniyellow}{\rule[0.05em]{0.18em}{0.95em}}\hspace{0.5em}\thesubsection}
+  {0.4em}
+  {}
+
 \begin{document}
 
 % =============================================================================
@@ -108,11 +124,22 @@
 \begin{titlepage}
 \thispagestyle{empty}
 
-% Bandas amarillas a sangre arriba y abajo
+% Bandas amarillas a sangre arriba y abajo + watermark .h en la esquina
 \begin{tikzpicture}[remember picture, overlay]
+  % Watermark grande del monograma .h, cortado a sangre por la esquina
+  \node[anchor=south east, inner sep=0pt]
+    at ([xshift=2.2cm, yshift=-0.4cm]current page.south east) {%
+    \begin{tikzpicture}
+      \fill[uniyellow!30] (0,0) rectangle (1.0cm,1.0cm);
+      \node[anchor=base west, inner sep=0pt, text=uniyellow!30,
+            font=\fontsize{260pt}{260pt}\fontfamily{lmss}\selectfont\bfseries]
+        at (1.5cm,0) {h};
+    \end{tikzpicture}};
+  % Banda superior
   \fill[uniyellow]
     (current page.north west) rectangle
     ([yshift=-1.1cm]current page.north east);
+  % Banda inferior
   \fill[uniyellow]
     (current page.south west) rectangle
     ([yshift=0.9cm]current page.south east);
