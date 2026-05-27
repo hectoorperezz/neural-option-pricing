@@ -118,28 +118,15 @@
     ([yshift=0.9cm]current page.south east);
 \end{tikzpicture}
 
-\vspace*{0.8cm}
+\vspace*{0.4cm}
 
-% --- Cabecera: logo institucional centrado ---------------------------------
-\begin{center}
-\includegraphics[width=7cm]{assets/logo_hesperides.png}
-\end{center}
+% --- Cabecera: logo institucional ------------------------------------------
+\noindent\includegraphics[width=8.5cm]{assets/logo_hesperides.png}
 
-\vspace{\stretch{1.0}}
+\vspace{\stretch{1.1}}
 
 % --- Bloque de título -------------------------------------------------------
-% Detalle editorial: línea fina larga con cuadrado amarillo central
-% que rima con el "punto" cuadrado del logotipo ".h".
-\newcommand{\heritmark}{%
-  \begin{tikzpicture}[baseline=0]
-    \draw[uniyellow, line width=0.6pt] (0,0) -- (3.0cm,0);
-    \fill[uniyellow] (1.42cm,-0.085) rectangle (1.58cm,0.085);
-    \draw[uniyellow, line width=0.6pt] (1.7cm,0) -- (4.7cm,0);
-  \end{tikzpicture}}
-
 \begin{center}
-\heritmark\par
-\vspace{22pt}
 {\Huge\bfseries\color{uniblack}
 Redes neuronales\\[6pt]
 como aproximadores numéricos\par}
@@ -148,9 +135,6 @@ como aproximadores numéricos\par}
 {\large\itshape\color{black!72}
 para pricing de opciones bajo\\[2pt]
 Black-Scholes y Heston\par}
-
-\vspace{22pt}
-\heritmark
 \end{center}
 
 \vspace{\stretch{1.0}}
@@ -158,10 +142,7 @@ Black-Scholes y Heston\par}
 % --- Autores ----------------------------------------------------------------
 \begin{center}
 {\footnotesize\scshape\bfseries\color{black!72} Autores}\par
-\vspace{8pt}
-\tikz \fill[uniyellow] (0,0) rectangle (4pt,4pt);
-\par
-\vspace{12pt}
+\vspace{10pt}
 {\large
 Ángel Fernández Sánchez\\[3pt]
 Jorge Alfageme Sotillos\\[3pt]
