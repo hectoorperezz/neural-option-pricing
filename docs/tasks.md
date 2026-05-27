@@ -74,7 +74,7 @@ Para evitar reabrir discusiones durante la ejecución, fijamos los valores sigui
 |---|---|
 | Arquitectura | MLP, 4 capas ocultas, 128 unidades |
 | Activación por defecto | Swish |
-| Optimizador | Adam, `lr=1e-3`, scheduler reduce-on-plateau |
+| Optimizador | Adam, `lr=1e-3` fijo |
 | Batch size | 1024 |
 | Épocas máximas | 100 |
 | Regularización | ninguna (datos sintéticos) |
@@ -89,7 +89,7 @@ Elegimos un MLP feed-forward simple porque el teorema universal de aproximación
 
 Swish entra como activación de los surrogates baseline porque, según Chen, es la decisión clave para que las Deltas obtenidas por autograd sean estables. ReLU tiene un kink en cero, su derivada es discontinua y eso ensucia las Deltas que la red produce. Swish, en cambio, es suave en todo el dominio, se comporta como ReLU para `x` grande y como una transición suave cerca del origen. Softplus y tanh son también suaves pero tienen problemas de saturación o de gradiente vanishing en redes profundas que las hacen menos atractivas como defaults. Como E2 compara las cuatro de forma sistemática, usar Swish en el resto de surrogates como baseline tiene sentido porque es nuestra hipótesis de mejor opción y queremos que los experimentos no relacionados con la activación se hagan sobre el candidato más fuerte.
 
-Adam con `lr=1e-3` es el default de PyTorch y converge sin sintonización en la inmensa mayoría de problemas de regresión. Alternativas como L-BFGS pueden funcionar mejor en aproximación supervisada pura pero son menos robustas en redes profundas y requieren más cuidado al sintonizarlas. Batch size de 1024 es potencia de dos para alineación de memoria en GPU y da entre 195 y 488 updates por época según el tamaño del dataset, suficiente para que el optimizador progrese sin que el ruido del gradiente domine la dinámica. El scheduler reduce-on-plateau es lo más simple que funciona: cuando la pérdida de validación se estanca, divide el learning rate por dos. No requiere conocer a priori cuándo decaer, a diferencia de cosine decay o step schedulers que requieren un cronograma fijado de antemano.
+Adam con `lr=1e-3` es el default de PyTorch y converge sin sintonización en la inmensa mayoría de problemas de regresión. Alternativas como L-BFGS pueden funcionar mejor en aproximación supervisada pura pero son menos robustas en redes profundas y requieren más cuidado al sintonizarlas. Mantener el learning rate fijo replica de forma simple el espíritu de Chen et al.: optimizador Adam, datos sintéticos grandes, ausencia de regularización y selección del mejor checkpoint por validación. Un scheduler de learning rate queda como posible extensión de optimización, pero no forma parte del protocolo principal para no introducir otra variable en las comparaciones. Batch size de 1024 es potencia de dos para alineación de memoria en GPU y da entre 195 y 488 updates por época según el tamaño del dataset, suficiente para que el optimizador progrese sin que el ruido del gradiente domine la dinámica.
 
 La ausencia de regularización es la decisión metodológica más importante y viene directamente de Chen. En aprendizaje automático clásico la regularización existe porque los datos llevan ruido y la red tendería a memorizarlo, lo que produce overfitting. En un surrogate los targets vienen del propio solver, son deterministas y no hay nada que memorizar. La pérdida de validación nunca empeora por overfitting, solo se estanca cuando la red llega al límite de su capacidad expresiva. Por eso no usamos early stopping, dropout ni weight decay. El tope de cien épocas funciona como límite práctico para que el entrenamiento no se eternice si la pérdida deja de bajar antes de tiempo.
 
@@ -137,7 +137,7 @@ El sampler enfocado de H-5 será una mezcla `50/50`. La mitad de las muestras se
 
 ---
 
-Separaremos explícitamente entrenamiento, validación y test. El conjunto de entrenamiento depende de cada surrogate: `BS-*` usa 200k puntos, `H-*` usa 500k puntos y las variantes `small` de E5 usan 100k puntos. El conjunto de validación será independiente, uniforme y de 50k puntos por familia de modelo. Se usará para monitorizar convergencia, ajustar el scheduler y seleccionar el checkpoint por una regla fija, pero no para detener el entrenamiento antes del presupuesto definido.
+Separaremos explícitamente entrenamiento, validación y test. El conjunto de entrenamiento depende de cada surrogate: `BS-*` usa 200k puntos, `H-*` usa 500k puntos y las variantes `small` de E5 usan 100k puntos. El conjunto de validación será independiente, uniforme y de 50k puntos por familia de modelo. Se usará para monitorizar convergencia y seleccionar el checkpoint por una regla fija, pero no para activar early stopping ni modificar el presupuesto de entrenamiento.
 
 El test final será independiente y balanceado por bins. Para cada familia de modelo generaremos 5k puntos por cada combinación de moneyness y vencimiento, es decir, 25 bins y 125k puntos en total. Este test no se usa durante entrenamiento ni selección de checkpoint. En particular, H-3 y H-5 se evalúan sobre el mismo test balanceado, aunque H-5 haya entrenado con muestreo enfocado. Así E3 mide mejora o deterioro por región sin sesgar la evaluación hacia la distribución de entrenamiento de H-5.
 
@@ -208,7 +208,7 @@ El smoke test sobre BS-3 al final de esta fase no es opcional. Es la primera vez
 | ☐ | Entrenar BS-1, BS-2, BS-3, BS-4 | Cuatro checkpoints en `results/bs/` |
 | ☐ | `binning.py` y `metrics.py` | Módulo de evaluación con tests |
 | ☐ | Tablas y heatmaps por bin para cada surrogate | Figuras y CSV en `results/bs/` |
-| ☐ | Análisis E1 (precio vs IV) sobre BS-3 | Tablas y heatmaps precio/IV por bin |
+| ☐ | Análisis E1 (precio vs IV) sobre BS-3 | Tablas y heatmaps precio/IV por bin, incluyendo Vega proxy generada por el evaluador |
 | ☐ | Análisis E2 (activaciones) sobre BS-1..4 | Sección redactable de la memoria |
 
 **Criterio de salida:** ☐ el análisis Black-Scholes reporta `MAE_Delta` y `MAE(C/K)` por activación y por bin, y permite comprobar si el patrón de activaciones suaves frente a ReLU aparece en un entorno con Delta analítica.
