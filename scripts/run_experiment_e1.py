@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -67,6 +68,21 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--device", default="auto")
     parser.add_argument("--batch-size", type=int, default=32768)
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=max(1, (os.cpu_count() or 2) - 2),
+        help=(
+            "Number of parallel CPU workers for the BS implied-volatility "
+            "inversion (the slow stage of E1). Defaults to all physical "
+            "cores minus two."
+        ),
+    )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable the tqdm progress bar shown during IV inversion.",
+    )
     return parser.parse_args()
 
 
@@ -132,6 +148,8 @@ def _build_input(
     pricer: Any,
     device: str,
     batch_size: int,
+    iv_workers: int,
+    iv_progress: bool,
 ) -> SurrogateInput:
     model = load_checkpoint(checkpoint_dir)
     dataset, bin_id = load_test_dataset(test_path)
@@ -140,6 +158,8 @@ def _build_input(
         pricer=pricer,
         device=device,
         batch_size=batch_size,
+        iv_workers=iv_workers,
+        iv_progress=iv_progress,
     )
     return SurrogateInput(
         surrogate_id=surrogate_id,
@@ -172,6 +192,8 @@ def main() -> None:
         )
 
     device = resolve_device(args.device)
+    iv_workers = max(1, int(args.workers))
+    iv_progress = not args.no_progress
     inputs: list[SurrogateInput] = []
     if bs_paths_set:
         inputs.append(
@@ -182,6 +204,8 @@ def main() -> None:
                 pricer=BlackScholesSolver(),
                 device=device,
                 batch_size=args.batch_size,
+                iv_workers=iv_workers,
+                iv_progress=iv_progress,
             )
         )
     if heston_paths_set:
@@ -193,11 +217,15 @@ def main() -> None:
                 pricer=HestonSolver(),
                 device=device,
                 batch_size=args.batch_size,
+                iv_workers=iv_workers,
+                iv_progress=iv_progress,
             )
         )
 
     print(f"E1 — surrogates: {', '.join(item.surrogate_id for item in inputs)}")
     print(f"device         : {device}")
+    print(f"iv_workers     : {iv_workers}")
+    print(f"iv_progress    : {iv_progress}")
 
     study = PriceVsIVStudy(inputs=tuple(inputs))
     started_at = time.perf_counter()

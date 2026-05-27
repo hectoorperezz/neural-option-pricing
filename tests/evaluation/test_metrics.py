@@ -331,3 +331,100 @@ def test_invert_iv_rejects_shape_mismatch() -> None:
             maturity=np.array([0.5, 1.0]),
             rate=np.array([0.02, 0.02]),
         )
+
+
+# --- invert_implied_volatility_call: parallel path + progress -------------
+
+
+def test_invert_iv_parallel_matches_serial() -> None:
+    """workers>1 must reproduce workers=1 bit-for-bit."""
+    bs = BlackScholesSolver()
+    inverter = ImpliedVolatilityInverter(solver=bs)
+    rng = np.random.default_rng(17)
+    n = 64
+    sigma_true = rng.uniform(0.05, 0.6, size=n)
+    moneyness = rng.uniform(0.7, 1.5, size=n)
+    maturity = rng.uniform(0.1, 1.5, size=n)
+    rate = rng.uniform(0.0, 0.05, size=n)
+
+    prices = np.array(
+        [
+            float(
+                bs.call_price(
+                    spot=float(moneyness[i]),
+                    strike=1.0,
+                    maturity=float(maturity[i]),
+                    rate=float(rate[i]),
+                    volatility=float(sigma_true[i]),
+                    dividend_yield=0.0,
+                )
+            )
+            for i in range(n)
+        ]
+    )
+
+    iv_serial, ok_serial = invert_implied_volatility_call(
+        prices=prices,
+        moneyness=moneyness,
+        maturity=maturity,
+        rate=rate,
+        inverter=inverter,
+        workers=1,
+    )
+    iv_parallel, ok_parallel = invert_implied_volatility_call(
+        prices=prices,
+        moneyness=moneyness,
+        maturity=maturity,
+        rate=rate,
+        inverter=inverter,
+        workers=2,
+    )
+
+    np.testing.assert_array_equal(ok_serial, ok_parallel)
+    np.testing.assert_allclose(iv_serial, iv_parallel, atol=0.0, rtol=0.0)
+
+
+def test_invert_iv_progress_flag_does_not_break_serial() -> None:
+    bs = BlackScholesSolver()
+    inverter = ImpliedVolatilityInverter(solver=bs)
+    price = float(
+        bs.call_price(
+            spot=1.0, strike=1.0, maturity=0.5,
+            rate=0.02, volatility=0.3, dividend_yield=0.0,
+        )
+    )
+
+    iv, ok = invert_implied_volatility_call(
+        prices=np.array([price]),
+        moneyness=np.array([1.0]),
+        maturity=np.array([0.5]),
+        rate=np.array([0.02]),
+        inverter=inverter,
+        progress=True,
+    )
+
+    assert bool(ok[0])
+    np.testing.assert_allclose(iv[0], 0.3, atol=1e-6)
+
+
+def test_invert_iv_rejects_zero_workers() -> None:
+    with pytest.raises(ValueError, match="workers"):
+        invert_implied_volatility_call(
+            prices=np.array([0.1]),
+            moneyness=np.array([1.0]),
+            maturity=np.array([0.5]),
+            rate=np.array([0.02]),
+            workers=0,
+        )
+
+
+def test_invert_iv_handles_empty_input() -> None:
+    iv, ok = invert_implied_volatility_call(
+        prices=np.array([]),
+        moneyness=np.array([]),
+        maturity=np.array([]),
+        rate=np.array([]),
+        workers=4,
+    )
+    assert iv.shape == (0,)
+    assert ok.shape == (0,)
