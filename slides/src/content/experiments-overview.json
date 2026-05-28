@@ -1,0 +1,36 @@
+{
+  "eyebrow": "Cinco experimentos",
+  "headline": "Cada uno aísla una sola dimensión.",
+  "experiments": [
+    {
+      "id": "E1",
+      "title": "Precio vs IV",
+      "summary": "¿Un error bajo en precio implica un error bajo en volatilidad implícita?",
+      "metric": "$\\mathrm{MAE}(C/K)$ vs $\\mathrm{MAE}_{\\mathrm{IV}}$"
+    },
+    {
+      "id": "E2",
+      "title": "Activaciones y Greeks",
+      "summary": "¿Qué activación produce mejores Greeks sin degradar el precio?",
+      "metric": "$\\mathrm{MAE}_{\\Delta}$ por bin"
+    },
+    {
+      "id": "E3",
+      "title": "Muestreo enfocado",
+      "summary": "¿Sembrar puntos en ATM y vencimientos cortos reduce el error donde duele?",
+      "metric": "$\\mathrm{MAE}_{\\mathrm{IV}}$ en ATM × cortos"
+    },
+    {
+      "id": "E4",
+      "title": "Eficiencia",
+      "summary": "¿Qué speedup ofrece el surrogate vs el solver, en función del tamaño de lote?",
+      "metric": "$t_{\\text{solver}} / t_{\\text{surrogate}}$"
+    },
+    {
+      "id": "E5",
+      "title": "Differential ML",
+      "summary": "¿Añadir Delta como target diferencial mejora la eficiencia muestral?",
+      "metric": "Mejora de $\\mathrm{MAE}_{\\Delta}$ a igual precio"
+    }
+  ]
+}

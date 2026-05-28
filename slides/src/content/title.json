@@ -1,0 +1,19 @@
+{
+  "subject": "Métodos numéricos y simulación estocástica",
+  "course": "Curso 2025/2026",
+  "asignaturaLabel": "Asignatura",
+  "title": {
+    "lineOne": "Redes neuronales",
+    "lineTwo": [
+      "como ",
+      { "text": "aproximadores numéricos" }
+    ]
+  },
+  "subtitle": "para pricing de opciones bajo Black-Scholes y Heston",
+  "authorsLabel": "Autores",
+  "authors": [
+    "Ángel Fernández Sánchez",
+    "Jorge Alfageme Sotillos",
+    "Héctor Pérez Ledesma"
+  ]
+}

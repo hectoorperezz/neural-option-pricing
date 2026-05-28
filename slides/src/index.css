@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+@theme {
+  /* Paleta institucional Universidad de las Hespérides */
+  --color-uni-yellow: #ffd100;
+  --color-uni-yellow-soft: #fdea99;
+  --color-uni-cream: #fff8dc;
+  --color-uni-black: #0e0e0e;
+  --color-ink: #1a1a1a;
+  --color-ink-soft: #3a3a3a;
+  --color-ink-muted: #6a6a6a;
+  --color-page: #fcfaf3;
+
+  /* Acentos secundarios para gráficos */
+  --color-accent-red: #b83a3a;
+  --color-accent-green: #3e8e41;
+  --color-accent-orange: #d96b1c;
+  --color-accent-purple: #6f3fae;
+
+  /* Tipografías */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", "Iowan Old Style", "Apple Garamond", "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-page);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow: hidden;
+  }
+
+  ::selection {
+    background-color: var(--color-uni-yellow);
+    color: var(--color-uni-black);
+  }
+}
+
+/* Tipografía utilitaria */
+@utility font-display {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+  letter-spacing: -0.015em;
+}
+
+@utility eyebrow {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: var(--color-ink-muted);
+}
+
+/* Slide layout: 16:9 escalable, padding generoso, deja sitio al SideRail */
+@utility slide-frame {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(3rem, 5vw, 5.5rem) clamp(3rem, 6vw, 7rem) clamp(3rem, 5vw, 5rem) clamp(6rem, 10vw, 11rem);
+  background: transparent;
+}
+
+/* Variante sin sidebar (portada y cierre usan el lienzo completo) */
+@utility slide-frame-bleed {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+}
+
+/* Tinta amarilla como subrayado animable */
+@utility ink-highlight {
+  background-image: linear-gradient(
+    180deg,
+    transparent 65%,
+    var(--color-uni-yellow) 65%,
+    var(--color-uni-yellow) 95%,
+    transparent 95%
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}

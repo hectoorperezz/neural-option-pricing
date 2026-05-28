@@ -1,0 +1,32 @@
+{
+  "eyebrow": "Pregunta de investigación",
+  "lines": [
+    "¿Bajo qué condiciones puede una red neuronal",
+    "sustituir a un solver de pricing de opciones"
+  ],
+  "italicLine": [
+    "de forma ",
+    { "text": "precisa", "highlight": true },
+    ", ",
+    { "text": "rápida", "highlight": true },
+    " y ",
+    { "text": "diferenciable", "highlight": true },
+    "?"
+  ],
+  "body": "No predecimos nada del mercado. Sustituimos un cálculo numérico costoso por una aproximación entrenada offline a partir del propio modelo.",
+  "formula": "\\hat{f}_{\\theta}(x) \\approx f(x), \\qquad x \\in \\mathcal{X} \\subset \\mathbb{R}^d",
+  "axes": [
+    {
+      "label": "Precisa",
+      "description": "Error pequeño en precio, IV y Delta dentro del dominio operativo."
+    },
+    {
+      "label": "Rápida",
+      "description": "Órdenes de magnitud más rápida que la integración numérica original."
+    },
+    {
+      "label": "Diferenciable",
+      "description": "Gradientes por autograd, listos para Greeks y calibración."
+    }
+  ]
+}

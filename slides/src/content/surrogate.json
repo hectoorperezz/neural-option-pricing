@@ -1,0 +1,35 @@
+{
+  "eyebrow": "Deep surrogate",
+  "headline": [
+    "Una red entrenada offline que ",
+    { "text": "sustituye al solver", "highlight": true },
+    " en producción."
+  ],
+  "body": "El modelo genera datos sintéticos. La red aprende la función de pricing a partir de ellos. Una vez entrenada, evaluarla es órdenes de magnitud más rápido y, además, es diferenciable por construcción.",
+  "steps": [
+    {
+      "id": "model",
+      "title": "Modelo financiero",
+      "subtitle": "Heston, Bates, …"
+    },
+    {
+      "id": "data",
+      "title": "Datos sintéticos",
+      "subtitle": "$(x_i,\\ f(x_i))$"
+    },
+    {
+      "id": "net",
+      "title": "Red neuronal",
+      "subtitle": "$\\hat{f}_{\\theta}(x)$"
+    },
+    {
+      "id": "eval",
+      "title": "Evaluación rápida",
+      "subtitle": "calib., Greeks, MC"
+    }
+  ],
+  "formula": {
+    "body": "\\hat{f}_{\\theta}(x) \\approx f(x), \\quad x \\in \\mathcal{X} \\subset \\mathbb{R}^d",
+    "caption": "Sin ruido (datos deterministas) y con función suave: la maldición de la dimensionalidad queda controlada (Barron, Grohs et al.)."
+  }
+}

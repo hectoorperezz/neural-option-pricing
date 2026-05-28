@@ -1,0 +1,48 @@
+{
+  "eyebrow": "Revisión bibliográfica",
+  "headline": [
+    "Cinco referencias que ",
+    { "text": "guían las decisiones", "highlight": true },
+    " del proyecto."
+  ],
+  "body": "Tres papers recomendados como punto de partida y dos incorporados al detectarlos como los más alineados con nuestros objetivos: deep surrogates y differential machine learning.",
+  "papers": [
+    {
+      "authors": "Hutchinson, Lo y Poggio",
+      "year": "1994",
+      "title": "Pricing y delta-hedging con learning networks",
+      "contribution": "Primer trabajo sistemático: una red aprende la función de pricing y se usa operativamente para cubrir.",
+      "role": "Punto de partida histórico"
+    },
+    {
+      "authors": "Becker, Cheridito y Jentzen",
+      "year": "2019",
+      "title": "Deep optimal stopping",
+      "contribution": "Aprenden la política de ejercicio anticipado vía sigmoides + Monte Carlo en alta dimensión.",
+      "role": "Línea complementaria"
+    },
+    {
+      "authors": "Ruf y Wang",
+      "year": "2020",
+      "title": "Neural networks for option pricing and hedging",
+      "contribution": "Revisión de más de 150 artículos; lecciones sobre inputs estacionarios y data leakage temporal.",
+      "role": "Mapa del campo"
+    },
+    {
+      "authors": "Chen, Didisheim y Scheidegger",
+      "year": "2025",
+      "title": "Deep surrogates for finance",
+      "contribution": "Surrogate de Bates 13-D entrenado con $10^9$ muestras. Decisiones clave: Swish, evaluación en IV, recorte de bordes.",
+      "role": "Núcleo de la metodología",
+      "central": true
+    },
+    {
+      "authors": "Huge y Savine",
+      "year": "2020",
+      "title": "Differential machine learning",
+      "contribution": "Añadir derivadas verdaderas al training set mejora Greeks y reduce el tamaño de muestra requerido.",
+      "role": "Motiva el experimento E5",
+      "central": true
+    }
+  ]
+}

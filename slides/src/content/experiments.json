@@ -1,0 +1,44 @@
+[
+  {
+    "id": "E1",
+    "title": "Precio frente a volatilidad implícita",
+    "question": "Recalculamos métricas sobre BS-3 y H-3 por bin para ver si dos surrogates con MAE de precio similar pueden tener errores muy distintos en IV.",
+    "metric": "$\\mathrm{MAE}(C/K)$ vs $\\mathrm{MAE}_{\\mathrm{IV}}$",
+    "surrogates": ["BS-3", "H-3"],
+    "hypothesis": "En bins de Vega baja el error de precio se amplifica al pasar a IV: dos surrogates con $\\mathrm{MAE}(C/K)$ comparable pueden tener $\\mathrm{MAE}_{\\mathrm{IV}}$ muy distintos."
+  },
+  {
+    "id": "E2",
+    "title": "Activaciones y calidad de Delta",
+    "question": "Comparamos ReLU, Softplus, Swish y tanh con arquitectura, optimizador y semilla fijos. La hipótesis: las activaciones suaves dan Deltas mejores aunque el precio sea comparable.",
+    "metric": "$\\mathrm{MAE}_{\\Delta}\\ \\text{por bin}$",
+    "surrogates": ["BS-1..4", "H-1..4"],
+    "hypothesis": "La discontinuidad de $\\mathrm{ReLU}'$ en $0$ se propaga a la Delta por autograd. Las activaciones suaves (Softplus, Swish, tanh) dan derivadas más estables a $\\mathrm{MAE}(C/K)$ comparable."
+  },
+  {
+    "id": "E3",
+    "title": "Muestreo uniforme vs enfocado",
+    "question": "H-3 frente a H-5: misma arquitectura, mismo dataset total, único cambio el sampler. Mide si concentrar masa cerca del ATM mejora los bins críticos.",
+    "metric": "$\\mathrm{MAE}_{\\mathrm{IV}}\\ \\text{en ATM} \\times \\{\\text{weekly, short, m-short}\\}$",
+    "surrogates": ["H-3", "H-5"],
+    "hypothesis": "Concentrar masa en zonas de mayor curvatura (ATM y vencimientos cortos) reduce el error donde más importa para trading.",
+    "threshold": "Positivo fuerte: mejora $\\geq 10\\%$ en bins críticos y deterioro global $\\leq 10\\%$."
+  },
+  {
+    "id": "E4",
+    "title": "Eficiencia computacional",
+    "question": "Cronometra evaluaciones del surrogate frente al solver original de Heston en lotes crecientes: tres warmups, diez repeticiones medidas, mediana y rango intercuartílico, CPU y GPU por separado.",
+    "metric": "$\\text{speedup} = t_{\\text{solver}} / t_{\\text{surrogate}}$",
+    "surrogates": ["H-3"],
+    "hypothesis": "El speedup crece con el tamaño de lote: la red amortiza el coste fijo de la pasada cuando procesa muchos puntos en paralelo, especialmente en GPU."
+  },
+  {
+    "id": "E5",
+    "title": "Differential ML con Delta",
+    "question": "H-3-small frente a H-6-small (la única diferencia es añadir MAE(Δ) a la pérdida) con H-3 como referencia de muestra grande. Mide si la información diferencial mejora la eficiencia muestral.",
+    "metric": "Mejora de $\\mathrm{MAE}_{\\Delta}$ vs precio comparable",
+    "surrogates": ["H-3-small", "H-6-small", "H-3"],
+    "hypothesis": "Análogo a Hermite frente a Lagrange: añadir la derivada al training set reconstruye mejor la forma local de $f$ con menos muestras.",
+    "threshold": "Positivo fuerte: $\\mathrm{MAE}_{\\Delta}$ mejora $\\geq 20\\%$ y $\\mathrm{MAE}(C/K)$ no empeora más de $10\\%$."
+  }
+]
