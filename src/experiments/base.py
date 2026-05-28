@@ -1,26 +1,22 @@
-"""Abstract base for the five experiments planned in ``docs/tasks.md``.
+"""Base común para los experimentos definidos en ``docs/tasks.md``.
 
-Per ``docs/architecture.md`` §Experiments:
+Según ``docs/architecture.md``:
 
     "Cada uno de los cinco experimentos del proyecto se materializa como una
     clase concreta que hereda de `Experiment`. La clase base define el
     método `run`, que es lo único que los scripts de análisis llaman."
 
-This module exposes:
+Este módulo define:
 
-* :class:`SurrogateInput` — a frozen dataclass bundling one surrogate
-  with the test dataset and the :class:`BinEvaluator` that should
-  evaluate it. Each experiment that walks several surrogates takes a
-  tuple of these.
-* :class:`ExperimentResult` — the uniform return type of every
-  ``Experiment.run()``. Holds the per-bin table, the observational
-  summary, the experiment identifier and the underlying
-  :class:`Report` objects so consumers can also derive heatmaps.
-* :class:`Experiment` — the abstract base with the single required
-  method ``run`` returning an :class:`ExperimentResult`.
+* ``SurrogateInput``: empaqueta un surrogate, su dataset de test y el
+  evaluador que debe usar.
+* ``ExperimentResult``: salida uniforme de los experimentos, con tabla,
+  resumen y reports internos para generar heatmaps.
+* ``Experiment``: clase base abstracta con un único método obligatorio,
+  ``run``.
 
-E4 (the timing benchmark) intentionally lives outside this hierarchy
-because it consumes a different protocol (no :class:`BinEvaluator`).
+E4 vive fuera de esta jerarquía porque mide tiempos y no usa
+``BinEvaluator``.
 """
 
 from __future__ import annotations
@@ -41,19 +37,14 @@ from src.evaluation.report import Report
 
 @dataclass(frozen=True)
 class SurrogateInput:
-    """One bundle ready to be evaluated by an :class:`Experiment`.
+    """Paquete mínimo para evaluar un surrogate dentro de un experimento.
 
-    Each experiment that consumes :class:`BinEvaluator` receives a tuple
-    of these so that surrogates of different families (BS vs Heston) can
-    coexist in the same study. The ``evaluator`` already carries the
-    matching solver and partition.
+    Permite mezclar surrogates de distintas familias en un mismo estudio. El
+    ``evaluator`` ya trae el solver y la partición que corresponden.
 
-    ``labels`` is an optional categorical metadata dictionary that
-    experiments such as :class:`ActivationStudy` (E2),
-    ``SamplingStudy`` (E3) or ``DMLStudy`` (E5) read to fill the table
-    column that distinguishes the dimension being varied. Keys used so
-    far: ``"activation"`` (E2), ``"sampler"`` (E3), ``"loss"`` (E5).
-    Experiments must tolerate a missing key gracefully (empty string).
+    ``labels`` guarda metadatos categóricos como ``activation`` (E2),
+    ``sampler`` (E3), ``loss`` o ``role`` (E5). Si falta una clave, el
+    experimento debe tratarla como cadena vacía.
     """
 
     surrogate_id: str
@@ -66,17 +57,14 @@ class SurrogateInput:
 
 @dataclass(frozen=True)
 class ExperimentResult:
-    """Uniform output of every :class:`Experiment.run` invocation.
+    """Salida uniforme de ``Experiment.run``.
 
-    ``table`` is the long-format per-(surrogate, bin) table that the CSV
-    serializer writes verbatim. ``reports`` keeps the underlying
-    :class:`Report` instances so callers can additionally produce
-    heatmaps via :meth:`Report.to_heatmap`.
+    ``table`` es la tabla larga por ``(surrogate, bin)`` que se escribe a
+    CSV. ``reports`` conserva los ``Report`` originales para poder generar
+    heatmaps sin recalcular métricas.
 
-    ``verdict`` is populated only by experiments whose methodology
-    document defines pre-registered classification thresholds (E3 and
-    E5). For E1 and E2 the methodology document forbids emitting a
-    verdict, so the field stays ``None``.
+    ``verdict`` solo se rellena cuando la metodología define umbrales
+    pre-registrados, como en E3 y E5. En E1 y E2 permanece en ``None``.
     """
 
     experiment_id: str
@@ -99,7 +87,7 @@ class ExperimentResult:
             )
 
     def to_csv(self, path: str | Path) -> None:
-        """Write the long-format table to ``path``."""
+        """Escribe la tabla larga a CSV."""
         if not self.table:
             raise ValueError("cannot serialize an empty table")
         output_path = Path(path)
@@ -117,11 +105,10 @@ class ExperimentResult:
         metrics: tuple[str, ...] = ("price", "iv"),
         statistic: str = "mean",
     ) -> list[Path]:
-        """Save one heatmap PNG per (surrogate, metric) into ``directory``.
+        """Guarda un heatmap PNG por ``(surrogate, metric)``.
 
-        Returns the list of paths written. By default produces the two
-        figures that ``tasks.md`` §E1 requires ("heatmaps separados para
-        precio e IV"); other experiments can request additional metrics.
+        Devuelve las rutas escritas. Por defecto genera precio e IV, que son
+        los dos heatmaps requeridos en E1.
         """
         output_dir = Path(directory)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -145,8 +132,8 @@ class ExperimentResult:
 
 
 class Experiment(ABC):
-    """Abstract base for the five experiments documented in ``tasks.md``."""
+    """Base abstracta de los experimentos definidos en ``tasks.md``."""
 
     @abstractmethod
     def run(self) -> ExperimentResult:
-        """Execute the experiment and return its :class:`ExperimentResult`."""
+        """Ejecuta el experimento y devuelve su resultado."""

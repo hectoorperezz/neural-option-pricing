@@ -1,4 +1,4 @@
-# Experimento de escalado de datos
+# Data scaling
 
 **Autores:** Ángel Fernández Sánchez, Jorge Alfageme Sotillos, Héctor Pérez Ledesma
 
@@ -6,17 +6,17 @@
 
 ---
 
-Este documento se conserva como registro diagnóstico del run de escalado. No sustituye al protocolo formal de evaluación de E1-E5, que sigue usando los tests balanceados de 125k puntos definidos en `tasks.md` y `metodologia.md`. Los artefactos específicos del run 50x no forman parte de la versión final del repositorio; las cifras relevantes quedan resumidas aquí para justificar las decisiones tomadas durante el proyecto.
+Este documento se conserva como registro diagnóstico del run de escalado. No sustituye al protocolo formal de evaluación de E1-E5, que sigue usando los tests balanceados de 125k puntos definidos en `metodologia.md`. Los artefactos específicos del run 50x no forman parte de la versión final del repositorio; las cifras relevantes quedan resumidas aquí para justificar las decisiones tomadas durante el proyecto.
 
 ## Motivación
 
 ---
 
-Tras cerrar la primera ronda de entrenamiento de los once surrogates definidos en `tasks.md` sobre los datasets baseline (200k para Black-Scholes y 500k para Heston), observamos que todos ellos convergían a un plateau de `MAE(C/K)` en validación del orden de `1e-2`, sin acercarse al criterio de salida de Fase 1 que exige `MAE_precio < 1e-4` para BS-3. El estancamiento aparecía además en las últimas veinte épocas como oscilación en torno al mínimo y no como descenso continuo, sugiriendo que el entrenamiento sí había encontrado un óptimo local pero ese óptimo estaba lejos del objetivo nominal del proyecto.
+Tras cerrar la primera ronda de entrenamiento de los once surrogates definidos en la metodología sobre los datasets baseline (200k para Black-Scholes y 500k para Heston), observamos que todos ellos se estabilizaban con un `MAE(C/K)` de validación del orden de `1e-2`, lejos del objetivo nominal que esperábamos para BS-3. En las últimas veinte épocas el error oscilaba en torno al mínimo en lugar de descender de forma sostenida, sugiriendo que el entrenamiento había encontrado una región estable pero todavía lejos del nivel de precisión buscado.
 
-Antes de cuestionar la arquitectura acordada (MLP 4x128, decisión cerrada en las constantes del pipeline) o cambiar el resto de hiperparámetros, convenía aislar primero la fuente del plateau. La hipótesis natural era la de aproximación universal: con una MLP de cincuenta mil parámetros y una función de pricing tan suave como la de Heston, ¿estaba saturando la capacidad de la red o simplemente faltaban datos? El paper de Chen, Didisheim y Scheidegger entrena su deep surrogate con mil millones de muestras en un espacio de trece dimensiones; nuestro baseline operaba en un régimen aproximado de diez muestras por parámetro, mientras que ellos están en torno a las mil. Esa diferencia de dos órdenes de magnitud justificó plantear un experimento de escalado de datos como diagnóstico previo a cualquier modificación del modelo.
+Antes de cuestionar la arquitectura acordada (MLP 4x128, decisión cerrada en las constantes del pipeline) o cambiar el resto de hiperparámetros, convenía aislar primero la fuente de ese estancamiento. La hipótesis natural era la de aproximación universal: con una MLP de cincuenta mil parámetros y una función de pricing tan suave como la de Heston, ¿estaba saturando la capacidad de la red o simplemente faltaban datos? El paper de Chen, Didisheim y Scheidegger entrena su deep surrogate con mil millones de muestras en un espacio de trece dimensiones; nuestro baseline operaba en un régimen aproximado de diez muestras por parámetro, mientras que ellos están en torno a las mil. Esa diferencia de dos órdenes de magnitud justificó plantear un experimento de escalado de datos como diagnóstico previo a cualquier modificación del modelo.
 
-El experimento consistió en regenerar los datasets de entrenamiento y validación multiplicando por cincuenta el número de muestras, reentrenar los once surrogates manteniendo idénticos arquitectura, optimizador, función de pérdida, número de épocas y semilla, y comparar el `MAE(C/K)` resultante con el baseline. Si el plateau era data-bound, esperábamos ver una reducción sustancial del error. Si la red ya estaba saturada, esperábamos ver una reducción marginal o nula, y entonces tendría sentido abrir la conversación con el grupo para escalar arquitectura.
+El experimento consistió en regenerar los datasets de entrenamiento y validación multiplicando por cincuenta el número de muestras, reentrenar los once surrogates manteniendo idénticos arquitectura, optimizador, función de pérdida, número de épocas y semilla de cada surrogate, y comparar el `MAE(C/K)` resultante con el baseline. Si el límite observado venía principalmente del volumen de datos, esperábamos ver una reducción sustancial del error. Si la red ya estaba saturada, esperábamos ver una reducción marginal o nula, y entonces tendría sentido abrir la conversación con el grupo para escalar arquitectura.
 
 ## Configuración del experimento
 
@@ -42,7 +42,7 @@ La generación de los datasets escalados llevó 8h 20min con paralelismo de 32 w
 
 ---
 
-El plateau era **data-bound**. Todos los surrogates mejoraron entre un 37% y un 91% en `MAE(C/K)` de validación al pasar al régimen 50x. El detalle por surrogate fue:
+Todos los surrogates mejoraron entre un 37% y un 91% en `MAE(C/K)` de validación al pasar al régimen 50x. El detalle por surrogate fue:
 
 | ID | Activación | Pérdida | Baseline `MAE(C/K)` | Escalado 50x | Reducción |
 |---|---|---|---|---|---|
@@ -94,19 +94,3 @@ La comparación canónica de E5 enfrenta H-6-small (5M de muestras con precio y 
 | H-3 | 25M uniforme | precio | 1.045e-03 |
 
 A igualdad de datos, H-6-small redujo el `MAE` de precio en un 37% respecto a H-3-small, lo que confirma en este régimen la tesis central de Huge y Savine: añadir gradientes verdaderos a la pérdida actúa como una forma potente de data augmentation. La métrica primaria de E5, no obstante, es `MAE_Delta`; por tanto esta lectura es preliminar y no reemplaza el experimento formal.
-
-## Diagnóstico del plateau
-
----
-
-El experimento responde de forma clara a la pregunta que lo motivaba: el plateau a `1e-2` que observábamos en el baseline 500k era data-bound, no model-bound. La MLP 4x128 absorbió un volumen de datos cincuenta veces mayor sin saturar su capacidad, reduciendo el error de validación entre un factor tres y un factor diez según el surrogate.
-
-La consecuencia metodológica directa es que los tamaños baseline definidos originalmente (200k para BS, 500k para Heston) eran pequeños para los objetivos de precisión del proyecto. Llegar a `1e-4` parece requerir más datos, más épocas, una estrategia de learning rate distinta o una arquitectura mayor. El run 50x no resuelve por completo el objetivo numérico, pero sí descarta que el cuello inmediato fuese la capacidad de la red en el régimen inicial.
-
-## Implicaciones
-
----
-
-Este documento justifica por qué los resultados de entrenamiento mejoraron al escalar datos, pero no cambia el protocolo final de evaluación. Las tablas formales de E1, E2 y E3 deben leerse desde `docs/experiments/` y `results/metrics/`, usando los tests balanceados de 125k puntos. Los tests x50 no se usan como referencia principal porque encarecen de forma innecesaria la inversión IV y no estaban en el diseño pre-registrado.
-
-El hallazgo transversal que sí puede aprovecharse en la memoria final es metodológico: antes de cambiar arquitectura conviene comprobar si el error está limitado por datos. En este proyecto, el escalado redujo de forma fuerte el error de validación, lo que conecta con la tesis de Chen et al. sobre el papel central de datasets sintéticos masivos en deep surrogates.

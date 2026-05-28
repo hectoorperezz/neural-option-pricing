@@ -1,7 +1,7 @@
-"""End-to-end timing benchmark for E4 (efficiency study).
+"""Benchmark extremo a extremo para E4.
 
-Materializes the protocol pre-registered in ``docs/tasks.md`` §E4 and
-``docs/metodologia.md`` §"Experimento E4 — Eficiencia computacional":
+Implementa el protocolo pre-registrado en ``docs/tasks.md`` y
+``docs/metodologia.md``:
 
     "El protocolo concreto usará lotes de 10^2, 10^3, 10^4 y 10^5
     opciones. Para cada tamaño se harán tres ejecuciones de warmup que
@@ -16,7 +16,7 @@ Materializes the protocol pre-registered in ``docs/tasks.md`` §E4 and
     repeticiones, hardware, modo CPU/GPU y si se incluyen conversiones
     de datos."
 
-And the contract declared in ``docs/architecture.md`` §Evaluation:
+También respeta el contrato definido en ``docs/architecture.md``:
 
     "La clase `TimingBenchmark` implementa el protocolo de eficiencia
     del experimento E4: recibe un surrogate y un solver, ejecuta tres
@@ -24,28 +24,13 @@ And the contract declared in ``docs/architecture.md`` §Evaluation:
     y 10^5, y devuelve mediana, p25/p75 y speedup por lote, separando
     CPU y GPU cuando aplique."
 
-The benchmark therefore:
+Por eso el benchmark:
 
-* Includes the cost of moving the input batch from NumPy to ``torch``
-  and onto the target device on every surrogate measurement. The
-  methodology document explicitly asks to disclose whether conversions
-  are included; we include them because they are part of what the user
-  actually pays in a calibration loop.
-* Calls ``torch.cuda.synchronize`` before stopping the clock on CUDA
-  devices so the recorded time reflects the kernel finishing, not the
-  launch returning.
-* Measures the Heston solver **once** per batch size and reuses those
-  timings across every device under benchmark; the solver runs on CPU
-  regardless of where the surrogate lives, so measuring it twice would
-  be wasted wall-clock time without adding information.
-* Optionally fans the solver out across multiple processes with
-  ``solver_workers``; this matches what a calibration loop user would
-  actually do in production (the in-process ``scipy.integrate.quad``
-  per point is serial by construction) and avoids one core saturating
-  while the other 23 sit idle.
-* Emits one log line per measured cell (with wall-clock delta, batch
-  size, device and current speedup) so a long run is observable in
-  real time instead of going silent for minutes.
+* incluye la conversión de NumPy a Torch y el movimiento al device;
+* sincroniza CUDA antes de parar el reloj;
+* mide el solver una sola vez por lote y reutiliza ese tiempo por device;
+* permite paralelizar el solver con ``solver_workers``;
+* emite logs por celda para que una ejecución larga sea observable.
 """
 
 from __future__ import annotations
@@ -66,9 +51,8 @@ from src.solvers.heston import HestonSolver
 OptionPricer = BlackScholesSolver | HestonSolver
 
 
-# Default protocol constants — pre-registered in ``tasks.md`` §E4 /
-# ``metodologia.md`` §E4. Exposed so the script and docs cite them
-# verbatim and tests can override them with smaller values.
+# Constantes del protocolo pre-registrado en tasks.md §E4 y metodologia.md
+# §E4. Quedan expuestas para que scripts, docs y tests usen la misma fuente.
 DEFAULT_BATCH_SIZES: tuple[int, ...] = (100, 1_000, 10_000, 100_000)
 DEFAULT_N_WARMUPS: int = 3
 DEFAULT_N_REPETITIONS: int = 10
@@ -76,7 +60,7 @@ DEFAULT_N_REPETITIONS: int = 10
 
 @dataclass(frozen=True)
 class TimingResult:
-    """Raw timings for one ``(device, batch_size)`` cell."""
+    """Tiempos crudos de una celda ``(device, batch_size)``."""
 
     device: str
     batch_size: int
@@ -131,7 +115,7 @@ class TimingResult:
 
 @dataclass(frozen=True)
 class TimingBenchmark:
-    """Time the surrogate vs the solver on identical input slices."""
+    """Cronometra surrogate y solver sobre los mismos puntos."""
 
     pricer: OptionPricer
     raw_inputs: np.ndarray
@@ -183,13 +167,11 @@ class TimingBenchmark:
         devices: tuple[str, ...],
         logger: Callable[[str], None] | None = None,
     ) -> tuple[TimingResult, ...]:
-        """Benchmark surrogate vs solver on every (device, batch_size) cell.
+        """Mide surrogate y solver en cada celda ``(device, batch_size)``.
 
-        The solver is timed exactly once per batch size (its work does
-        not depend on the surrogate device) and the resulting timings
-        are reused for each ``TimingResult`` that shares that batch
-        size. ``logger`` defaults to ``print`` with ``flush=True``;
-        pass ``logger=lambda _: None`` to suppress output (tests do).
+        El solver se mide una sola vez por tamaño de lote porque no depende
+        del device del surrogate. ``logger`` usa ``print`` por defecto; en
+        tests se puede pasar ``logger=lambda _: None``.
         """
         if not devices:
             raise ValueError("at least one device must be provided")
@@ -261,7 +243,7 @@ class TimingBenchmark:
 
 
 # ---------------------------------------------------------------------------
-# Solver timing (single-process or pool-fanned)
+# Cronometraje del solver
 # ---------------------------------------------------------------------------
 
 
@@ -323,13 +305,11 @@ def _measure_solver_parallel(
     pool: ProcessPoolExecutor,
     n_workers: int,
 ) -> list[float]:
-    """Fan the solver out across processes by splitting ``raw_inputs``.
+    """Paraleliza el solver dividiendo ``raw_inputs`` en chunks.
 
-    Each worker receives a contiguous chunk of the input batch and runs
-    the solver on it. The wall-clock time recorded is the time from
-    submitting the first chunk to receiving the last result, which is
-    the number a calibration-loop user would feel. The pool itself is
-    created once by the caller and reused across batch sizes.
+    Cada worker recibe un bloque contiguo. El tiempo medido va desde el envío
+    del primer chunk hasta la recepción del último resultado. El pool se crea
+    fuera y se reutiliza entre tamaños de lote.
     """
     chunks = _split_chunks(raw_inputs, n_workers)
     args = [(pricer, chunk, input_names) for chunk in chunks]
@@ -357,7 +337,7 @@ def _split_chunks(
 
 
 # ---------------------------------------------------------------------------
-# Surrogate timing (per device)
+# Cronometraje del surrogate por device
 # ---------------------------------------------------------------------------
 
 
@@ -390,7 +370,7 @@ def _measure_surrogate(
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Utilidades internas
 # ---------------------------------------------------------------------------
 
 
@@ -399,7 +379,7 @@ def _solver_kwargs(
     raw_inputs: np.ndarray,
     input_names: tuple[str, ...],
 ) -> dict[str, Any]:
-    """Build the keyword arguments expected by ``pricer.call_price``."""
+    """Construye los argumentos esperados por ``pricer.call_price``."""
     columns = {
         name: raw_inputs[:, idx].astype(np.float64)
         for idx, name in enumerate(input_names)
@@ -437,7 +417,7 @@ def _elapsed(start: float) -> str:
 
 
 class _NullPool:
-    """Sentinel used in place of a real pool when ``solver_workers==1``."""
+    """Sentinela usado cuando ``solver_workers == 1``."""
 
     def __enter__(self) -> "_NullPool":
         return self
@@ -453,10 +433,9 @@ def _maybe_pool(n_workers: int) -> ProcessPoolExecutor | _NullPool:
 
 
 def default_solver_workers() -> int:
-    """Sensible default for ``solver_workers`` based on CPU count.
+    """Valor por defecto razonable para ``solver_workers``.
 
-    Mirrors the convention used elsewhere in the project: ``cpu_count - 2``
-    leaves room for the OS and the surrogate while still feeding the
-    solver fan-out, and clamps to at least 1 on tiny boxes.
+    Usa ``cpu_count - 2`` para dejar margen al sistema y al surrogate, con
+    mínimo 1 para máquinas pequeñas.
     """
     return max(1, (os.cpu_count() or 2) - 2)

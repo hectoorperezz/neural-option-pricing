@@ -37,7 +37,7 @@ def _to_output(value: np.ndarray) -> float | np.ndarray:
 
 @dataclass(frozen=True)
 class BlackScholesSolver:
-    """Closed-form Black-Scholes pricer for European call options."""
+    """Pricer Black-Scholes cerrado para calls europeas."""
 
     def call_price(
         self,

@@ -32,14 +32,14 @@ class GeneratedArrayBatch:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate synthetic option-pricing datasets.")
+    parser = argparse.ArgumentParser(description="Genera datasets sintéticos de pricing de opciones.")
     parser.add_argument("--family", choices=("black_scholes", "heston"), required=True)
     parser.add_argument("--sampler", choices=("uniform", "focused", "balanced"), default="uniform")
     parser.add_argument("--n-samples", type=int)
     parser.add_argument(
         "--samples-per-bin",
         type=int,
-        help="Required for --sampler balanced. Total samples = 25 * samples_per_bin.",
+        help="Obligatorio con --sampler balanced. Total = 25 * samples_per_bin.",
     )
     parser.add_argument("--batch-size", type=int, default=10_000)
     parser.add_argument("--seed", type=int, default=42)
@@ -50,28 +50,24 @@ def parse_args() -> argparse.Namespace:
         "--compression",
         choices=("none", "zip"),
         default="none",
-        help="Use zip compression for smaller files at the cost of extra CPU time.",
+        help="Usa compresión zip para archivos más pequeños a costa de más CPU.",
     )
     parser.add_argument(
         "--overwrite",
         action="store_true",
-        help="Overwrite output files if they already exist.",
+        help="Sobrescribe el archivo de salida si ya existe.",
     )
     parser.add_argument(
         "--progress-every",
         type=int,
         default=5,
-        help="Print progress every N accepted batches.",
+        help="Imprime progreso cada N batches aceptados.",
     )
     parser.add_argument(
         "--workers",
         type=int,
         default=1,
-        help="Parallel worker processes. 1 (default) preserves bit-identical output of "
-             "the original sequential implementation. With workers>1, n_samples is split "
-             "across workers and sub-seeds are spawned deterministically via "
-             "np.random.SeedSequence.spawn(workers). Same (seed, workers) reproduces "
-             "the exact same dataset; different workers values give different datasets.",
+        help="Procesos paralelos. 1 preserva la salida secuencial bit a bit. Con workers>1 se divide n_samples y se crean subsemillas deterministas con SeedSequence.",
     )
     return parser.parse_args()
 
@@ -380,7 +376,7 @@ def _worker_chunk(
     seed: int,
     include_delta: bool,
 ) -> dict[str, Any]:
-    """Run inside a worker process. Generate `chunk_n` accepted samples and return arrays."""
+    """Genera ``chunk_n`` muestras aceptadas dentro de un worker."""
     domain = make_black_scholes_domain() if family == "black_scholes" else make_heston_domain()
     solver = BlackScholesSolver() if family == "black_scholes" else HestonSolver()
     if sampler_type == "focused":
@@ -429,7 +425,7 @@ def _worker_balanced_bins(
     seed: int,
     include_delta: bool,
 ) -> list[dict[str, Any]]:
-    """Run inside a worker process. Generate full bins for the given bin_ids."""
+    """Genera bins completos dentro de un worker."""
     domain = make_black_scholes_domain() if family == "black_scholes" else make_heston_domain()
     solver = BlackScholesSolver() if family == "black_scholes" else HestonSolver()
     sampler = BalancedBinSampler(domain, samples_per_bin=samples_per_bin)

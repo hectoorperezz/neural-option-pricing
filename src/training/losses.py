@@ -16,7 +16,7 @@ class LossOutput:
 
 
 class PriceLoss(nn.Module):
-    """L1 loss on normalized call price C/K."""
+    """Pérdida L1 sobre el precio normalizado ``C/K``."""
 
     def forward(self, model: nn.Module, batch: dict[str, torch.Tensor]) -> LossOutput:
         predictions = model(batch["features"])
@@ -25,7 +25,7 @@ class PriceLoss(nn.Module):
 
 
 class DifferentialLoss(nn.Module):
-    """Price plus Delta loss for E5."""
+    """Pérdida conjunta de precio y Delta para E5."""
 
     def __init__(
         self,

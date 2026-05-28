@@ -1,18 +1,11 @@
-"""Run E3 (Sampling Study) on the documented Heston surrogates.
+"""Ejecuta E3 sobre los surrogates Heston documentados.
 
-Orchestration only. The script loads the uniform baseline (``H-3``) and
-the focused candidate (``H-5``) — the two subjects that
-``docs/tasks.md`` §E3 and ``docs/metodologia.md`` §"Experimento E3 —
-Muestreo uniforme frente a enfocado" designate — constructs a single
-:class:`BinEvaluator` (Heston solver) backed by the shared balanced test
-set, builds :class:`SurrogateInput` instances labelled with the sampler
-each surrogate was trained on (``"uniform"`` for the baseline checkpoint
-and ``"focused"`` for the candidate), hands them to
-:class:`SamplingStudy`, and writes the per-bin long-format CSV plus the
-price and IV heatmaps that ``docs/tasks.md`` §"Fase 3" mandates as the
-deliverable.
+Este script solo orquesta. Carga H-3 como baseline uniforme y H-5 como
+candidato enfocado, comparte el mismo test balanced, etiqueta cada input con
+su sampler, ejecuta ``SamplingStudy`` y escribe el CSV largo por bin junto
+con heatmaps de precio e IV.
 
-Typical invocation::
+Uso típico::
 
     python scripts/run_experiment_e3.py \\
         --uniform-checkpoint results/checkpoints/H-3 \\
@@ -21,23 +14,19 @@ Typical invocation::
         --output             results/metrics/e3_table.csv \\
         --figures-dir        results/figures/e3
 
-The metric primary printed in the summary is the per-bin ``MAE_IV``
-averaged over the three critical ATM bins (weekly, short, medium-short),
-and the verdict is the pre-registered fuerte/débil/negativo
-classification from ``metodologia.md`` §E3.
+La métrica primaria del resumen es ``MAE_IV`` medio en los tres bins críticos
+ATM: weekly, short y medium-short. El veredicto sigue la clasificación
+pre-registrada en ``metodologia.md``.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import time
 from pathlib import Path
-from typing import Any
 
 import numpy as np
-import torch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -46,49 +35,49 @@ if str(REPO_ROOT) not in sys.path:
 from src.datasets.generator import OptionDataset
 from src.evaluation import BinEvaluator, BinPartition
 from src.experiments import ExperimentResult, SamplingStudy, SurrogateInput
-from src.models import MLP
 from src.solvers import HestonSolver
+from src.utils import load_mlp_checkpoint, load_option_dataset_npz, resolve_torch_device
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Run E3 (uniform H-3 vs focused H-5) and write per-bin CSV "
-            "plus price/IV heatmaps."
+            "Ejecuta E3 (H-3 uniforme frente a H-5 enfocado) y escribe "
+            "CSV por bin junto con heatmaps de precio e IV."
         )
     )
     parser.add_argument(
         "--uniform-checkpoint",
         type=Path,
         required=True,
-        help="Checkpoint directory for the uniform baseline (e.g. H-3).",
+        help="Directorio del checkpoint baseline uniforme, por ejemplo H-3.",
     )
     parser.add_argument(
         "--focused-checkpoint",
         type=Path,
         required=True,
-        help="Checkpoint directory for the focused candidate (e.g. H-5).",
+        help="Directorio del checkpoint candidato enfocado, por ejemplo H-5.",
     )
     parser.add_argument(
         "--test",
         type=Path,
         required=True,
         help=(
-            "Balanced Heston test set shared by both surrogates "
-            "(documented in tasks.md §E3 as the same balanced test)."
+            "Test set Heston balanced compartido por ambos surrogates, "
+            "según lo documentado en tasks.md §E3."
         ),
     )
     parser.add_argument(
         "--output",
         type=Path,
         required=True,
-        help="Destination CSV (long-format, one row per surrogate x bin).",
+        help="CSV de destino en formato largo, una fila por surrogate y bin.",
     )
     parser.add_argument(
         "--figures-dir",
         type=Path,
         default=None,
-        help="Optional directory for price/IV heatmap PNGs.",
+        help="Directorio opcional para heatmaps PNG de precio e IV.",
     )
     parser.add_argument("--device", default="auto")
     parser.add_argument("--batch-size", type=int, default=32768)
@@ -97,71 +86,16 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=1,
         help=(
-            "Worker processes for IV inversion. 1 keeps it serial; "
-            "values above 1 fan out via ProcessPoolExecutor."
+            "Procesos para la inversión de IV. Con 1 se mantiene en serie; "
+            "valores mayores reparten el trabajo con ProcessPoolExecutor."
         ),
     )
     parser.add_argument(
         "--iv-progress",
         action="store_true",
-        help="Show a tqdm bar during IV inversion (long jobs).",
+        help="Muestra una barra tqdm durante la inversión de IV.",
     )
     return parser.parse_args()
-
-
-def resolve_device(device: str) -> str:
-    if device == "auto":
-        return "cuda" if torch.cuda.is_available() else "cpu"
-    return device
-
-
-def load_checkpoint(checkpoint_dir: Path) -> tuple[torch.nn.Module, dict[str, Any]]:
-    config_path = checkpoint_dir / "config.json"
-    checkpoint_path = checkpoint_dir / "checkpoint.pt"
-    if not config_path.exists():
-        raise FileNotFoundError(f"missing config.json at {config_path}")
-    if not checkpoint_path.exists():
-        raise FileNotFoundError(f"missing checkpoint.pt at {checkpoint_path}")
-
-    config = json.loads(config_path.read_text(encoding="utf-8"))
-    checkpoint = torch.load(checkpoint_path, map_location="cpu")
-
-    model = MLP(
-        input_dim=int(config["input_dim"]),
-        hidden_width=int(config["hidden_width"]),
-        hidden_layers=int(config["hidden_layers"]),
-        activation=str(config["activation"]),
-    )
-    state_dict = checkpoint.get("best_state_dict") or checkpoint["model_state_dict"]
-    model.load_state_dict(state_dict)
-    model.eval()
-    return model, config
-
-
-def load_test_dataset(path: Path) -> tuple[OptionDataset, np.ndarray | None]:
-    if not path.exists():
-        raise FileNotFoundError(f"test set not found at {path}")
-    data = np.load(path, allow_pickle=False)
-    features = np.asarray(data["features"], dtype=np.float32)
-    raw_inputs = np.asarray(data["raw_inputs"], dtype=np.float32)
-    prices = np.asarray(data["prices"], dtype=np.float32).reshape(-1, 1)
-    deltas: np.ndarray | None = None
-    if "deltas" in data.files:
-        deltas = np.asarray(data["deltas"], dtype=np.float32).reshape(-1, 1)
-    input_names = tuple(str(name) for name in np.asarray(data["input_names"]).tolist())
-    bin_id: np.ndarray | None = None
-    if "bin_id" in data.files:
-        bin_id = np.asarray(data["bin_id"], dtype=np.int64)
-    return (
-        OptionDataset(
-            features=torch.from_numpy(features),
-            prices=torch.from_numpy(prices),
-            deltas=None if deltas is None else torch.from_numpy(deltas),
-            raw_inputs=torch.from_numpy(raw_inputs),
-            input_names=input_names,
-        ),
-        bin_id,
-    )
 
 
 def _build_input(
@@ -172,7 +106,7 @@ def _build_input(
     bin_id: np.ndarray | None,
     evaluator: BinEvaluator,
 ) -> SurrogateInput:
-    model, _config = load_checkpoint(checkpoint_dir)
+    model, _config = load_mlp_checkpoint(checkpoint_dir)
     return SurrogateInput(
         surrogate_id=checkpoint_dir.name,
         model=model,
@@ -195,7 +129,7 @@ def _run(
     iv_workers: int,
     iv_progress: bool,
 ) -> ExperimentResult:
-    dataset, bin_id = load_test_dataset(test_path)
+    dataset, bin_id = load_option_dataset_npz(test_path)
     evaluator = BinEvaluator(
         partition=BinPartition.default(),
         pricer=HestonSolver(),
@@ -243,7 +177,7 @@ def _run(
 
 def main() -> None:
     args = parse_args()
-    device = resolve_device(args.device)
+    device = resolve_torch_device(args.device)
     print("E3 — Sampling Study (uniform vs focused)")
     print(f"device       : {device}")
     print(f"test         : {args.test}")

@@ -18,7 +18,7 @@ ACTIVATIONS: dict[str, type[nn.Module]] = {
 
 
 class MLP(nn.Module):
-    """Configurable feed-forward surrogate."""
+    """Surrogate MLP configurable."""
 
     def __init__(
         self,

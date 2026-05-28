@@ -1,33 +1,16 @@
-"""Pointwise and per-bin error metrics for surrogate evaluation.
+"""Métricas puntuales y agregadas por bin.
 
-The functions in this module follow the contract laid out in
-``docs/metodologia.md`` (section "Targets, normalización y métricas") and in
-``docs/architecture.md`` (section "Evaluation"). They are deliberately
-written as free functions rather than methods on a class because the logic
-is purely algorithmic: no polymorphism is needed.
+Las funciones siguen el contrato de ``docs/metodologia.md`` y
+``docs/architecture.md``. Se mantienen como funciones libres porque la lógica
+es algorítmica y no necesita polimorfismo.
 
-Three metrics are produced for every surrogate, all of them expressed as
-absolute errors so they can be aggregated per bin without further
-transformation:
+Trabajamos con tres errores absolutos: ``MAE(C/K)`` para el precio
+normalizado, ``MAE_Delta`` para la derivada respecto a moneyness y ``MAE_IV``
+para la volatilidad implícita Black-Scholes recuperada desde el precio. Los
+fallos de inversión IV se devuelven como máscara explícita para que puedan
+reportarse en el diagnóstico.
 
-* ``MAE(C/K)`` — absolute error on the normalized call price ``y = C/K``.
-* ``MAE_Delta`` — absolute error on ``Delta = dy/dm``, obtained from the
-  surrogate by autograd and from the solver as ``N(d1)`` (BS) or ``P1``
-  (Heston, with ``q = 0``).
-* ``MAE_IV`` — absolute error on the Black-Scholes implied volatility
-  recovered by inverting the predicted price. Inversion failures are
-  reported through ``ok_mask`` rather than silently dropped; the
-  methodology document mandates that this diagnostic is preserved.
-
-Per-bin aggregation reports the mean and the 50/95/99 percentiles, with
-the methodology document highlighting ``p95`` as the column that exposes
-operationally relevant tail errors.
-
-Conventions inherited from the dataset generator (``src/datasets/generator.py``):
-
-* ``strike = 1.0``, so the predicted output of the network is directly the
-  call price ``C`` and ``spot = moneyness``.
-* ``dividend_yield = 0`` in every experiment.
+Convenciones del generador: ``strike = 1.0`` y ``dividend_yield = 0``.
 """
 
 from __future__ import annotations
@@ -48,10 +31,10 @@ def absolute_errors(
     predicted: np.ndarray | torch.Tensor,
     target: np.ndarray | torch.Tensor,
 ) -> np.ndarray:
-    """Element-wise absolute error ``|predicted - target|`` as ``np.ndarray``.
+    """Devuelve el error absoluto elemento a elemento.
 
-    Accepts NumPy arrays or PyTorch tensors interchangeably; the result is
-    always a float64 NumPy array detached from any autograd graph.
+    Acepta arrays de NumPy o tensores de PyTorch. El resultado siempre es un
+    ``np.ndarray`` en ``float64`` y desconectado de autograd.
     """
     pred_array = _to_numpy(predicted)
     target_array = _to_numpy(target)
@@ -69,15 +52,12 @@ def aggregate_by_bin(
     n_bins: int,
     percentiles: Iterable[int] = (50, 95, 99),
 ) -> dict[str, np.ndarray]:
-    """Aggregate per-point values into per-bin summary statistics.
+    """Agrega valores puntuales en estadísticos por bin.
 
-    Returns a dict with one entry per statistic, each entry an array of shape
-    ``(n_bins,)``: ``mean``, ``count``, plus one entry per requested
-    percentile (e.g. ``p50``, ``p95``, ``p99``). ``count`` is the number of
-    finite values that contributed to the aggregates of that bin; ``NaN``
-    inputs are ignored. Bins that receive no finite value get ``count = 0``
-    and ``NaN`` for every aggregate, so heatmaps can show empty cells
-    cleanly.
+    Devuelve un diccionario con ``mean``, ``count`` y los percentiles pedidos
+    (por ejemplo ``p50``, ``p95`` y ``p99``). ``count`` solo cuenta valores
+    finitos; los ``NaN`` se ignoran. Un bin sin datos válidos queda con
+    ``count = 0`` y agregados ``NaN``.
     """
     values_arr = np.asarray(values, dtype=np.float64)
     bin_id_arr = np.asarray(bin_id, dtype=np.int64)
@@ -125,14 +105,12 @@ def predict_surrogate_prices_and_deltas(
     moneyness_range: tuple[float, float] = (0.4, 2.0),
     moneyness_index: int = 0,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Run the surrogate on the full test set in batches and return arrays.
+    """Evalúa el surrogate por lotes y devuelve precio y Delta.
 
-    Both the price ``y_hat = C/K`` and the Delta ``dy/dm`` (recovered by
-    autograd with the chain-rule correction defined in
-    ``src/models/greeks.py``) are computed in the same forward pass.
-    ``create_graph=False`` because evaluation does not need to backpropagate
-    through the gradient term. The model is placed in eval mode but autograd
-    is left enabled so that Delta can be obtained.
+    El precio ``y_hat = C/K`` y la Delta ``dy/dm`` se calculan en la misma
+    pasada usando autograd y la corrección de regla de la cadena definida en
+    ``src/models/greeks.py``. El modelo entra en modo evaluación, pero
+    autograd sigue activo para poder obtener la derivada.
     """
     if batch_size <= 0:
         raise ValueError("batch_size must be strictly positive")
@@ -184,26 +162,18 @@ def invert_implied_volatility_call(
     workers: int = 1,
     progress: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Invert call prices to Black-Scholes implied volatility, point by point.
+    """Invierte precios de call a IV Black-Scholes punto a punto.
 
-    The project convention fixes ``strike = 1.0`` and ``dividend_yield = 0``
-    (see ``src/datasets/generator.py``), so the inputs only need to carry
-    moneyness, maturity and rate alongside the predicted price ``C/K``.
+    El proyecto fija ``strike = 1.0`` y ``dividend_yield = 0``. Por eso los
+    inputs solo necesitan moneyness, maturity, rate y el precio ``C/K``.
 
-    Returns ``(iv, ok)`` where ``iv`` is the recovered volatility per point
-    and ``ok`` is a boolean mask of successful inversions. Failed inversions
-    keep ``iv = NaN`` and ``ok = False``; failure modes include prices
-    outside the no-arbitrage band, non-convergence of Newton-Raphson with
-    bisection fallback, and any other ``ValueError`` raised by the inverter.
-    The methodology document mandates that these failures are reported as
-    diagnostic rather than silently dropped.
+    Devuelve ``(iv, ok)``. ``iv`` contiene la volatilidad recuperada y ``ok``
+    indica qué inversiones han sido válidas. Si falla, queda ``iv = NaN`` y
+    ``ok = False``. Los fallos se reportan como diagnóstico.
 
-    ``workers > 1`` parallelises the loop across CPU cores using
-    ``concurrent.futures.ProcessPoolExecutor``. The same input ordering and
-    return values are preserved bit-for-bit relative to ``workers=1``; the
-    inverter is stateless and the work is embarrassingly parallel.
-    ``progress=True`` shows a ``tqdm`` bar (per-point in serial mode,
-    per-chunk in parallel mode).
+    ``workers > 1`` reparte el bucle entre procesos. Se preserva el orden de
+    entrada y la salida es equivalente a ``workers=1``. ``progress=True``
+    muestra una barra ``tqdm``.
     """
     prices_arr = np.asarray(prices, dtype=np.float64)
     moneyness_arr = np.asarray(moneyness, dtype=np.float64)
@@ -339,7 +309,7 @@ def _invert_iv_parallel(
 def _invert_iv_chunk(
     args: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, ImpliedVolatilityInverter, float],
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Worker entrypoint for the parallel path. Top-level so it pickles."""
+    """Entrada del worker paralelo; debe estar a nivel de módulo para pickle."""
     prices, moneyness, maturity, rate, inverter, initial_guess = args
     return _invert_iv_serial(
         prices, moneyness, maturity, rate, inverter, initial_guess, progress=False

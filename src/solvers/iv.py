@@ -9,7 +9,7 @@ from src.solvers.black_scholes import BlackScholesSolver
 
 @dataclass(frozen=True)
 class ImpliedVolatilityInverter:
-    """Black-Scholes implied-volatility inverter for European calls."""
+    """Inversor de volatilidad implícita Black-Scholes para calls europeas."""
 
     solver: BlackScholesSolver = BlackScholesSolver()
     min_volatility: float = 1e-8

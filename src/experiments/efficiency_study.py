@@ -1,26 +1,15 @@
 """E4 — Eficiencia computacional.
 
-Composes :class:`src.evaluation.timing.TimingBenchmark` for the surrogate
-designated by ``docs/tasks.md`` §E4 ("H-3") and produces an
-:class:`EfficiencyResult` that mirrors the shape of
-:class:`src.experiments.base.ExperimentResult` (table, summary,
-``to_csv``) but is **not** an ``Experiment`` subclass.
+Compone ``TimingBenchmark`` para el surrogate fijado en E4 (H-3) y devuelve
+un ``EfficiencyResult`` con tabla, resumen y serialización a CSV. No hereda
+de ``Experiment`` porque su protocolo no usa ``BinEvaluator``.
 
-The reason ``EfficiencyStudy`` lives outside the ``Experiment``
-hierarchy is documented in ``src/experiments/base.py``:
+La metodología no define veredicto fuerte/débil/negativo para E4: es un
+experimento de medición, no de comparación.
 
-    "E4 (the timing benchmark) intentionally lives outside this
-    hierarchy because it consumes a different protocol (no
-    `BinEvaluator`)."
-
-The methodology document also forbids any fuerte/débil/negativo verdict
-for E4 ("es de medición, no de comparación"), so the result has no
-``verdict`` field.
-
-The rendered table contains one row per ``(device, batch_size)`` pair
-with the median, p25, p75 of solver and surrogate times, the median
-speedup and the surrogate throughput in options per second. A line plot
-``speedup`` vs ``batch_size`` is produced as the figure deliverable.
+La tabla contiene una fila por ``(device, batch_size)`` con mediana, p25,
+p75, speedup y throughput del surrogate. La figura asociada representa
+``speedup`` frente a ``batch_size``.
 """
 
 from __future__ import annotations
@@ -81,7 +70,7 @@ class EfficiencyStudy:
 
 @dataclass(frozen=True)
 class EfficiencyResult:
-    """Uniform output of :meth:`EfficiencyStudy.run`."""
+    """Salida uniforme de ``EfficiencyStudy.run``."""
 
     experiment_id: str
     surrogate_id: str
@@ -97,7 +86,7 @@ class EfficiencyResult:
             raise ValueError("timings cannot be empty")
 
     def to_csv(self, path: str | Path) -> None:
-        """Write the per-(device, batch_size) table as CSV."""
+        """Escribe la tabla por ``(device, batch_size)`` a CSV."""
         import csv
 
         output_path = Path(path)
@@ -110,11 +99,11 @@ class EfficiencyResult:
                 writer.writerow(row)
 
     def to_plot(self, path: str | Path) -> Path:
-        """Save the speedup-vs-batch line plot as PNG.
+        """Guarda el gráfico de speedup frente a tamaño de lote.
 
-        One line per device, log scale on both axes (the speedup spans
-        orders of magnitude with the batch size, and the batch sizes
-        themselves are powers of ten by construction).
+        Se dibuja una línea por device y escala logarítmica en ambos ejes,
+        porque los lotes son potencias de diez y el speedup cambia por
+        órdenes de magnitud.
         """
         import matplotlib
 

@@ -7,17 +7,16 @@ import sys
 from pathlib import Path
 from typing import Any, Iterator
 
-import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
 
 def _torch_compile_available() -> bool:
-    """torch.compile()'s default Inductor backend requires Triton.
+    """Comprueba si ``torch.compile`` puede usarse en esta plataforma.
 
-    Triton has no official Windows wheel, so torch.compile is effectively
-    Linux/Mac-only on stock PyTorch. We probe with importlib to avoid
-    paying the cost of an actual compile only to fail at first step.
+    El backend Inductor necesita Triton. En Windows no hay wheel oficial, así
+    que comprobamos la importación antes de pagar el coste de compilar y
+    fallar en el primer paso.
     """
     if sys.platform == "win32":
         try:
@@ -31,11 +30,11 @@ def _torch_compile_available() -> bool:
 
 
 class GPUBatchIterator:
-    """Iterable yielding batches from tensors kept on ``device``.
+    """Iterador de lotes para tensores ya cargados en el ``device``.
 
-    Bypasses DataLoader (and its host->device transfer per batch) when the
-    full dataset comfortably fits in VRAM. Yields dicts with the same keys
-    as ``OptionDataset.__getitem__`` so it is a drop-in replacement.
+    Evita ``DataLoader`` y la transferencia host->device por lote cuando el
+    dataset cabe en VRAM. Devuelve diccionarios con las mismas claves que
+    ``OptionDataset.__getitem__``.
     """
 
     def __init__(
@@ -71,14 +70,13 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.datasets.generator import OptionDataset
 from src.models import MLP
 from src.training import DifferentialLoss, PriceLoss, Trainer
-from src.utils import set_global_seed
+from src.utils import load_option_dataset_npz, resolve_torch_device, set_global_seed
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train an option-pricing surrogate from NPZ data.")
+    parser = argparse.ArgumentParser(description="Entrena un surrogate de pricing desde datos NPZ.")
     parser.add_argument("--train", type=Path, required=True)
     parser.add_argument("--validation", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
@@ -91,7 +89,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=4096)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--device", default="auto", help="'auto', 'cpu', 'cuda', or any torch device.")
+    parser.add_argument("--device", default="auto", help="'auto', 'cpu', 'cuda' o cualquier device válido de Torch.")
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--price-weight", type=float, default=1.0)
     parser.add_argument("--delta-weight", type=float, default=1.0)
@@ -100,49 +98,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--compile",
         action="store_true",
-        help="Wrap the model with torch.compile() for kernel fusion. Reduces per-step "
-             "launch overhead at the cost of a one-off compilation on the first step.",
+        help="Envuelve el modelo con torch.compile() para fusionar kernels. Reduce overhead por paso a cambio de compilar en el primer paso.",
     )
     parser.add_argument(
         "--preload-to-device",
         action="store_true",
-        help="Move full train + validation datasets to the target device upfront and "
-             "iterate them via a GPU-native batch iterator. Eliminates host->device "
-             "transfer per batch; safe when datasets fit in VRAM.",
+        help="Carga train y validation completos en el device y usa un iterador nativo de GPU. Evita transferencias por lote si los datos caben en VRAM.",
     )
     return parser.parse_args()
-
-
-def resolve_device(device: str) -> str:
-    if device == "auto":
-        return "cuda" if torch.cuda.is_available() else "cpu"
-    if device == "cuda" and not torch.cuda.is_available():
-        raise RuntimeError("CUDA was requested but is not available")
-    return device
-
-
-def load_npz_dataset(path: Path, require_delta: bool = False) -> OptionDataset:
-    if not path.exists():
-        raise FileNotFoundError(path)
-
-    data = np.load(path, allow_pickle=False)
-    features = np.asarray(data["features"], dtype=np.float32)
-    raw_inputs = np.asarray(data["raw_inputs"], dtype=np.float32)
-    prices = np.asarray(data["prices"], dtype=np.float32).reshape(-1, 1)
-    deltas = None
-    if "deltas" in data.files:
-        deltas = np.asarray(data["deltas"], dtype=np.float32).reshape(-1, 1)
-    elif require_delta:
-        raise ValueError(f"{path} does not contain 'deltas', required by differential loss")
-
-    input_names = tuple(str(value) for value in data["input_names"].tolist())
-    return OptionDataset(
-        features=torch.from_numpy(features),
-        prices=torch.from_numpy(prices),
-        deltas=None if deltas is None else torch.from_numpy(deltas),
-        raw_inputs=torch.from_numpy(raw_inputs),
-        input_names=input_names,
-    )
 
 
 def make_loss(args: argparse.Namespace) -> torch.nn.Module:
@@ -186,9 +149,16 @@ def main() -> None:
         raise ValueError("--hidden-width and --hidden-layers must be strictly positive")
 
     set_global_seed(args.seed)
-    device = resolve_device(args.device)
-    train_dataset = load_npz_dataset(args.train, require_delta=args.loss == "differential")
-    validation_dataset = load_npz_dataset(args.validation, require_delta=False)
+    device = resolve_torch_device(args.device, require_cuda=True)
+    train_dataset, _ = load_option_dataset_npz(
+        args.train,
+        require_delta=args.loss == "differential",
+        dataset_label="train dataset",
+    )
+    validation_dataset, _ = load_option_dataset_npz(
+        args.validation,
+        dataset_label="validation dataset",
+    )
     if train_dataset.features.shape[1] != validation_dataset.features.shape[1]:
         raise ValueError("train and validation input dimensions do not match")
 

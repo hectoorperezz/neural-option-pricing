@@ -17,7 +17,7 @@ class Sampler(Protocol):
 
 @dataclass(frozen=True)
 class OptionDataset(Dataset):
-    """Torch dataset with normalized inputs and normalized call prices."""
+    """Dataset de Torch con inputs normalizados y precios de call normalizados."""
 
     features: torch.Tensor
     prices: torch.Tensor
@@ -52,7 +52,7 @@ class GeneratedBatch:
 
 @dataclass(frozen=True)
 class DatasetGenerator:
-    """Generate synthetic option datasets from a solver and a sampler."""
+    """Genera datasets sintéticos combinando un solver y un sampler."""
 
     solver: object
     domain: Domain

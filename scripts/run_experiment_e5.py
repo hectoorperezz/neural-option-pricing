@@ -1,15 +1,11 @@
-"""Run E5 (Differential ML) on the documented Heston surrogates.
+"""Ejecuta E5 sobre los surrogates Heston documentados.
 
-Orchestration only. The script loads the two small surrogates that
-``docs/tasks.md`` §E5 designates as the subjects (``H-3-small`` trained
-with price-only loss and ``H-6-small`` trained with the differential
-price+Delta loss), optionally loads the large baseline ``H-3`` as a
-reference, builds a :class:`BinEvaluator` backed by the shared balanced
-Heston test set, hands the inputs to :class:`DMLStudy`, and writes the
-per-bin long-format CSV plus the price/Delta heatmaps that
-``docs/tasks.md`` §"Fase 3" mandates as the deliverable.
+Este script solo orquesta. Carga H-3-small y H-6-small, opcionalmente H-3
+como baseline grande, comparte el mismo test balanced Heston, ejecuta
+``DMLStudy`` y escribe el CSV largo por bin junto con heatmaps de precio y
+Delta.
 
-Typical invocation::
+Uso típico::
 
     python scripts/run_experiment_e5.py \\
         --small-price-checkpoint results/checkpoints/H-3-small \\
@@ -19,23 +15,19 @@ Typical invocation::
         --output                 results/metrics/e5_table.csv \\
         --figures-dir            results/figures/e5
 
-``--baseline-checkpoint`` is optional; without it the experiment still
-emits its pre-registered verdict (which only depends on ``H-3-small``
-and ``H-6-small``) but skips the "distance vs baseline" diagnostic
-lines of the summary.
+``--baseline-checkpoint`` es opcional. Sin él, el experimento mantiene su
+veredicto pre-registrado, que solo depende de H-3-small y H-6-small, pero no
+incluye la distancia frente a H-3 en el resumen.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import time
 from pathlib import Path
-from typing import Any
 
 import numpy as np
-import torch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -44,37 +36,37 @@ if str(REPO_ROOT) not in sys.path:
 from src.datasets.generator import OptionDataset
 from src.evaluation import BinEvaluator, BinPartition
 from src.experiments import DMLStudy, ExperimentResult, SurrogateInput
-from src.models import MLP
 from src.solvers import HestonSolver
+from src.utils import load_mlp_checkpoint, load_option_dataset_npz, resolve_torch_device
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Run E5 (DML: H-3-small vs H-6-small, optionally with H-3 as "
-            "baseline) and write per-bin CSV plus price/Delta heatmaps."
+            "Ejecuta E5: H-3-small frente a H-6-small, con H-3 opcional "
+            "como baseline, y escribe CSV por bin más heatmaps."
         )
     )
     parser.add_argument(
         "--small-price-checkpoint",
         type=Path,
         required=True,
-        help="Checkpoint of the small price-only surrogate (e.g. H-3-small).",
+        help="Checkpoint del surrogate pequeño entrenado solo con precio, por ejemplo H-3-small.",
     )
     parser.add_argument(
         "--small-dml-checkpoint",
         type=Path,
         required=True,
-        help="Checkpoint of the small DML (price+Delta) surrogate (e.g. H-6-small).",
+        help="Checkpoint del surrogate pequeño DML, precio más Delta, por ejemplo H-6-small.",
     )
     parser.add_argument(
         "--baseline-checkpoint",
         type=Path,
         default=None,
         help=(
-            "Optional checkpoint of the large baseline surrogate (e.g. H-3). "
-            "If provided, the summary reports the distance from the DML "
-            "surrogate to this baseline as a diagnostic."
+            "Checkpoint opcional del baseline grande, por ejemplo H-3. "
+            "Si se proporciona, el resumen reporta la distancia del DML "
+            "frente a este baseline."
         ),
     )
     parser.add_argument(
@@ -82,83 +74,25 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         required=True,
         help=(
-            "Heston test set with Delta. Shared across all surrogates per "
-            "tasks.md §E5."
+            "Test set Heston con Delta, compartido por todos los surrogates "
+            "según tasks.md §E5."
         ),
     )
     parser.add_argument(
         "--output",
         type=Path,
         required=True,
-        help="Destination CSV (long-format, one row per surrogate x bin).",
+        help="CSV de destino en formato largo, una fila por surrogate y bin.",
     )
     parser.add_argument(
         "--figures-dir",
         type=Path,
         default=None,
-        help="Optional directory for price/Delta heatmap PNGs.",
+        help="Directorio opcional para heatmaps PNG de precio y Delta.",
     )
     parser.add_argument("--device", default="auto")
     parser.add_argument("--batch-size", type=int, default=32768)
     return parser.parse_args()
-
-
-def resolve_device(device: str) -> str:
-    if device == "auto":
-        return "cuda" if torch.cuda.is_available() else "cpu"
-    return device
-
-
-def load_checkpoint(checkpoint_dir: Path) -> tuple[torch.nn.Module, dict[str, Any]]:
-    config_path = checkpoint_dir / "config.json"
-    checkpoint_path = checkpoint_dir / "checkpoint.pt"
-    if not config_path.exists():
-        raise FileNotFoundError(f"missing config.json at {config_path}")
-    if not checkpoint_path.exists():
-        raise FileNotFoundError(f"missing checkpoint.pt at {checkpoint_path}")
-
-    config = json.loads(config_path.read_text(encoding="utf-8"))
-    checkpoint = torch.load(checkpoint_path, map_location="cpu")
-
-    model = MLP(
-        input_dim=int(config["input_dim"]),
-        hidden_width=int(config["hidden_width"]),
-        hidden_layers=int(config["hidden_layers"]),
-        activation=str(config["activation"]),
-    )
-    state_dict = checkpoint.get("best_state_dict") or checkpoint["model_state_dict"]
-    model.load_state_dict(state_dict)
-    model.eval()
-    return model, config
-
-
-def load_test_dataset(path: Path) -> tuple[OptionDataset, np.ndarray | None]:
-    if not path.exists():
-        raise FileNotFoundError(f"test set not found at {path}")
-    data = np.load(path, allow_pickle=False)
-    features = np.asarray(data["features"], dtype=np.float32)
-    raw_inputs = np.asarray(data["raw_inputs"], dtype=np.float32)
-    prices = np.asarray(data["prices"], dtype=np.float32).reshape(-1, 1)
-    if "deltas" not in data.files:
-        raise ValueError(
-            "test set lacks the `deltas` array; E5 needs it as ground truth. "
-            "Regenerate with `--include-delta` if necessary."
-        )
-    deltas = np.asarray(data["deltas"], dtype=np.float32).reshape(-1, 1)
-    input_names = tuple(str(name) for name in np.asarray(data["input_names"]).tolist())
-    bin_id: np.ndarray | None = None
-    if "bin_id" in data.files:
-        bin_id = np.asarray(data["bin_id"], dtype=np.int64)
-    return (
-        OptionDataset(
-            features=torch.from_numpy(features),
-            prices=torch.from_numpy(prices),
-            deltas=torch.from_numpy(deltas),
-            raw_inputs=torch.from_numpy(raw_inputs),
-            input_names=input_names,
-        ),
-        bin_id,
-    )
 
 
 def _build_input(
@@ -169,7 +103,7 @@ def _build_input(
     bin_id: np.ndarray | None,
     evaluator: BinEvaluator,
 ) -> SurrogateInput:
-    model, config = load_checkpoint(checkpoint_dir)
+    model, config = load_mlp_checkpoint(checkpoint_dir)
     labels = {
         "role": role,
         "loss": str(config.get("loss", "")),
@@ -195,7 +129,7 @@ def _run(
     device: str,
     batch_size: int,
 ) -> ExperimentResult:
-    dataset, bin_id = load_test_dataset(test_path)
+    dataset, bin_id = load_option_dataset_npz(test_path, require_delta=True)
     evaluator = BinEvaluator(
         partition=BinPartition.default(),
         pricer=HestonSolver(),
@@ -250,7 +184,7 @@ def _run(
 
 def main() -> None:
     args = parse_args()
-    device = resolve_device(args.device)
+    device = resolve_torch_device(args.device)
     print("E5 — Differential ML con Delta")
     print(f"device       : {device}")
     print(f"test         : {args.test}")

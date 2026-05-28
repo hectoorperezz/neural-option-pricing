@@ -1,17 +1,18 @@
 @echo off
 setlocal
 
-REM Windows equivalent of generate_all_datasets.sh.
-REM Runs the full dataset generation pipeline sequentially with multiprocessing.
-REM Override defaults via environment variables:
-REM   set WORKERS=16     (default 24)
-REM   set DATA_DIR=...   (default <repo>\data)
+REM Equivalente Windows de generate_all_datasets.sh.
+REM Ejecuta la generacion completa de datasets con multiprocessing.
+REM Permite sobrescribir valores por variables de entorno:
+REM   set WORKERS=16     (por defecto 24)
+REM   set DATA_DIR=...   (por defecto <repo>\data)
 
 if "%WORKERS%"=="" set "WORKERS=24"
-if "%DATA_DIR%"=="" set "DATA_DIR=%~dp0..\data"
+set "REPO_ROOT=%~dp0..\.."
+if "%DATA_DIR%"=="" set "DATA_DIR=%REPO_ROOT%\data"
 
-set "PY=%~dp0..\.venv\Scripts\python.exe"
-set "SCRIPT=%~dp0generate_dataset.py"
+if "%PY%"=="" set "PY=%REPO_ROOT%\.venv\Scripts\python.exe"
+set "SCRIPT=%REPO_ROOT%\scripts\generate_dataset.py"
 
 if not exist "%DATA_DIR%" mkdir "%DATA_DIR%"
 

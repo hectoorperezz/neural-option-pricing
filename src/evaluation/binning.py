@@ -1,16 +1,14 @@
-"""Bin partition for the 5x5 moneyness x maturity evaluation grid.
+"""Partición 5x5 de moneyness y vencimiento para evaluación.
 
-Defines :class:`BinPartition`, the canonical way to assign each test point
-to one of the 25 bins used by E1-E5 to report per-region surrogate quality.
-The bin boundaries are imported from :mod:`src.datasets.sampler` so that
-they stay aligned with the boundaries used to draw the balanced test set.
+``BinPartition`` asigna cada punto de test a uno de los 25 bins usados en
+E1-E5. Los límites se importan desde ``src.datasets.sampler`` para que la
+evaluación y el test set balanced usen exactamente la misma rejilla.
 
-Binning convention: ``[low, high)`` for all bins except the topmost one on
-each axis, which is ``[low, high]``. This keeps boundary assignment
-deterministic and matches the convention documented in the methodology.
+La convención es ``[low, high)`` salvo el último bin de cada eje, que es
+``[low, high]``. Así los puntos de frontera se asignan de forma
+determinista.
 
-The ``bin_id`` returned by :meth:`BinPartition.assign` follows the same
-layout used by :class:`src.datasets.sampler.BalancedBinSampler.iter_bins`::
+El ``bin_id`` sigue el mismo orden que ``BalancedBinSampler.iter_bins``::
 
     bin_id = maturity_idx * n_moneyness_bins + moneyness_idx
 """
@@ -43,12 +41,11 @@ _DEFAULT_MATURITY_LABELS: tuple[str, ...] = (
 
 @dataclass(frozen=True)
 class BinPartition:
-    """Partition of the (moneyness, maturity) plane into a regular grid.
+    """Rejilla regular sobre el plano ``(moneyness, maturity)``.
 
-    Each axis is sliced into a sequence of half-open intervals ``[low, high)``,
-    with the rightmost interval closed on both ends. A test point is mapped
-    to a single bin by locating the interval that contains it on each axis
-    and combining the two indices.
+    Cada eje se divide en intervalos. Un punto se asigna localizando su
+    intervalo de moneyness y su intervalo de vencimiento, y combinando ambos
+    índices.
     """
 
     moneyness_bins: tuple[tuple[float, float], ...]
@@ -58,7 +55,7 @@ class BinPartition:
 
     @classmethod
     def default(cls) -> "BinPartition":
-        """Standard 5x5 partition shared with :class:`BalancedBinSampler`."""
+        """Partición 5x5 estándar compartida con ``BalancedBinSampler``."""
         return cls(moneyness_bins=MONEYNESS_BINS, maturity_bins=MATURITY_BINS)
 
     def __post_init__(self) -> None:
@@ -104,11 +101,10 @@ class BinPartition:
         moneyness: np.ndarray | float,
         maturity: np.ndarray | float,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Assign each (moneyness, maturity) pair to its bin.
+        """Asigna cada par ``(moneyness, maturity)`` a su bin.
 
-        Returns a tuple ``(bin_id, moneyness_idx, maturity_idx)`` of integer
-        arrays sharing the broadcast shape of the inputs. Out-of-domain
-        inputs raise :class:`ValueError`; we never silently clamp.
+        Devuelve ``(bin_id, moneyness_idx, maturity_idx)``. Si un punto cae
+        fuera del dominio, se lanza ``ValueError``; no se recorta en silencio.
         """
         moneyness_arr = np.asarray(moneyness, dtype=np.float64)
         maturity_arr = np.asarray(maturity, dtype=np.float64)
@@ -154,14 +150,14 @@ class BinPartition:
         )
 
     def bin_label(self, moneyness_idx: int, maturity_idx: int) -> str:
-        """Human-readable label for a bin, e.g. ``"atm_weekly"``."""
+        """Etiqueta legible del bin, por ejemplo ``"atm_weekly"``."""
         return (
             f"{self.moneyness_labels[moneyness_idx]}"
             f"_{self.maturity_labels[maturity_idx]}"
         )
 
     def bin_id_from_indices(self, moneyness_idx: int, maturity_idx: int) -> int:
-        """Inverse of the bin layout: indices → ``bin_id``."""
+        """Conversión inversa de índices de rejilla a ``bin_id``."""
         if not 0 <= moneyness_idx < self.n_moneyness_bins:
             raise ValueError(
                 f"moneyness_idx must be in [0, {self.n_moneyness_bins})"

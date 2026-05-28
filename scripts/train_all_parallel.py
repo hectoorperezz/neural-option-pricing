@@ -1,15 +1,13 @@
-"""Parallel orchestrator for training the 11 surrogates on a single GPU.
+"""Orquestador paralelo para entrenar los 11 surrogates en una sola GPU.
 
-Each surrogate runs in its own ``subprocess`` so they truly time-share the
-GPU; a ``ThreadPoolExecutor`` controls how many run concurrently. With a
-tiny MLP (4x128) one process leaves the GPU mostly idle, so we launch
-several at once to push utilization toward 100%.
+Cada surrogate corre en su propio ``subprocess`` y un ``ThreadPoolExecutor``
+controla cuántos entrenamientos se lanzan a la vez. Con la MLP pequeña
+usada en el proyecto, un único proceso infrautiliza la GPU; varios procesos
+en paralelo aumentan el throughput.
 
-Defaults assume an RTX 4060 8 GB:
-- ``--parallel 4`` keeps VRAM around 3-4 GB (each process ~700 MB CUDA
-  context + activations + dataset).
-- ``--compile`` and ``--preload-to-device`` are forwarded by default;
-  disable them with ``--no-compile`` / ``--no-preload``.
+Los valores por defecto están pensados para una RTX 4060 de 8 GB:
+``--parallel 4`` mantiene la VRAM en un rango razonable y
+``--preload-to-device`` se activa salvo que se pase ``--no-preload``.
 """
 
 from __future__ import annotations
@@ -104,23 +102,23 @@ def run_surrogate(spec: SurrogateSpec, args: argparse.Namespace) -> tuple[str, i
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Train all 11 surrogates in parallel on a single GPU.")
-    parser.add_argument("--parallel", type=int, default=4, help="Number of concurrent training subprocesses (default: 4).")
+    parser = argparse.ArgumentParser(description="Entrena los 11 surrogates en paralelo sobre una sola GPU.")
+    parser.add_argument("--parallel", type=int, default=4, help="Número de subprocesses de entrenamiento concurrentes.")
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--hidden-width", type=int, default=128)
     parser.add_argument("--hidden-layers", type=int, default=4)
-    parser.add_argument("--num-workers", type=int, default=0, help="DataLoader workers per process (irrelevant when --preload-to-device).")
+    parser.add_argument("--num-workers", type=int, default=0, help="Workers de DataLoader por proceso; no aplica con --preload-to-device.")
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA)
     parser.add_argument("--results-dir", type=Path, default=DEFAULT_RESULTS)
     parser.add_argument("--log-dir", type=Path, default=DEFAULT_LOGS)
-    parser.add_argument("--device", default="auto", help="'auto', 'cpu', 'cuda', or any torch device.")
+    parser.add_argument("--device", default="auto", help="'auto', 'cpu', 'cuda' o cualquier device válido de Torch.")
     parser.add_argument(
         "--compile",
         action="store_true",
-        help="Enable torch.compile() per process. Requires Triton (Linux/Mac); ignored on Windows.",
+        help="Activa torch.compile() por proceso. Requiere Triton; se ignora en Windows.",
     )
-    parser.add_argument("--no-preload", action="store_true", help="Disable --preload-to-device (enabled by default).")
+    parser.add_argument("--no-preload", action="store_true", help="Desactiva --preload-to-device, activo por defecto.")
     args = parser.parse_args()
 
     if args.compile and platform.system() == "Windows":

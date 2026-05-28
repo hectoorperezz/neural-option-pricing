@@ -7,7 +7,7 @@ import numpy as np
 
 @dataclass(frozen=True)
 class Domain:
-    """Input hypercube and deterministic min-max transforms."""
+    """Hipercubo de entrada y transformaciones min-max deterministas."""
 
     input_names: tuple[str, ...]
     lower_bounds: tuple[float, ...]

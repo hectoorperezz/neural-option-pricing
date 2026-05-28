@@ -1,8 +1,7 @@
 """E1 — Precio frente a volatilidad implícita.
 
-Materializes the experiment specified in ``docs/tasks.md`` §E1 and
-``docs/metodologia.md`` §"Experimento E1 — Precio frente a volatilidad
-implícita":
+Implementa el experimento descrito en ``docs/tasks.md`` y
+``docs/metodologia.md``:
 
     "E1 es observacional. No requiere entrenar nada nuevo, simplemente
     recalcula métricas sobre un surrogate que ya está entrenado para
@@ -17,23 +16,12 @@ implícita":
 
     "No fijamos clasificación fuerte/débil para E1."
 
-The class therefore:
+Por eso la clase:
 
-* Forces ``compute_iv=True`` on every :class:`BinEvaluator` invocation
-  because IV is the experiment's primary metric.
-* Computes a per-point Vega proxy as ``BS-Vega(target IV)``, the closed
-  form Black-Scholes Vega evaluated at the implied volatility recovered
-  from the *target* price; aggregated per bin. This is the most literal
-  reading of "proxy de Vega" in the methodology document, applies
-  consistently to BS and Heston surrogates, and reuses the existing
-  Black-Scholes solver without inventing new machinery.
-* Emits a per-bin table with the price MAE statistics, the IV MAE
-  statistics, the Vega proxy, the IV failure rate, and an
-  ``iv_to_price_ratio`` column that quantifies the "discrepancia" the
-  methodology document asks for.
-* Produces a short observational ``summary`` listing the bins where the
-  discrepancy is largest. No fuerte/débil verdict is emitted because
-  the methodology document explicitly forbids one for E1.
+* fuerza ``compute_iv=True``, porque IV es la métrica central;
+* calcula una Vega proxy como ``BS-Vega(target IV)``, agregada por bin;
+* emite precio, IV, Vega proxy, tasa de fallo IV y ``iv_to_price_ratio``;
+* genera un resumen observacional, sin veredicto fuerte/débil.
 """
 
 from __future__ import annotations
@@ -108,15 +96,11 @@ def _vega_proxy_per_bin(
     surrogate_input: SurrogateInput,
     report: Report,
 ) -> np.ndarray:
-    """Compute the per-bin mean of BS-Vega evaluated at the target IV.
+    """Calcula la Vega proxy media por bin.
 
-    The methodology document asks for "Vega media o proxy de Vega" as a
-    diagnostic column. We choose the closed-form Black-Scholes Vega
-    evaluated at the implied volatility of the *target* price (the
-    output of the solver, never the network). This is well defined on
-    both BS and Heston tests because the IV is always recovered against
-    Black-Scholes; calling :meth:`BlackScholesSolver.call_vega` at that
-    sigma yields the proxy directly.
+    Usamos la Vega Black-Scholes evaluada en la IV del precio objetivo, es
+    decir, del solver y no de la red. Es una proxy común para BS y Heston
+    porque la IV siempre se recupera contra Black-Scholes.
     """
     raw_inputs = surrogate_input.dataset.raw_inputs.detach().cpu().numpy()
     moneyness = raw_inputs[:, 0].astype(np.float64)

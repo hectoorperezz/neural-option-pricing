@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DATA_DIR="${DATA_DIR:-data}"
-LOG_DIR="${LOG_DIR:-results/logs}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+DATA_DIR="${DATA_DIR:-$REPO_ROOT/data}"
+LOG_DIR="${LOG_DIR:-$REPO_ROOT/results/logs}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 OVERWRITE="${OVERWRITE:-0}"
 
@@ -19,9 +22,9 @@ run_dataset() {
 
   echo "[$(timestamp)] START $name" | tee "$log_file"
   if [[ "$OVERWRITE" == "1" ]]; then
-    "$PYTHON_BIN" scripts/generate_dataset.py "$@" --overwrite 2>&1 | tee -a "$log_file"
+    "$PYTHON_BIN" "$REPO_ROOT/scripts/generate_dataset.py" "$@" --overwrite 2>&1 | tee -a "$log_file"
   else
-    "$PYTHON_BIN" scripts/generate_dataset.py "$@" 2>&1 | tee -a "$log_file"
+    "$PYTHON_BIN" "$REPO_ROOT/scripts/generate_dataset.py" "$@" 2>&1 | tee -a "$log_file"
   fi
   echo "[$(timestamp)] DONE $name" | tee -a "$log_file"
 }

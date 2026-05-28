@@ -11,7 +11,7 @@ def surrogate_price_and_delta(
     moneyness_index: int = 0,
     create_graph: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Return model price and Delta under min-max normalized moneyness."""
+    """Devuelve precio y Delta corrigiendo la normalización min-max de moneyness."""
 
     if moneyness_range[1] <= moneyness_range[0]:
         raise ValueError("moneyness_range must satisfy min < max")

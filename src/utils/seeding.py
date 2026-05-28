@@ -8,7 +8,7 @@ import torch
 
 
 def set_global_seed(seed: int, deterministic_torch: bool = True) -> None:
-    """Seed Python, NumPy, and PyTorch RNGs from one entry point."""
+    """Fija las semillas de Python, NumPy y PyTorch desde un único punto."""
 
     if seed < 0:
         raise ValueError("seed must be non-negative")

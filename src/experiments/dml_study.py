@@ -1,7 +1,7 @@
 """E5 — Differential ML con Delta.
 
-Materializes the experiment specified in ``docs/tasks.md`` §E5 and
-``docs/metodologia.md`` §"Experimento E5 — Differential ML con Delta":
+Implementa el experimento descrito en ``docs/tasks.md`` y
+``docs/metodologia.md``:
 
     "La comparación principal será
         H-3-small: precio solo, 100k muestras
@@ -24,23 +24,13 @@ Materializes the experiment specified in ``docs/tasks.md`` §E5 and
     o si la mejora de Delta exige sacrificar más de un 10% de precisión
     en precio."
 
-The class therefore:
+Por eso la clase:
 
-* Receives two or three :class:`SurrogateInput` instances, identified
-  by ``labels["role"]``: ``"small_price"`` (H-3-small),
-  ``"small_dml"`` (H-6-small) and optionally ``"baseline_large"``
-  (H-3). The first two are mandatory and feed the pre-registered
-  verdict; the third is observational and feeds the "distance" lines of
-  the summary.
-* Forces ``compute_iv=False`` because the methodology document defines
-  the primary metric as ``MAE_Delta`` and the control as ``MAE(C/K)``;
-  IV inversion is not part of E5.
-* Aggregates per-bin Delta and price MAE into nan-safe global means
-  (same convention as :class:`SamplingStudy` for E3), applies the
-  20%/10% thresholds and populates :attr:`ExperimentResult.verdict`.
-* Reports the distance from H-6-small to H-3 as observational lines in
-  the summary; that comparison is *not* part of the verdict, in line
-  with the methodology document.
+* compara ``small_price`` (H-3-small) y ``small_dml`` (H-6-small);
+* acepta ``baseline_large`` (H-3) como referencia observacional;
+* desactiva IV porque E5 se centra en Delta y precio;
+* aplica los umbrales 20%/10% para el veredicto;
+* informa la distancia a H-3 sin usarla para decidir el veredicto.
 """
 
 from __future__ import annotations
@@ -54,8 +44,8 @@ from src.evaluation.report import Report
 from src.experiments.base import Experiment, ExperimentResult, SurrogateInput
 
 
-# Roles recognised in ``SurrogateInput.labels["role"]``. The first two are
-# mandatory; the third is observational.
+# Roles reconocidos en ``SurrogateInput.labels["role"]``. Los dos primeros
+# son obligatorios; el tercero es observacional.
 _ROLE_SMALL_PRICE = "small_price"     # H-3-small
 _ROLE_SMALL_DML = "small_dml"         # H-6-small
 _ROLE_BASELINE_LARGE = "baseline_large"  # H-3
@@ -63,7 +53,7 @@ _REQUIRED_ROLES: tuple[str, ...] = (_ROLE_SMALL_PRICE, _ROLE_SMALL_DML)
 _OPTIONAL_ROLES: tuple[str, ...] = (_ROLE_BASELINE_LARGE,)
 _ALL_ROLES: tuple[str, ...] = _REQUIRED_ROLES + _OPTIONAL_ROLES
 
-# Thresholds verbatim from ``metodologia.md`` §E5.
+# Umbrales definidos en ``metodologia.md`` §E5.
 _STRONG_DELTA_IMPROVEMENT: float = 0.20
 _MAX_PRICE_DEGRADATION: float = 0.10
 
@@ -175,7 +165,7 @@ class DMLStudy(Experiment):
 
 
 def decide_verdict(delta_improvement: float, price_degradation: float) -> str:
-    """Apply the thresholds documented in ``metodologia.md`` §E5."""
+    """Aplica los umbrales documentados en ``metodologia.md`` §E5."""
     if not np.isfinite(delta_improvement) or delta_improvement <= 0.0:
         return "negativo"
     if np.isfinite(price_degradation) and price_degradation > _MAX_PRICE_DEGRADATION:
@@ -240,14 +230,14 @@ def _global_mean(
 
 
 def _relative_change(baseline: float, candidate: float) -> float:
-    """``(baseline - candidate) / baseline``. Positive = candidate better."""
+    """``(baseline - candidate) / baseline``; positivo significa mejora."""
     if not np.isfinite(baseline) or baseline == 0.0 or not np.isfinite(candidate):
         return float("nan")
     return (baseline - candidate) / baseline
 
 
 def _relative_change_signed(baseline: float, candidate: float) -> float:
-    """``(candidate - baseline) / baseline``. Positive = candidate worse."""
+    """``(candidate - baseline) / baseline``; positivo significa deterioro."""
     if not np.isfinite(baseline) or baseline == 0.0 or not np.isfinite(candidate):
         return float("nan")
     return (candidate - baseline) / baseline

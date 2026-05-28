@@ -25,7 +25,7 @@ MATURITY_BINS: tuple[tuple[float, float], ...] = (
 
 @dataclass(frozen=True)
 class UniformSampler:
-    """Uniform sampler in the financial scale defined by the domain."""
+    """Muestreo uniforme en la escala financiera definida por el dominio."""
 
     domain: Domain
     seed: int | None = None
@@ -37,7 +37,7 @@ class UniformSampler:
 
 @dataclass(frozen=True)
 class FocusedSampler:
-    """Mixture sampler for H-5: global coverage plus ATM/short-maturity focus."""
+    """Muestreo mixto para H-5: cobertura global y foco ATM/corto plazo."""
 
     domain: Domain
     seed: int | None = None
@@ -110,7 +110,7 @@ class FocusedSampler:
 
 @dataclass(frozen=True)
 class BalancedBinSampler:
-    """Sampler with equal observations in each moneyness x maturity bin."""
+    """Muestreo con el mismo número de puntos en cada bin de moneyness y plazo."""
 
     domain: Domain
     samples_per_bin: int

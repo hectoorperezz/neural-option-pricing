@@ -1,29 +1,21 @@
-"""Evaluate every checkpoint under a directory and emit a consolidated summary.
+"""Evalúa todos los checkpoints de un directorio y consolida el resumen.
 
-This is the orchestrator of the orchestrator: it walks
-``results/checkpoints/``, detects each surrogate's family from its
-``config.json`` (``input_dim == 4`` -> Black-Scholes, ``input_dim == 8``
--> Heston), routes each checkpoint to its matching test set, and invokes
-``scripts/evaluate_surrogate.py`` once per checkpoint via ``subprocess``.
+Este script es el orquestador de segundo nivel: recorre
+``results/checkpoints/``, detecta la familia de cada surrogate desde
+``config.json`` y llama a ``evaluate_surrogate.py`` una vez por checkpoint.
 
-By deferring to ``evaluate_surrogate.py`` the script keeps every numeric
-or structural decision in a single place (``docs/architecture.md``
-§Principios: "los scripts solo orquestan llamadas sin contener lógica
-reutilizable"; ``CLAUDE.md`` lo refuerza). Si Héctor mejora
-``evaluate_surrogate.py``, este script hereda la mejora sin un solo
-cambio.
+Al delegar en ``evaluate_surrogate.py``, toda la lógica de evaluación queda
+en un único sitio. Si ese script mejora, este hereda la mejora sin duplicar
+decisiones.
 
-Outputs in ``results/metrics/``:
+Salidas en ``results/metrics/``:
 
-* ``<surrogate>_eval.csv`` — one per surrogate, 25 rows (one per bin),
-  produced verbatim by ``evaluate_surrogate.py``.
-* ``all_surrogates_summary.csv`` — one row per surrogate with the
-  globally-aggregated metrics (mean of per-bin means, worst-bin
-  ``p95``, worst-bin label) so the team can scan all 11 at once in
-  Excel without opening 11 files.
+* ``<surrogate>_eval.csv``: un CSV por surrogate, con 25 filas.
+* ``all_surrogates_summary.csv``: una fila por surrogate, con métricas
+  globales agregadas para revisar todos los modelos de un vistazo.
 
-Sequential by default. A failure in any subprocess stops the whole run
-with a clear error; we never emit a partial summary.
+La ejecución es secuencial. Si falla un subprocess, se detiene todo y no se
+emite un resumen parcial.
 """
 
 from __future__ import annotations
@@ -49,7 +41,7 @@ DEFAULT_HESTON_TEST = REPO_ROOT / "data" / "heston_test_125k_balanced_delta.npz"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Evaluate every checkpoint under a directory and emit a summary CSV."
+        description="Evalúa todos los checkpoints de un directorio y escribe un CSV resumen."
     )
     parser.add_argument("--checkpoints-dir", type=Path, default=DEFAULT_CHECKPOINTS_DIR)
     parser.add_argument("--bs-test", type=Path, default=DEFAULT_BS_TEST)
@@ -60,18 +52,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--no-iv",
         action="store_true",
-        help="Forward --no-iv to every evaluation (skips IV inversion, much faster).",
+        help="Pasa --no-iv a cada evaluación; omite IV y acelera mucho el proceso.",
     )
     parser.add_argument(
         "--summary-name",
         default="all_surrogates_summary.csv",
-        help="Filename for the consolidated summary CSV (written inside --output-dir).",
+        help="Nombre del CSV resumen consolidado, escrito dentro de --output-dir.",
     )
     return parser.parse_args()
 
 
 def find_checkpoints(checkpoints_dir: Path) -> list[Path]:
-    """Return every immediate subdir of ``checkpoints_dir`` carrying a checkpoint."""
+    """Devuelve los subdirectorios inmediatos que contienen un checkpoint."""
     if not checkpoints_dir.exists():
         raise FileNotFoundError(f"checkpoints directory not found: {checkpoints_dir}")
     candidates = [
@@ -108,7 +100,7 @@ def evaluate_one(
     batch_size: int,
     no_iv: bool,
 ) -> int:
-    """Invoke ``evaluate_surrogate.py`` for a single checkpoint."""
+    """Invoca ``evaluate_surrogate.py`` para un checkpoint."""
     cmd = [
         python_exe,
         str(EVALUATE_SURROGATE_SCRIPT),
@@ -129,7 +121,7 @@ def summarize_one(
     test_path: Path,
     eval_csv: Path,
 ) -> dict[str, Any]:
-    """Compute the consolidated row for a single surrogate from its per-bin CSV."""
+    """Construye la fila consolidada de un surrogate desde su CSV por bin."""
     rows = list(csv.DictReader(eval_csv.open(encoding="utf-8")))
     if not rows:
         raise ValueError(f"{eval_csv} is empty")

@@ -1,22 +1,13 @@
-"""Container for per-bin surrogate evaluation results.
+"""Resultado agregado de evaluar un surrogate por bins.
 
-:class:`Report` is the data structure that ``BinEvaluator`` will return after
-applying :mod:`src.evaluation.metrics` to a surrogate over a test set. It is
-intentionally a thin dataclass that holds already-aggregated values and
-knows how to write them out as a CSV; it does no arithmetic itself.
+``Report`` es el contenedor que devuelve ``BinEvaluator``. Guarda métricas ya
+agregadas, no recalcula nada, y sabe serializarlas a CSV o a heatmaps.
 
-The CSV layout is wide (one row per bin, one column per metric statistic)
-because the immediate consumer is a human inspecting results in Excel; the
-``Experiment`` classes planned for the next phase can re-aggregate this
-into long format with pandas if needed.
-
-Per ``docs/metodologia.md`` ("Las métricas mínimas de evaluación serán
-`MAE(C/K)`, `MAE_IV` y `MAE_Delta`. Para cada una se reportarán promedios y
-percentiles por bin, con especial atención al percentil 95.") every metric
-shows mean and p50/p95/p99 in the CSV. The IV failure rate per bin lives in
-its own column because the methodology document explicitly mandates that it
-be surfaced as a diagnostic ("los fallos no deben ocultarse, se reportarán
-como parte del diagnóstico").
+El CSV usa formato ancho: una fila por bin y una columna por estadístico.
+Esto facilita la inspección directa en Excel. Cada métrica reporta media,
+p50, p95 y p99, tal como se fijó en ``docs/metodologia.md``. La tasa de fallo
+de inversión IV se conserva como columna propia porque forma parte del
+diagnóstico, no es un detalle a ocultar.
 """
 
 from __future__ import annotations
@@ -35,17 +26,16 @@ _METRICS_IN_CSV: tuple[str, ...] = ("mean", "p50", "p95", "p99")
 
 @dataclass(frozen=True)
 class Report:
-    """Per-bin surrogate quality summary, with CSV serialization.
+    """Resumen de calidad por bin, serializable a CSV.
 
-    ``price``, ``delta`` and ``iv`` are dicts in the shape produced by
-    :func:`src.evaluation.metrics.aggregate_by_bin`: keys ``mean``,
-    ``count``, ``p50``, ``p95``, ``p99``; each value is an ``np.ndarray``
-    of length ``partition.n_bins``. ``delta`` and ``iv`` may be ``None``
-    if the dataset did not provide Deltas or if IV inversion was skipped.
+    ``price``, ``delta`` e ``iv`` tienen la forma que produce
+    ``aggregate_by_bin``: claves ``mean``, ``count``, ``p50``, ``p95`` y
+    ``p99``. Cada valor es un array de longitud ``partition.n_bins``.
+    ``delta`` e ``iv`` pueden ser ``None`` si el dataset no trae Deltas o si
+    se omitió la inversión de IV.
 
-    ``iv_failure_rate_per_bin`` is the fraction of points in each bin for
-    which the BS implied-volatility inverter could not return a value;
-    methodology requires that it be reported alongside ``MAE_IV``.
+    ``iv_failure_rate_per_bin`` mide la fracción de puntos del bin donde el
+    inversor de IV no pudo devolver una volatilidad válida.
     """
 
     surrogate_id: str
@@ -87,7 +77,7 @@ class Report:
                 )
 
     def to_csv(self, path: str | Path) -> None:
-        """Write the per-bin summary to a wide CSV file at ``path``."""
+        """Escribe el resumen por bin en un CSV ancho."""
         output_path = Path(path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -163,13 +153,13 @@ class Report:
         path: str | Path,
         statistic: str = "mean",
     ) -> None:
-        """Save a 5x5 heatmap PNG of ``statistic`` for ``metric``.
+        """Guarda un heatmap 5x5 para una métrica y un estadístico.
 
-        ``metric`` must be one of ``"price"``, ``"delta"``, ``"iv"`` or
-        ``"iv_failure_rate"``. ``statistic`` is one of ``"mean"``, ``"p50"``,
-        ``"p95"``, ``"p99"`` (ignored for ``iv_failure_rate``, which has no
-        percentiles). Empty bins are rendered in light grey to be visually
-        distinguishable from numeric zero.
+        ``metric`` puede ser ``"price"``, ``"delta"``, ``"iv"`` o
+        ``"iv_failure_rate"``. ``statistic`` puede ser ``"mean"``, ``"p50"``,
+        ``"p95"`` o ``"p99"``. En ``iv_failure_rate`` se ignora porque no hay
+        percentiles. Los bins vacíos se pintan en gris claro para separarlos
+        visualmente del cero numérico.
         """
         values = self._values_for_heatmap(metric, statistic)
         n_rows = self.partition.n_maturity_bins

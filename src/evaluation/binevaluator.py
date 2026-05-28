@@ -1,28 +1,12 @@
-"""Per-bin evaluation orchestrator for trained surrogates.
+"""Orquestador de evaluación por bins para surrogates entrenados.
 
-:class:`BinEvaluator` is the piece that glues together the three other
-modules under :mod:`src.evaluation`:
+``BinEvaluator`` conecta la partición de bins, las métricas y el ``Report``.
+Dado un surrogate entrenado, un ``OptionDataset`` y la partición 5x5, devuelve
+un informe completo con errores de precio, Delta e IV cuando aplica.
 
-* :class:`src.evaluation.binning.BinPartition` decides which bin each test
-  point belongs to.
-* The free functions in :mod:`src.evaluation.metrics` compute pointwise
-  absolute errors, per-bin aggregates, surrogate outputs and the BS
-  implied-volatility inversion.
-* :class:`src.evaluation.report.Report` packages the resulting numbers
-  and knows how to serialize them to CSV.
-
-Given a trained surrogate, an :class:`src.datasets.generator.OptionDataset`
-and the standard 5x5 partition, :meth:`BinEvaluator.evaluate` returns a
-fully populated :class:`Report`. This matches the contract described in
-``docs/architecture.md`` §"Evaluation": the evaluator receives the
-partition and an ``OptionPricer`` by injection so the same code path
-serves Black-Scholes and Heston surrogates without branching.
-
-In this version the injected ``pricer`` is not invoked: the reference
-prices and deltas come from the dataset itself (already produced by the
-solver during dataset generation). The field is kept for forward
-compatibility with the timing benchmark planned for E4 and to honour the
-constructor signature documented in ``architecture.md``.
+El ``pricer`` se inyecta para mantener el contrato de arquitectura y para
+compatibilidad con E4. En esta ruta no se usa directamente: los precios y
+Deltas de referencia ya vienen calculados en el dataset.
 """
 
 from __future__ import annotations
@@ -53,12 +37,10 @@ OptionPricer = Union[BlackScholesSolver, HestonSolver]
 
 @dataclass(frozen=True)
 class BinEvaluator:
-    """Evaluate a surrogate over a test set and return a :class:`Report`.
+    """Evalúa un surrogate sobre un test set y devuelve un ``Report``.
 
-    The evaluator is configured once and can be reused across surrogates of
-    the same family; calling :meth:`evaluate` does not mutate any field of
-    the evaluator. The frozen dataclass mirrors the convention used by
-    every other component in :mod:`src.evaluation`.
+    La instancia se configura una vez y puede reutilizarse con surrogates de
+    la misma familia. ``evaluate`` no muta el estado interno.
     """
 
     partition: BinPartition
@@ -80,16 +62,15 @@ class BinEvaluator:
         surrogate_id: str = "",
         test_path: str = "",
     ) -> Report:
-        """Run the full per-bin evaluation pipeline.
+        """Ejecuta la evaluación completa por bins.
 
-        ``bin_id`` may be provided when the test set already carries it
-        (the ``.npz`` files produced by ``BalancedBinSampler`` do). When it
-        is ``None`` the partition computes it on the fly from ``raw_inputs``.
+        ``bin_id`` puede venir del propio test set, como ocurre con los
+        ``.npz`` generados por ``BalancedBinSampler``. Si no se proporciona,
+        la partición lo calcula desde ``raw_inputs``.
 
-        ``compute_iv=False`` short-circuits the implied-volatility inversion,
-        which is by far the slowest stage of the pipeline (it loops over the
-        test set point by point through the scalar inverter). The resulting
-        report will carry ``iv = None`` and ``iv_failure_rate_per_bin = None``.
+        ``compute_iv=False`` evita la inversión de IV, que es la fase más
+        lenta. En ese caso el informe deja ``iv`` e ``iv_failure_rate`` como
+        ``None``.
         """
         device = self._resolve_device()
         inverter = self.iv_inverter if self.iv_inverter is not None else ImpliedVolatilityInverter()

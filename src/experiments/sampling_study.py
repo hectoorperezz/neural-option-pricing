@@ -1,8 +1,7 @@
 """E3 — Muestreo uniforme frente a enfocado.
 
-Materializes the experiment specified in ``docs/tasks.md`` §E3 and
-``docs/metodologia.md`` §"Experimento E3 — Muestreo uniforme frente a
-enfocado":
+Implementa el experimento descrito en ``docs/tasks.md`` y
+``docs/metodologia.md``:
 
     "La comparación principal será H-3 frente a H-5. Ambos surrogates
     deben compartir arquitectura, pérdida, optimizador, tamaño de
@@ -20,19 +19,13 @@ enfocado":
     críticos o si la mejora local exige sacrificar de forma excesiva
     la cobertura global."
 
-The class therefore:
+Por eso la clase:
 
-* Receives exactly two :class:`SurrogateInput` instances, one labelled
-  ``sampler="uniform"`` and the other ``sampler="focused"`` (the
-  CLI script populates the labels from the training dataset path).
-* Forces ``compute_iv=True`` because IV is the experiment's primary
-  metric.
-* Aggregates the per-bin ``MAE_IV`` over the three critical bins
-  ``atm_weekly``, ``atm_short``, ``atm_medium_short`` (which
-  ``tasks.md`` §E3 designates explicitly), compares against the same
-  surrogate's global ``MAE_IV`` (nan-safe mean of per-bin means), and
-  applies the thresholds above to populate the
-  :attr:`ExperimentResult.verdict` field.
+* recibe exactamente dos surrogates: ``uniform`` y ``focused``;
+* fuerza ``compute_iv=True`` porque IV es la métrica primaria;
+* agrega ``MAE_IV`` en ``atm_weekly``, ``atm_short`` y
+  ``atm_medium_short``;
+* compara esa mejora local con el deterioro global y asigna el veredicto.
 """
 
 from __future__ import annotations
@@ -46,7 +39,7 @@ from src.evaluation.report import Report
 from src.experiments.base import Experiment, ExperimentResult, SurrogateInput
 
 
-# Bins designated as "critical" by tasks.md §E3 / metodologia.md §E3:
+# Bins críticos definidos en tasks.md §E3 / metodologia.md §E3:
 # "ATM combinado con weekly, short y medium-short".
 _CRITICAL_BIN_LABELS: tuple[str, ...] = (
     "atm_weekly",
@@ -54,15 +47,13 @@ _CRITICAL_BIN_LABELS: tuple[str, ...] = (
     "atm_medium_short",
 )
 
-# Thresholds taken verbatim from metodologia.md §E3.
+# Umbrales tomados de metodologia.md §E3.
 _STRONG_IMPROVEMENT_THRESHOLD: float = 0.10
 _STRONG_MAX_GLOBAL_DEGRADATION: float = 0.10
 
-# The methodology document distinguishes "moderate" from "excessive" global
-# degradation without pinning a number. We adopt 20% as the boundary between
-# them; anything below this is still "positive weak", above it tips into
-# "negative". Flagged in the commit message and in this constant so Héctor
-# can override if he prefers a different threshold.
+# La metodología distingue deterioro global moderado y excesivo sin fijar un
+# número. Usamos 20% como frontera operativa: por debajo sigue siendo
+# positivo débil; por encima pasa a negativo.
 _EXCESSIVE_GLOBAL_DEGRADATION: float = 0.20
 
 
@@ -150,7 +141,7 @@ class SamplingStudy(Experiment):
 
 
 def decide_verdict(improvement_critical: float, global_degradation: float) -> str:
-    """Apply the thresholds documented in ``metodologia.md`` §E3."""
+    """Aplica los umbrales documentados en ``metodologia.md`` §E3."""
     if not np.isfinite(improvement_critical) or improvement_critical <= 0.0:
         return "negativo"
     if np.isfinite(global_degradation) and global_degradation > _EXCESSIVE_GLOBAL_DEGRADATION:
@@ -223,10 +214,10 @@ def _global_mae_iv(report: Report) -> float:
 
 
 def _relative_change(baseline: float, candidate: float) -> float:
-    """Return ``(baseline - candidate) / baseline`` as a relative change.
+    """Devuelve ``(baseline - candidate) / baseline``.
 
-    For ``improvement_critical`` callers pass ``baseline=uniform`` and
-    ``candidate=focused``; a positive number means focused is better.
+    En ``improvement_critical``, positivo significa que ``focused`` mejora a
+    ``uniform``.
     """
     if not np.isfinite(baseline) or baseline == 0.0 or not np.isfinite(candidate):
         return float("nan")
@@ -234,10 +225,10 @@ def _relative_change(baseline: float, candidate: float) -> float:
 
 
 def _relative_degradation(baseline: float, candidate: float) -> float:
-    """Return ``(candidate - baseline) / baseline``.
+    """Devuelve ``(candidate - baseline) / baseline``.
 
-    A positive value means the candidate is worse than the baseline; a
-    negative value means it improves over the baseline.
+    Positivo significa que el candidato empeora; negativo significa que
+    mejora.
     """
     if not np.isfinite(baseline) or baseline == 0.0 or not np.isfinite(candidate):
         return float("nan")

@@ -15,7 +15,7 @@ def _to_output(value: np.ndarray) -> float | np.ndarray:
 
 @dataclass(frozen=True)
 class HestonSolver:
-    """Fourier pricer for European calls under the Heston model."""
+    """Pricer de Heston por Fourier para calls europeas."""
 
     integration_upper_bound: float = float("inf")
     integration_lower_bound: float = 1e-8

@@ -1,8 +1,7 @@
 """E2 — Activaciones y calidad de Delta.
 
-Materializes the experiment specified in ``docs/tasks.md`` §E2 and
-``docs/metodologia.md`` §"Experimento E2 — Activaciones y calidad de
-Delta":
+Implementa el experimento descrito en ``docs/tasks.md`` y
+``docs/metodologia.md``:
 
     "E2 compara ReLU, Softplus, Swish y tanh manteniendo fijo todo lo
     demás. La pregunta no es solo qué activación da mejor precio, sino
@@ -15,20 +14,12 @@ Delta":
 
     "No fijamos umbrales fuerte/débil para E2."
 
-The class therefore:
+Por eso la clase:
 
-* Forces ``compute_iv=False`` because IV is not part of E2's deliverables
-  (the methodology document only names MAE_Delta as primary and MAE(C/K)
-  as control); skipping IV inversion makes the run an order of magnitude
-  faster.
-* Requires the test dataset to carry the reference Delta column: without
-  it ``MAE_Delta`` cannot be computed and the experiment cannot proceed.
-* Emits a per-bin table with the price MAE statistics, the Delta MAE
-  statistics and the surrogate's activation label so that the long-format
-  CSV can be pivoted in Excel by ``(activation, bin)``.
-* Produces a short observational ``summary`` ranking activations by mean
-  ``MAE_Delta`` and by their worst-bin p95. No fuerte/débil verdict is
-  emitted because the methodology document forbids one for E2.
+* desactiva IV porque E2 evalúa Delta y precio como control;
+* exige que el test set traiga Delta de referencia;
+* emite una tabla por bin con precio, Delta y activación;
+* genera un ranking observacional, sin veredicto fuerte/débil.
 """
 
 from __future__ import annotations
