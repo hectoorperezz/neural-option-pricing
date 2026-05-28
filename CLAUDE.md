@@ -18,6 +18,7 @@ Referencias centrales (no opcionales para entender decisiones de diseño):
 - `docs/metodologia.md` — targets, normalización, métricas, bins, criterios de validez de cada experimento.
 - `docs/tasks.md` — los 5 experimentos (E1–E5), los 11 surrogates y las cuatro fases del proyecto con criterios de salida.
 - `docs/architecture.md` — principios de diseño y jerarquías OO por módulo.
+- `docs/experimento-escalado-datos.md` — registro diagnóstico del run 50x; no sustituye al protocolo formal de evaluación.
 - `docs/contexto-generacion-datasets.md` — playbook operativo (entorno, benchmark, tmux, formato `.npz`/`.json`).
 
 ## Comandos
