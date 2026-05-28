@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from torch import nn
 
@@ -54,23 +54,28 @@ class EfficiencyStudy:
                 raise ValueError(f"duplicate device entry: {device}")
             seen.add(device)
 
-    def run(self) -> "EfficiencyResult":
-        timings: dict[str, tuple[TimingResult, ...]] = {}
-        rows: list[dict[str, Any]] = []
-        for device in self.devices:
-            device_results = self.benchmark.run(self.surrogate, device)
-            timings[device] = device_results
-            for result in device_results:
-                rows.append(_render_row(self.surrogate_id, result))
+    def run(
+        self, logger: Callable[[str], None] | None = None
+    ) -> "EfficiencyResult":
+        all_results = self.benchmark.run(
+            self.surrogate, self.devices, logger=logger
+        )
+        timings: dict[str, list[TimingResult]] = {d: [] for d in self.devices}
+        for result in all_results:
+            timings[result.device].append(result)
+        timings_tuple: dict[str, tuple[TimingResult, ...]] = {
+            device: tuple(items) for device, items in timings.items()
+        }
+        rows = [_render_row(self.surrogate_id, r) for r in all_results]
 
-        summary = _build_summary(self.surrogate_id, timings)
+        summary = _build_summary(self.surrogate_id, timings_tuple)
         return EfficiencyResult(
             experiment_id="E4",
             surrogate_id=self.surrogate_id,
             metric_primary="speedup = tiempo_solver / tiempo_surrogate por tamaño de lote",
             table=tuple(rows),
             summary=summary,
-            timings=timings,
+            timings=timings_tuple,
         )
 
 

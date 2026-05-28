@@ -9,6 +9,7 @@ from src.evaluation.timing import (
     DEFAULT_N_WARMUPS,
     TimingBenchmark,
     TimingResult,
+    default_solver_workers,
 )
 from src.solvers import BlackScholesSolver
 
@@ -23,6 +24,10 @@ from src.solvers import BlackScholesSolver
 class _ConstantPriceModel(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x[:, :1]
+
+
+def _silent(_msg: str) -> None:
+    return None
 
 
 def _build_bs_pool(n: int = 200) -> tuple[np.ndarray, np.ndarray, tuple[str, ...]]:
@@ -47,6 +52,7 @@ def _make_benchmark(
     batch_sizes: tuple[int, ...] = (10, 50),
     n_warmups: int = 1,
     n_repetitions: int = 3,
+    solver_workers: int = 1,
 ) -> TimingBenchmark:
     features, raw_inputs, input_names = _build_bs_pool()
     return TimingBenchmark(
@@ -57,6 +63,7 @@ def _make_benchmark(
         batch_sizes=batch_sizes,
         n_warmups=n_warmups,
         n_repetitions=n_repetitions,
+        solver_workers=solver_workers,
     )
 
 
@@ -69,6 +76,10 @@ def test_protocol_defaults_match_methodology() -> None:
     assert DEFAULT_BATCH_SIZES == (100, 1_000, 10_000, 100_000)
     assert DEFAULT_N_WARMUPS == 3
     assert DEFAULT_N_REPETITIONS == 10
+
+
+def test_default_solver_workers_is_positive() -> None:
+    assert default_solver_workers() >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -171,21 +182,40 @@ def test_benchmark_rejects_non_positive_repetitions() -> None:
         )
 
 
+def test_benchmark_rejects_zero_solver_workers() -> None:
+    features, raw_inputs, names = _build_bs_pool()
+    with pytest.raises(ValueError, match="solver_workers"):
+        TimingBenchmark(
+            pricer=BlackScholesSolver(),
+            raw_inputs=raw_inputs,
+            features=features,
+            input_names=names,
+            batch_sizes=(10,),
+            solver_workers=0,
+        )
+
+
 # ---------------------------------------------------------------------------
 # TimingBenchmark.run — structural guarantees
 # ---------------------------------------------------------------------------
 
 
-def test_run_returns_one_result_per_batch_size() -> None:
+def test_run_rejects_empty_devices() -> None:
+    benchmark = _make_benchmark()
+    with pytest.raises(ValueError, match="at least one device"):
+        benchmark.run(_ConstantPriceModel(), (), logger=_silent)
+
+
+def test_run_returns_one_result_per_device_and_batch_size() -> None:
     benchmark = _make_benchmark(batch_sizes=(10, 50, 100))
-    results = benchmark.run(_ConstantPriceModel(), "cpu")
+    results = benchmark.run(_ConstantPriceModel(), ("cpu",), logger=_silent)
     assert len(results) == 3
     assert tuple(r.batch_size for r in results) == (10, 50, 100)
 
 
 def test_run_records_exactly_n_repetitions_per_result() -> None:
     benchmark = _make_benchmark(batch_sizes=(20,), n_repetitions=4, n_warmups=2)
-    (result,) = benchmark.run(_ConstantPriceModel(), "cpu")
+    (result,) = benchmark.run(_ConstantPriceModel(), ("cpu",), logger=_silent)
     assert len(result.solver_times_s) == 4
     assert len(result.surrogate_times_s) == 4
     assert result.n_repetitions == 4
@@ -193,27 +223,58 @@ def test_run_records_exactly_n_repetitions_per_result() -> None:
 
 def test_run_marks_device_on_every_result() -> None:
     benchmark = _make_benchmark(batch_sizes=(10, 20))
-    results = benchmark.run(_ConstantPriceModel(), "cpu")
+    results = benchmark.run(_ConstantPriceModel(), ("cpu",), logger=_silent)
     assert all(r.device == "cpu" for r in results)
 
 
 def test_run_produces_finite_positive_timings() -> None:
     benchmark = _make_benchmark(batch_sizes=(30,))
-    (result,) = benchmark.run(_ConstantPriceModel(), "cpu")
+    (result,) = benchmark.run(_ConstantPriceModel(), ("cpu",), logger=_silent)
     for t in result.solver_times_s + result.surrogate_times_s:
         assert np.isfinite(t)
         assert t >= 0.0
 
 
 def test_run_includes_data_conversion_in_surrogate_time() -> None:
-    """Smoke test that surrogate timing is end-to-end (not just forward).
-
-    Because we pass numpy features and move them to device inside the
-    measured block, the surrogate time must be strictly positive even
-    when the model is the identity. We do not assert an exact value;
-    only that the timer captures the work between ``torch.from_numpy``
-    and the network output.
-    """
+    """Smoke test that surrogate timing is end-to-end (not just forward)."""
     benchmark = _make_benchmark(batch_sizes=(50,), n_repetitions=5, n_warmups=1)
-    (result,) = benchmark.run(_ConstantPriceModel(), "cpu")
+    (result,) = benchmark.run(_ConstantPriceModel(), ("cpu",), logger=_silent)
     assert result.surrogate_median_s > 0.0
+
+
+def test_run_reuses_solver_times_across_devices() -> None:
+    """Solver runs once per batch, its times must be identical across devices."""
+    benchmark = _make_benchmark(batch_sizes=(20,))
+    results = benchmark.run(
+        _ConstantPriceModel(), ("cpu", "cpu"), logger=_silent
+    )
+    assert len(results) == 2
+    # Same batch on two device entries => the same solver timing tuple
+    # must be shared (the solver only ran once).
+    assert results[0].solver_times_s == results[1].solver_times_s
+
+
+def test_run_logs_per_cell(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Custom logger receives at least one message per (device, batch) cell."""
+    benchmark = _make_benchmark(batch_sizes=(10, 20))
+    messages: list[str] = []
+    benchmark.run(_ConstantPriceModel(), ("cpu",), logger=messages.append)
+    joined = "\n".join(messages)
+    # Both batch sizes must show up in the log
+    assert "batch_size=10" in joined
+    assert "batch_size=20" in joined
+    # And both phases (solver + surrogate) must be reported
+    assert "solver done" in joined
+    assert "surrogate[cpu]" in joined
+
+
+def test_run_with_pool_workers_succeeds() -> None:
+    """Solver with workers>1 returns the same shape as the serial path."""
+    benchmark = _make_benchmark(
+        batch_sizes=(40,), n_repetitions=2, n_warmups=1, solver_workers=2
+    )
+    (result,) = benchmark.run(_ConstantPriceModel(), ("cpu",), logger=_silent)
+    assert len(result.solver_times_s) == 2
+    assert len(result.surrogate_times_s) == 2
+    for t in result.solver_times_s:
+        assert t > 0.0

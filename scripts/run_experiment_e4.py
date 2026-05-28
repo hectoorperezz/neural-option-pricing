@@ -38,6 +38,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.evaluation import TimingBenchmark
+from src.evaluation.timing import default_solver_workers
 from src.experiments import EfficiencyResult, EfficiencyStudy
 from src.models import MLP
 from src.solvers import HestonSolver
@@ -108,6 +109,16 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=None,
         help="Override repetition count. Default: 10 (as pre-registered).",
+    )
+    parser.add_argument(
+        "--solver-workers",
+        type=int,
+        default=None,
+        help=(
+            "Processes the Heston solver fans out to. Default: "
+            "cpu_count - 2 (matches the convention used by the dataset "
+            "generator). Pass 1 to force the in-process serial solver."
+        ),
     )
     return parser.parse_args()
 
@@ -182,11 +193,20 @@ def main() -> EfficiencyResult:
         benchmark_kwargs["n_warmups"] = args.n_warmups
     if args.n_repetitions is not None:
         benchmark_kwargs["n_repetitions"] = args.n_repetitions
+    solver_workers = (
+        args.solver_workers if args.solver_workers is not None
+        else default_solver_workers()
+    )
+    benchmark_kwargs["solver_workers"] = solver_workers
     benchmark = TimingBenchmark(**benchmark_kwargs)
 
     print(
-        "protocol     : batch_sizes={}, n_warmups={}, n_repetitions={}".format(
-            benchmark.batch_sizes, benchmark.n_warmups, benchmark.n_repetitions
+        "protocol     : batch_sizes={}, n_warmups={}, n_repetitions={}, "
+        "solver_workers={}".format(
+            benchmark.batch_sizes,
+            benchmark.n_warmups,
+            benchmark.n_repetitions,
+            benchmark.solver_workers,
         )
     )
 

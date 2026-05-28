@@ -126,6 +126,7 @@ def test_script_writes_csv_and_plot(
             "--batch-sizes", "10", "50",
             "--n-warmups", "1",
             "--n-repetitions", "2",
+            "--solver-workers", "1",
         ],
     )
 
@@ -156,6 +157,7 @@ def test_script_can_run_without_plot(
             "--batch-sizes", "10",
             "--n-warmups", "1",
             "--n-repetitions", "2",
+            "--solver-workers", "1",
         ],
     )
 

@@ -34,19 +34,27 @@ The benchmark therefore:
 * Calls ``torch.cuda.synchronize`` before stopping the clock on CUDA
   devices so the recorded time reflects the kernel finishing, not the
   launch returning.
-* Leaves the Heston solver serial — it is single-process by
-  construction (``scipy.integrate.quad`` per point) and the experiment
-  is meant to measure the solver "as is".
-* Does not touch ``torch.set_num_threads``; PyTorch CPU concurrency is
-  whatever the user gets by default in production, and that is the
-  reference for the speedup we report.
+* Measures the Heston solver **once** per batch size and reuses those
+  timings across every device under benchmark; the solver runs on CPU
+  regardless of where the surrogate lives, so measuring it twice would
+  be wasted wall-clock time without adding information.
+* Optionally fans the solver out across multiple processes with
+  ``solver_workers``; this matches what a calibration loop user would
+  actually do in production (the in-process ``scipy.integrate.quad``
+  per point is serial by construction) and avoids one core saturating
+  while the other 23 sit idle.
+* Emits one log line per measured cell (with wall-clock delta, batch
+  size, device and current speedup) so a long run is observable in
+  real time instead of going silent for minutes.
 """
 
 from __future__ import annotations
 
+import os
 import time
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 import torch
@@ -58,10 +66,9 @@ from src.solvers.heston import HestonSolver
 OptionPricer = BlackScholesSolver | HestonSolver
 
 
-# Default protocol constants — these are the values pre-registered in
-# ``tasks.md`` §E4 / ``metodologia.md`` §E4. Exposed as module-level
-# constants so the script and the docs can cite them verbatim and so
-# tests can override them with smaller values when needed.
+# Default protocol constants — pre-registered in ``tasks.md`` §E4 /
+# ``metodologia.md`` §E4. Exposed so the script and docs cite them
+# verbatim and tests can override them with smaller values.
 DEFAULT_BATCH_SIZES: tuple[int, ...] = (100, 1_000, 10_000, 100_000)
 DEFAULT_N_WARMUPS: int = 3
 DEFAULT_N_REPETITIONS: int = 10
@@ -69,13 +76,7 @@ DEFAULT_N_REPETITIONS: int = 10
 
 @dataclass(frozen=True)
 class TimingResult:
-    """Raw timings for one ``(device, batch_size)`` cell.
-
-    ``solver_times_s`` and ``surrogate_times_s`` contain exactly
-    ``n_repetitions`` wall-clock seconds (warmups are discarded before
-    populating the tuples). All statistics are derived properties so the
-    result stays a pure data object.
-    """
+    """Raw timings for one ``(device, batch_size)`` cell."""
 
     device: str
     batch_size: int
@@ -123,7 +124,6 @@ class TimingResult:
 
     @property
     def speedup_median(self) -> float:
-        """``solver_median / surrogate_median``. ``inf`` if surrogate is 0."""
         if self.surrogate_median_s <= 0.0:
             return float("inf")
         return self.solver_median_s / self.surrogate_median_s
@@ -131,15 +131,7 @@ class TimingResult:
 
 @dataclass(frozen=True)
 class TimingBenchmark:
-    """Time the surrogate vs the solver on identical input slices.
-
-    The benchmark stores the full pool of points and slices the first
-    ``batch_size`` of them per measurement so that the solver and the
-    surrogate see the same option specifications at every batch size.
-    The protocol constants (``n_warmups``, ``n_repetitions``,
-    ``batch_sizes``) default to the values pre-registered in
-    ``tasks.md`` §E4 and ``metodologia.md`` §E4.
-    """
+    """Time the surrogate vs the solver on identical input slices."""
 
     pricer: OptionPricer
     raw_inputs: np.ndarray
@@ -148,6 +140,7 @@ class TimingBenchmark:
     batch_sizes: tuple[int, ...] = DEFAULT_BATCH_SIZES
     n_warmups: int = DEFAULT_N_WARMUPS
     n_repetitions: int = DEFAULT_N_REPETITIONS
+    solver_workers: int = 1
 
     def __post_init__(self) -> None:
         if self.raw_inputs.ndim != 2:
@@ -176,48 +169,132 @@ class TimingBenchmark:
             raise ValueError("n_warmups must be non-negative")
         if self.n_repetitions <= 0:
             raise ValueError("n_repetitions must be strictly positive")
+        if self.solver_workers < 1:
+            raise ValueError("solver_workers must be >= 1")
         if len(self.input_names) != self.raw_inputs.shape[1]:
             raise ValueError(
                 "input_names length does not match raw_inputs columns "
                 f"({len(self.input_names)} vs {self.raw_inputs.shape[1]})"
             )
 
-    def run(self, surrogate: nn.Module, device: str) -> tuple[TimingResult, ...]:
-        """Run the benchmark on ``device`` and return one result per batch."""
-        surrogate = surrogate.to(device)
+    def run(
+        self,
+        surrogate: nn.Module,
+        devices: tuple[str, ...],
+        logger: Callable[[str], None] | None = None,
+    ) -> tuple[TimingResult, ...]:
+        """Benchmark surrogate vs solver on every (device, batch_size) cell.
+
+        The solver is timed exactly once per batch size (its work does
+        not depend on the surrogate device) and the resulting timings
+        are reused for each ``TimingResult`` that shares that batch
+        size. ``logger`` defaults to ``print`` with ``flush=True``;
+        pass ``logger=lambda _: None`` to suppress output (tests do).
+        """
+        if not devices:
+            raise ValueError("at least one device must be provided")
+        log = logger if logger is not None else _print_flush
+        wall_start = time.perf_counter()
+
+        log(
+            f"[{_elapsed(wall_start)}] benchmark start: "
+            f"batch_sizes={list(self.batch_sizes)}, devices={list(devices)}, "
+            f"warmups={self.n_warmups}, repetitions={self.n_repetitions}, "
+            f"solver_workers={self.solver_workers}"
+        )
+
         surrogate.eval()
 
         results: list[TimingResult] = []
-        for batch_size in self.batch_sizes:
-            raw_slice = self.raw_inputs[:batch_size]
-            feature_slice = self.features[:batch_size]
-            solver_times = _measure_solver(
-                pricer=self.pricer,
-                raw_inputs=raw_slice,
-                input_names=self.input_names,
-                n_warmups=self.n_warmups,
-                n_repetitions=self.n_repetitions,
-            )
-            surrogate_times = _measure_surrogate(
-                surrogate=surrogate,
-                features=feature_slice,
-                device=device,
-                n_warmups=self.n_warmups,
-                n_repetitions=self.n_repetitions,
-            )
-            results.append(
-                TimingResult(
-                    device=device,
-                    batch_size=batch_size,
-                    n_repetitions=self.n_repetitions,
-                    solver_times_s=tuple(solver_times),
-                    surrogate_times_s=tuple(surrogate_times),
+        with _maybe_pool(self.solver_workers) as pool:
+            for batch_size in self.batch_sizes:
+                log(
+                    f"[{_elapsed(wall_start)}] === batch_size={batch_size} ==="
                 )
-            )
+                solver_times = _measure_solver(
+                    pricer=self.pricer,
+                    raw_inputs=self.raw_inputs[:batch_size],
+                    input_names=self.input_names,
+                    n_warmups=self.n_warmups,
+                    n_repetitions=self.n_repetitions,
+                    pool=pool,
+                    n_workers=self.solver_workers,
+                )
+                solver_median = float(np.median(solver_times))
+                log(
+                    f"[{_elapsed(wall_start)}]   solver done. "
+                    f"median={solver_median:.4f}s, "
+                    f"throughput={batch_size / max(solver_median, 1e-12):.1f} opt/s"
+                )
+
+                for device in devices:
+                    surr_times = _measure_surrogate(
+                        surrogate=surrogate,
+                        features=self.features[:batch_size],
+                        device=device,
+                        n_warmups=self.n_warmups,
+                        n_repetitions=self.n_repetitions,
+                    )
+                    surrogate_median = float(np.median(surr_times))
+                    speedup = (
+                        solver_median / surrogate_median
+                        if surrogate_median > 0
+                        else float("inf")
+                    )
+                    log(
+                        f"[{_elapsed(wall_start)}]   surrogate[{device}] done. "
+                        f"median={surrogate_median:.4e}s, "
+                        f"speedup=x{speedup:.1f}"
+                    )
+                    results.append(
+                        TimingResult(
+                            device=device,
+                            batch_size=batch_size,
+                            n_repetitions=self.n_repetitions,
+                            solver_times_s=tuple(solver_times),
+                            surrogate_times_s=tuple(surr_times),
+                        )
+                    )
+
+        log(f"[{_elapsed(wall_start)}] benchmark complete.")
         return tuple(results)
 
 
+# ---------------------------------------------------------------------------
+# Solver timing (single-process or pool-fanned)
+# ---------------------------------------------------------------------------
+
+
 def _measure_solver(
+    *,
+    pricer: OptionPricer,
+    raw_inputs: np.ndarray,
+    input_names: tuple[str, ...],
+    n_warmups: int,
+    n_repetitions: int,
+    pool: ProcessPoolExecutor | None,
+    n_workers: int,
+) -> list[float]:
+    if pool is None or n_workers <= 1 or raw_inputs.shape[0] < n_workers:
+        return _measure_solver_serial(
+            pricer=pricer,
+            raw_inputs=raw_inputs,
+            input_names=input_names,
+            n_warmups=n_warmups,
+            n_repetitions=n_repetitions,
+        )
+    return _measure_solver_parallel(
+        pricer=pricer,
+        raw_inputs=raw_inputs,
+        input_names=input_names,
+        n_warmups=n_warmups,
+        n_repetitions=n_repetitions,
+        pool=pool,
+        n_workers=n_workers,
+    )
+
+
+def _measure_solver_serial(
     *,
     pricer: OptionPricer,
     raw_inputs: np.ndarray,
@@ -236,6 +313,54 @@ def _measure_solver(
     return times
 
 
+def _measure_solver_parallel(
+    *,
+    pricer: OptionPricer,
+    raw_inputs: np.ndarray,
+    input_names: tuple[str, ...],
+    n_warmups: int,
+    n_repetitions: int,
+    pool: ProcessPoolExecutor,
+    n_workers: int,
+) -> list[float]:
+    """Fan the solver out across processes by splitting ``raw_inputs``.
+
+    Each worker receives a contiguous chunk of the input batch and runs
+    the solver on it. The wall-clock time recorded is the time from
+    submitting the first chunk to receiving the last result, which is
+    the number a calibration-loop user would feel. The pool itself is
+    created once by the caller and reused across batch sizes.
+    """
+    chunks = _split_chunks(raw_inputs, n_workers)
+    args = [(pricer, chunk, input_names) for chunk in chunks]
+    for _ in range(n_warmups):
+        list(pool.map(_solver_worker, args))
+    times: list[float] = []
+    for _ in range(n_repetitions):
+        start = time.perf_counter()
+        list(pool.map(_solver_worker, args))
+        times.append(time.perf_counter() - start)
+    return times
+
+
+def _solver_worker(args: tuple[Any, np.ndarray, tuple[str, ...]]) -> np.ndarray:
+    pricer, raw_inputs, input_names = args
+    kwargs = _solver_kwargs(pricer, raw_inputs, input_names)
+    return np.asarray(pricer.call_price(**kwargs))
+
+
+def _split_chunks(
+    raw_inputs: np.ndarray, n_workers: int
+) -> list[np.ndarray]:
+    chunks = np.array_split(raw_inputs, n_workers)
+    return [c for c in chunks if c.shape[0] > 0]
+
+
+# ---------------------------------------------------------------------------
+# Surrogate timing (per device)
+# ---------------------------------------------------------------------------
+
+
 def _measure_surrogate(
     *,
     surrogate: nn.Module,
@@ -244,6 +369,7 @@ def _measure_surrogate(
     n_warmups: int,
     n_repetitions: int,
 ) -> list[float]:
+    surrogate.to(device)
     is_cuda = _is_cuda_device(device)
     for _ in range(n_warmups):
         with torch.no_grad():
@@ -263,20 +389,17 @@ def _measure_surrogate(
     return times
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
 def _solver_kwargs(
     pricer: OptionPricer,
     raw_inputs: np.ndarray,
     input_names: tuple[str, ...],
 ) -> dict[str, Any]:
-    """Build the keyword arguments expected by ``pricer.call_price``.
-
-    The dataset generator (``scripts/generate_dataset.py``) writes
-    ``raw_inputs`` with one column per non-fixed input — for Black-Scholes
-    that is ``(moneyness, maturity, rate, volatility)``, for Heston it is
-    ``(moneyness, maturity, rate, v0, theta, kappa, xi, rho)``. Strike
-    and dividend yield are pipeline-wide constants (``strike=1``,
-    ``q=0``) per the conventions documented in ``metodologia.md``.
-    """
+    """Build the keyword arguments expected by ``pricer.call_price``."""
     columns = {
         name: raw_inputs[:, idx].astype(np.float64)
         for idx, name in enumerate(input_names)
@@ -300,3 +423,40 @@ def _solver_kwargs(
 
 def _is_cuda_device(device: str) -> bool:
     return device.startswith("cuda")
+
+
+def _print_flush(message: str) -> None:
+    print(message, flush=True)
+
+
+def _elapsed(start: float) -> str:
+    delta = time.perf_counter() - start
+    minutes = int(delta // 60)
+    seconds = delta - minutes * 60
+    return f"+{minutes:02d}m{seconds:05.2f}s"
+
+
+class _NullPool:
+    """Sentinel used in place of a real pool when ``solver_workers==1``."""
+
+    def __enter__(self) -> "_NullPool":
+        return self
+
+    def __exit__(self, *_args: Any) -> None:
+        return None
+
+
+def _maybe_pool(n_workers: int) -> ProcessPoolExecutor | _NullPool:
+    if n_workers <= 1:
+        return _NullPool()
+    return ProcessPoolExecutor(max_workers=n_workers)
+
+
+def default_solver_workers() -> int:
+    """Sensible default for ``solver_workers`` based on CPU count.
+
+    Mirrors the convention used elsewhere in the project: ``cpu_count - 2``
+    leaves room for the OS and the surrogate while still feeding the
+    solver fan-out, and clamps to at least 1 on tiny boxes.
+    """
+    return max(1, (os.cpu_count() or 2) - 2)

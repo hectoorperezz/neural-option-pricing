@@ -95,7 +95,7 @@ def test_efficiency_study_rejects_empty_surrogate_id() -> None:
 
 
 def test_run_returns_efficiency_result_with_expected_metadata() -> None:
-    result = _make_study().run()
+    result = _make_study().run(logger=lambda _: None)
     assert isinstance(result, EfficiencyResult)
     assert result.experiment_id == "E4"
     assert result.surrogate_id == "H-3"
@@ -103,12 +103,12 @@ def test_run_returns_efficiency_result_with_expected_metadata() -> None:
 
 
 def test_table_has_one_row_per_device_and_batch_size() -> None:
-    result = _make_study(batch_sizes=(10, 50)).run()
+    result = _make_study(batch_sizes=(10, 50)).run(logger=lambda _: None)
     assert len(result.table) == 2  # 1 device x 2 batch sizes
 
 
 def test_table_columns_match_methodology() -> None:
-    result = _make_study().run()
+    result = _make_study().run(logger=lambda _: None)
     expected = {
         "surrogate_id",
         "device",
@@ -127,13 +127,13 @@ def test_table_columns_match_methodology() -> None:
 
 
 def test_summary_mentions_each_device() -> None:
-    result = _make_study(devices=("cpu",)).run()
+    result = _make_study(devices=("cpu",)).run(logger=lambda _: None)
     assert "cpu" in result.summary
     assert "speedup" in result.summary.lower()
 
 
 def test_timings_dict_indexed_by_device() -> None:
-    result = _make_study(devices=("cpu",), batch_sizes=(10, 50, 100)).run()
+    result = _make_study(devices=("cpu",), batch_sizes=(10, 50, 100)).run(logger=lambda _: None)
     assert set(result.timings.keys()) == {"cpu"}
     assert tuple(r.batch_size for r in result.timings["cpu"]) == (10, 50, 100)
 
@@ -144,7 +144,7 @@ def test_timings_dict_indexed_by_device() -> None:
 
 
 def test_to_csv_writes_header_plus_rows(tmp_path: Path) -> None:
-    result = _make_study(batch_sizes=(10, 50)).run()
+    result = _make_study(batch_sizes=(10, 50)).run(logger=lambda _: None)
     output = tmp_path / "e4.csv"
     result.to_csv(output)
     rows = list(csv.DictReader(output.open(encoding="utf-8")))
@@ -153,7 +153,7 @@ def test_to_csv_writes_header_plus_rows(tmp_path: Path) -> None:
 
 
 def test_to_plot_writes_png(tmp_path: Path) -> None:
-    result = _make_study(batch_sizes=(10, 50, 100)).run()
+    result = _make_study(batch_sizes=(10, 50, 100)).run(logger=lambda _: None)
     output = tmp_path / "speedup.png"
     written = result.to_plot(output)
     assert written == output
