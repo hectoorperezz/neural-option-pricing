@@ -47,6 +47,13 @@ class SurrogateInput:
     of these so that surrogates of different families (BS vs Heston) can
     coexist in the same study. The ``evaluator`` already carries the
     matching solver and partition.
+
+    ``labels`` is an optional categorical metadata dictionary that
+    experiments such as :class:`ActivationStudy` (E2),
+    ``SamplingStudy`` (E3) or ``DMLStudy`` (E5) read to fill the table
+    column that distinguishes the dimension being varied. Keys used so
+    far: ``"activation"`` (E2), ``"sampler"`` (E3), ``"loss"`` (E5).
+    Experiments must tolerate a missing key gracefully (empty string).
     """
 
     surrogate_id: str
@@ -54,6 +61,7 @@ class SurrogateInput:
     dataset: OptionDataset
     evaluator: BinEvaluator
     bin_id: np.ndarray | None = None
+    labels: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)
