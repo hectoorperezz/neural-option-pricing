@@ -23,8 +23,8 @@ def _build_full_report() -> Report:
     n = partition.n_bins
     return Report(
         surrogate_id="BS-3",
-        test_path="data/bs_test_6250k_balanced_delta.npz",
-        n_samples=6_250_000,
+        test_path="data/bs_test_125k_balanced_delta.npz",
+        n_samples=125_000,
         partition=partition,
         price=_full_aggregate(n, fill=1e-3),
         delta=_full_aggregate(n, fill=1e-2),
@@ -37,7 +37,7 @@ def test_report_accepts_all_metrics() -> None:
     report = _build_full_report()
 
     assert report.surrogate_id == "BS-3"
-    assert report.n_samples == 6_250_000
+    assert report.n_samples == 125_000
     assert report.partition.n_bins == 25
     assert report.price["mean"][0] == 1e-3
 

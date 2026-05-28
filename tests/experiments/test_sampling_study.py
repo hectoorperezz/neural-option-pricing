@@ -14,7 +14,7 @@ from src.experiments import (
     SamplingStudy,
     SurrogateInput,
 )
-from src.experiments.sampling_study import decide_verdict
+from src.experiments.sampling_study import _relative_degradation, decide_verdict
 from src.solvers import BlackScholesSolver
 
 
@@ -250,6 +250,16 @@ def test_decide_verdict_negative_no_improvement() -> None:
 
 def test_decide_verdict_negative_excessive_global() -> None:
     assert decide_verdict(0.30, 0.25) == "negativo"
+
+
+def test_global_degradation_uses_uniform_baseline_denominator() -> None:
+    uniform_global = 0.16470
+    focused_global = 0.12973
+
+    assert _relative_degradation(uniform_global, focused_global) == pytest.approx(
+        -0.2123,
+        abs=1e-4,
+    )
 
 
 def test_run_populates_verdict_field() -> None:

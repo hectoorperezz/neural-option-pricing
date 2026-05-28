@@ -60,7 +60,7 @@ _STRONG_MAX_GLOBAL_DEGRADATION: float = 0.10
 
 # The methodology document distinguishes "moderate" from "excessive" global
 # degradation without pinning a number. We adopt 20% as the boundary between
-# them; pierre below this is still "positive weak", above it tips into
+# them; anything below this is still "positive weak", above it tips into
 # "negative". Flagged in the commit message and in this constant so Héctor
 # can override if he prefers a different threshold.
 _EXCESSIVE_GLOBAL_DEGRADATION: float = 0.20
@@ -123,7 +123,7 @@ class SamplingStudy(Experiment):
         focused_global = _global_mae_iv(reports[focused_id])
 
         improvement_critical = _relative_change(uniform_critical, focused_critical)
-        global_degradation = _relative_change(focused_global, uniform_global)
+        global_degradation = _relative_degradation(uniform_global, focused_global)
         verdict = decide_verdict(improvement_critical, global_degradation)
 
         summary = _build_summary(
@@ -227,13 +227,21 @@ def _relative_change(baseline: float, candidate: float) -> float:
 
     For ``improvement_critical`` callers pass ``baseline=uniform`` and
     ``candidate=focused``; a positive number means focused is better.
-    For ``global_degradation`` callers pass ``baseline=uniform`` and
-    ``candidate=focused`` but swap the order externally by computing
-    ``(focused_global - uniform_global) / uniform_global`` instead.
     """
     if not np.isfinite(baseline) or baseline == 0.0 or not np.isfinite(candidate):
         return float("nan")
     return (baseline - candidate) / baseline
+
+
+def _relative_degradation(baseline: float, candidate: float) -> float:
+    """Return ``(candidate - baseline) / baseline``.
+
+    A positive value means the candidate is worse than the baseline; a
+    negative value means it improves over the baseline.
+    """
+    if not np.isfinite(baseline) or baseline == 0.0 or not np.isfinite(candidate):
+        return float("nan")
+    return (candidate - baseline) / baseline
 
 
 def _build_summary(

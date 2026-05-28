@@ -43,8 +43,8 @@ EVALUATE_SURROGATE_SCRIPT = REPO_ROOT / "scripts" / "evaluate_surrogate.py"
 
 DEFAULT_CHECKPOINTS_DIR = REPO_ROOT / "results" / "checkpoints"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "results" / "metrics"
-DEFAULT_BS_TEST = REPO_ROOT / "data" / "bs_test_6250k_balanced_delta.npz"
-DEFAULT_HESTON_TEST = REPO_ROOT / "data" / "heston_test_6250k_balanced_delta.npz"
+DEFAULT_BS_TEST = REPO_ROOT / "data" / "bs_test_125k_balanced_delta.npz"
+DEFAULT_HESTON_TEST = REPO_ROOT / "data" / "heston_test_125k_balanced_delta.npz"
 
 
 def parse_args() -> argparse.Namespace:

@@ -13,7 +13,7 @@ Typical invocation::
 
     python scripts/evaluate_surrogate.py \\
         --checkpoint results/checkpoints/BS-3 \\
-        --test       data/bs_test_6250k_balanced_delta.npz \\
+        --test       data/bs_test_125k_balanced_delta.npz \\
         --output     results/metrics/BS-3_eval.csv
 
 Pass ``--no-iv`` to skip the BS implied-volatility inversion (orders of

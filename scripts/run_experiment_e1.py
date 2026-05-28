@@ -14,9 +14,9 @@ Typical invocation (both families)::
 
     python scripts/run_experiment_e1.py \\
         --bs-checkpoint     results/checkpoints/BS-3 \\
-        --bs-test           data/bs_test_6250k_balanced_delta.npz \\
+        --bs-test           data/bs_test_125k_balanced_delta.npz \\
         --heston-checkpoint results/checkpoints/H-3 \\
-        --heston-test       data/heston_test_6250k_balanced_delta.npz \\
+        --heston-test       data/heston_test_125k_balanced_delta.npz \\
         --output            results/metrics/e1_table.csv \\
         --figures-dir       results/figures/e1
 
