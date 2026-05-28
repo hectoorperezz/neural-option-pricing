@@ -72,6 +72,11 @@ class ExperimentResult:
     serializer writes verbatim. ``reports`` keeps the underlying
     :class:`Report` instances so callers can additionally produce
     heatmaps via :meth:`Report.to_heatmap`.
+
+    ``verdict`` is populated only by experiments whose methodology
+    document defines pre-registered classification thresholds (E3 and
+    E5). For E1 and E2 the methodology document forbids emitting a
+    verdict, so the field stays ``None``.
     """
 
     experiment_id: str
@@ -80,6 +85,7 @@ class ExperimentResult:
     table: tuple[dict[str, Any], ...]
     summary: str
     reports: dict[str, Report]
+    verdict: str | None = None
 
     def __post_init__(self) -> None:
         if not self.experiment_id:
