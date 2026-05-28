@@ -349,7 +349,7 @@ Bajo qué condiciones una red neuronal profunda puede actuar como un surrogate p
 
 Para responderla de forma operativa, descomponemos la pregunta en cinco preguntas más concretas que se traducen en cinco experimentos comparativos. Cada uno varía una sola dimensión del problema mientras mantiene todo lo demás fijo, lo que permite atribuir cualquier diferencia observada a la dimensión que estamos variando y no a otras variables que se hayan colado por accidente.
 
-El resto del documento se organiza como sigue. La \autoref{sec:revision} sintetiza la revisión bibliográfica que ha guiado las decisiones metodológicas. La \autoref{sec:enfoque} describe cómo enfocamos nuestro propio trabajo. La \autoref{sec:metodologia} fija la metodología experimental: \emph{targets}, normalización, solvers, dominio, muestreo y evaluación por \emph{bins}. La \autoref{sec:experimentos} describe los cinco experimentos y los once surrogates que los sostienen. La \autoref{sec:fases} presenta el plan de ejecución por fases. La \autoref{sec:discusion} discute alcance, limitaciones y trabajo en curso.
+El resto del documento se organiza como sigue. La \autoref{sec:revision} sintetiza la revisión bibliográfica que ha guiado las decisiones metodológicas. La \autoref{sec:enfoque} describe cómo enfocamos nuestro propio trabajo. La \autoref{sec:metodologia} fija la metodología experimental: \emph{targets}, normalización, solvers, dominio, muestreo y evaluación por \emph{bins}. La \autoref{sec:experimentos} describe los cinco experimentos y los once surrogates que los sostienen. La \autoref{sec:resultados} reporta los resultados de cada experimento. La \autoref{sec:discusion} discute alcance, limitaciones y trabajo en curso.
 
 % =============================================================================
 \section{Revisión bibliográfica}\label{sec:revision}
@@ -967,65 +967,51 @@ En E5 sí varía deliberadamente el tamaño del \emph{dataset} porque la pregunt
 Cada experimento se cierra con una comparación que cambia una sola dimensión relevante. Si se cambia activación, no se cambia \emph{dataset}. Si se cambia \emph{sampler}, no se cambia arquitectura. Si se cambia \emph{loss} en E5, se mantiene el mismo tamaño pequeño de \emph{dataset} para H-3-small y H-6-small. Para E3 y E5, en los que sí buscamos una clasificación operativa del resultado, los umbrales \emph{positivo fuerte/débil/negativo} se fijan antes de ver los datos. Esa regla previa es lo que evita interpretar resultados de forma oportunista cuando llegue el momento de redactar conclusiones.
 
 % =============================================================================
-\section{Plan de ejecución por fases}\label{sec:fases}
+\section{Resultados experimentales}\label{sec:resultados}
 % =============================================================================
 
-El proyecto se divide en cuatro fases ordenadas. Cada una no empieza hasta que la anterior está cerrada y verificada contra un criterio de salida concreto, como ilustra la \autoref{fig:phases}. Esta secuencialidad es estricta porque las fases tienen dependencias reales: no podemos entrenar redes sobre datos que no hemos generado, no podemos generar datos sin \emph{solvers} que funcionen y no podemos validar un experimento sin métricas implementadas.
+Cada subsección reporta uno de los cinco experimentos descritos en la \autoref{sec:experimentos}. La estructura es común a todos: se recuerda brevemente la configuración, se presentan las métricas observadas mediante tablas y figuras por \emph{bin}, y se discute la implicación a la luz de la hipótesis previa. En los experimentos con clasificación operativa (E3 y E5) se aplica el criterio fuerte/débil/negativo fijado antes de ver los datos. En el resto el resultado se reporta en términos de patrones por \emph{bin} y de robustez de los hallazgos.
 
-% --- FIGURA: timeline de fases ----------------------------------------------
-\begin{figure}[ht]
-\centering
-\begin{tikzpicture}[node distance=2.5mm, font=\scriptsize]
-  \node[phasebox] (p0) {Fase 0\\\emph{Infraestructura}};
-  \node[phasebox, right=of p0] (p1) {Fase 1\\\emph{Pipeline}};
-  \node[phasebox, right=of p1] (p2) {Fase 2\\\emph{Experimentos BS}};
-  \node[phasebox, right=of p2] (p3) {Fase 3\\\emph{Experimentos Heston}};
-  \node[phasebox, right=of p3] (p4) {Fase 4\\\emph{Eficiencia y cierre}};
+\subsection{E1 --- Precio frente a volatilidad implícita}\label{sec:res-e1}
 
-  \draw[pipearrow] (p0) -- (p1);
-  \draw[pipearrow] (p1) -- (p2);
-  \draw[pipearrow] (p2) -- (p3);
-  \draw[pipearrow] (p3) -- (p4);
+E1 es observacional. Se recalculan, sobre los \emph{surrogates} ya entrenados BS-3 y H-3, las tres métricas básicas ($\text{MAE}(C/K)$, $\text{MAE}_{\text{IV}}$ y $\text{MAE}_\Delta$) por \emph{bin} del test balanceado. La pregunta es si dos \emph{surrogates} con error de precio aparentemente similar pueden tener errores de volatilidad implícita muy distintos en regiones concretas del dominio, y por tanto si la métrica elegida para la validación importa de forma operativa.
 
-  % salidas
-  \node[notebox, below=4mm of p0, text width=2.4cm]
-    {Error $<10^{-6}$ precio\\ y $<10^{-4}$ Delta vs QuantLib};
-  \node[notebox, below=4mm of p1, text width=2.4cm]
-    {BS-3 converge a $\text{MAE}<10^{-4}$};
-  \node[notebox, below=4mm of p2, text width=2.4cm]
-    {E1 + E2 cerrado sobre BS};
-  \node[notebox, below=4mm of p3, text width=2.4cm]
-    {E2 + E3 + E5 cerrado sobre Heston};
-  \node[notebox, below=4mm of p4, text width=2.4cm]
-    {\emph{Speedup} para lotes $10^2$--$10^5$};
+% TODO: tabla por bin con MAE(C/K), MAE_IV, Vega/proxy, percentiles y tasa de fallos del inverter.
+% TODO: heatmaps 5x5 de MAE(C/K) y MAE_IV.
+% TODO: párrafo final con conclusión metodológica.
 
-  % phase status markers
-  \node[font=\Large, papergreen, anchor=center] at ([yshift=-0.45cm]p0.north) {\checkmark};
-  \node[font=\Large, paperorange, anchor=center] at ([yshift=-0.45cm]p1.north) {$\bullet$};
-  \node[font=\Large, papergrey!50, anchor=center] at ([yshift=-0.45cm]p2.north) {$\circ$};
-  \node[font=\Large, papergrey!50, anchor=center] at ([yshift=-0.45cm]p3.north) {$\circ$};
-  \node[font=\Large, papergrey!50, anchor=center] at ([yshift=-0.45cm]p4.north) {$\circ$};
+\subsection{E2 --- Activaciones y calidad de Delta}\label{sec:res-e2}
 
-  % legend
-  \node[legendbox, anchor=north west] at ([yshift=-1.8cm]p0.south west) {
-    \textcolor{papergreen}{\checkmark}\ cerrada \quad
-    \textcolor{paperorange}{$\bullet$}\ en curso \quad
-    \textcolor{papergrey!50}{$\circ$}\ pendiente
-  };
-\end{tikzpicture}
-\caption{Plan de ejecución secuencial por fases con su criterio de salida. La secuencialidad es estricta: cada fase depende del cierre verificado de la anterior.}
-\label{fig:phases}
-\end{figure}
+E2 compara las cuatro activaciones (ReLU, \emph{Softplus}, Swish y \emph{tanh}) sobre Black-Scholes (BS-1..4) y sobre Heston (H-1..4), manteniendo arquitectura, optimizador, \emph{dataset} y semilla fijos. La métrica primaria es $\text{MAE}_\Delta$ por \emph{bin}; $\text{MAE}(C/K)$ se reporta como control para verificar que las activaciones suaves no degradan el nivel del precio. La hipótesis es que la falta de suavidad de ReLU se propaga a la Delta calculada por \emph{autograd}, generando errores sustancialmente mayores aunque el precio sea comparable.
 
-La \textbf{fase 0} cubre la infraestructura. Incluye la estructura del repositorio, semillas centralizadas, \emph{solvers} de Black-Scholes y Heston, inversor de volatilidad implícita y la validación cruzada con QuantLib. Su criterio de salida es que Black-Scholes y Heston reproduzcan valores de referencia externos con error inferior a $10^{-6}$ en precio y $10^{-4}$ en Delta. Esta fase se cierra contra valores tabulados conocidos porque un fallo silencioso en el \emph{solver} contaminaría todo el resto del proyecto sin que nos enteremos.
+% TODO: tabla MAE_Delta por activación con percentiles 50/95/99 por bin.
+% TODO: tabla complementaria MAE(C/K) por activación.
+% TODO: figura con histogramas o boxplots de error de Delta agrupados por activación.
+% TODO: discusión sobre la robustez del patrón ReLU vs activaciones suaves entre BS y Heston.
 
-La \textbf{fase 1} monta el \emph{pipeline} de datos y entrenamiento. Implementa el \emph{sampler}, el generador, el \emph{script} reproducible de generación, el modelo, las utilidades de \emph{Greeks}, el \emph{trainer} y el \emph{script} de entrenamiento. Genera los \emph{datasets} base de entrenamiento, validación y test balanceado por \emph{bins} para ambas familias de modelo. Su criterio de salida es un \emph{smoke test} sobre BS-3 que converja a un MAE de precio razonablemente pequeño en validación. Es la primera vez que el \emph{pipeline} completo se ejecuta de principio a fin: si BS-3 no converge cuando le pasamos datos de una fórmula cerrada conocida, hay algo roto antes de tocar Heston y este es el momento de descubrirlo.
+\subsection{E3 --- Muestreo uniforme frente a enfocado}\label{sec:res-e3}
 
-La \textbf{fase 2} ejecuta los experimentos sobre Black-Scholes. Entrena BS-1, BS-2, BS-3 y BS-4, implementa los módulos de \emph{binning} y métricas, produce tablas y \emph{heatmaps} por \emph{bin} para cada \emph{surrogate} y completa los análisis E1 (precio vs IV) y E2 (activaciones) sobre Black-Scholes. El motivo de hacer Black-Scholes antes que Heston es que Black-Scholes tiene fórmulas cerradas para precio, Delta, Vega e IV, lo que permite validar todas las piezas del \emph{pipeline} contra valores exactos antes de extender el mismo análisis a Heston.
+E3 contrasta H-3 (muestreo uniforme) y H-5 (muestreo enfocado en $m \in [0.7, 1.3]$ y vencimientos cortos) evaluados sobre el mismo test balanceado, manteniendo todo lo demás fijo. La métrica primaria es $\text{MAE}_{\text{IV}}$ en los \emph{bins} ATM combinados con \emph{weekly}, \emph{short} y \emph{medium-short}. Se aplica la clasificación operativa fijada en la \autoref{tab:metricas}: positivo fuerte si la mejora local supera el 10\,\% sin que el error global empeore más del 10\,\%; positivo débil si la mejora es menor o el deterioro global es moderado; negativo si no mejora los \emph{bins} críticos o el coste global es excesivo.
 
-La \textbf{fase 3} ejecuta los experimentos sobre Heston, que es el bloque más grande del proyecto. Genera los \emph{datasets} específicos de E3 y E5, entrena H-1, H-2, H-3, H-4, H-5, H-3-small y H-6-small, repite el análisis E2 sobre Heston y cierra E3 (muestreo) y E5 (DML) con su clasificación operativa fuerte/débil/negativa.
+% TODO: tabla H-3 vs H-5 con MAE_IV y MAE(C/K) por bin, destacando los bins críticos.
+% TODO: figura heatmap diferencia H-5 - H-3 por bin.
+% TODO: clasificación final del resultado.
 
-La \textbf{fase 4} cubre eficiencia y cierre. Implementa el protocolo de cronometraje con \emph{warmup} y diez repeticiones por lote, ejecuta E4 sobre H-3, produce las figuras finales y redacta la memoria. La eficiencia se mide al final porque depende de tener el \emph{surrogate} ya entrenado y validado.
+\subsection{E4 --- Eficiencia computacional}\label{sec:res-e4}
+
+E4 cronometra la evaluación de H-3 frente al solver semi-cerrado de Heston para lotes de $10^2$, $10^3$, $10^4$ y $10^5$ opciones. El protocolo es de tres \emph{warmups} no medidos y diez repeticiones medidas por tamaño de lote. Se reporta la mediana y el rango intercuartílico $p25/p75$ del tiempo, así como el \emph{speedup} relativo. CPU y GPU se reportan por separado para no mezclar mejora algorítmica con diferencia de hardware. El \emph{surrogate} se evalúa siempre con \texttt{model.eval()} y \texttt{torch.no\_grad()}.
+
+% TODO: tabla con tiempos medianos del solver y del surrogate por tamaño de lote.
+% TODO: curva log-log de tiempo vs tamaño de lote y curva de speedup correspondiente.
+% TODO: discusión sobre el régimen en que la mejora se hace significativa.
+
+\subsection{E5 --- Differential ML con Delta}\label{sec:res-e5}
+
+E5 compara H-3-small (100k muestras, pérdida en precio) frente a H-6-small (100k muestras, pérdida $L_1(C/K) + L_1(\Delta)$ con pesos 1:1), y usa H-3 (500k muestras, pérdida en precio) como referencia de muestra grande. La métrica primaria es la mejora de $\text{MAE}_\Delta$ de H-6-small sobre H-3-small. Se aplica la clasificación operativa: positivo fuerte si $\text{MAE}_\Delta$ mejora al menos un 20\,\% y $\text{MAE}(C/K)$ no empeora más de un 10\,\%; positivo débil si la mejora de Delta es menor manteniendo el margen en precio; negativo en otro caso. Adicionalmente se reporta la distancia de H-6-small frente a H-3 para juzgar la eficiencia muestral.
+
+% TODO: tabla con MAE(C/K) y MAE_Delta para H-3-small, H-6-small y H-3 por bin.
+% TODO: figura de comparación de Deltas en cortes representativos del dominio.
+% TODO: clasificación final y discusión sobre eficiencia muestral.
 
 % =============================================================================
 \section{Discusión y trabajo futuro}\label{sec:discusion}
@@ -1035,7 +1021,7 @@ El alcance del proyecto está deliberadamente acotado. No intentamos calibrar a 
 
 Quedan abiertas varias extensiones naturales que merecen mención. Extender el conjunto de \emph{Greeks} incorporadas a la pérdida diferencial (Vega, Gamma, Theta, Rho) permitiría medir hasta qué punto el \emph{differential machine learning} escala más allá del caso unidimensional que estudiamos en E5, aunque introduce dificultades numéricas adicionales porque algunas de esas derivadas son sensibles a la inestabilidad del \emph{solver} de Heston en zonas extremas. Pasar de opciones europeas a opciones americanas o exóticas pondría a prueba la generalización del enfoque a \emph{payoffs} con derecho de ejercicio anticipado y conectaría nuestro trabajo con la línea de Becker, Cheridito y Jentzen. Aplicar el \emph{surrogate} dentro de un procedimiento de calibración a datos reales --- en línea con el segundo nivel de validación de Chen et al.--- mediría el coste económico del error de aproximación de la red. Por último, escalar la arquitectura o el tamaño del \emph{dataset} permitiría explorar si la reducción de error es lineal o se satura, una pregunta especialmente relevante en la fase actual del proyecto.
 
-A día de hoy, las fases 0 y 1 están prácticamente cerradas: los \emph{solvers} están validados contra QuantLib y el \emph{pipeline} de generación y entrenamiento está operativo. Las fases 2 a 4 se ejecutarán en las semanas siguientes según el plan descrito en la \autoref{sec:fases}. La estructura del trabajo está diseñada para que los resultados experimentales se puedan integrar de forma incremental en la versión final del paper sin reescribir las secciones metodológicas, que ya están cerradas.
+La estructura del trabajo está diseñada para que los resultados experimentales se incorporen de forma incremental a las subsecciones de la \autoref{sec:resultados} sin afectar al cuerpo metodológico, que permanece cerrado. Cada experimento se redacta a medida que sus entrenamientos y métricas correspondientes están disponibles.
 
 % =============================================================================
 \begin{thebibliography}{99}
