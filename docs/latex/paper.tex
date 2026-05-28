@@ -796,7 +796,7 @@ La evaluación por bins es obligatoria porque los errores medios globales son in
 \section{Experimentos}\label{sec:experimentos}
 % =============================================================================
 
-Cinco experimentos comparativos sostienen el trabajo, uno por cada dimensión del problema que aislamos para estudiarla. Cada experimento responde a una pregunta única, varía una sola dimensión y mantiene todo lo demás fijo. Esta rigidez es la que permite atribuir cualquier diferencia observada a la dimensión que estamos variando y no a otras variables que se nos hayan colado por accidente: si se cambia activación no se cambia dataset; si se cambia sampler no se cambia arquitectura; si se cambia pérdida se conservan tamaño y semilla. Para los experimentos con clasificación operativa, los umbrales positivo fuerte/débil/negativo se fijan antes de ver los datos para evitar interpretaciones oportunistas al redactar conclusiones.
+Cinco experimentos comparativos sostienen el trabajo, uno por cada dimensión del problema que aislamos para estudiarla. Cada experimento responde a una pregunta única, varía una sola dimensión y mantiene todo lo demás fijo. Esta rigidez es la que permite atribuir cualquier diferencia observada a la dimensión que estamos variando y no a otras variables que se nos hayan colado por accidente: si se cambia activación no se cambia dataset; si se cambia sampler no se cambia arquitectura; si se cambia pérdida se conservan tamaño, muestra y protocolo de entrenamiento. Las semillas de generación y entrenamiento quedan fijadas por configuración y registradas para asegurar reproducibilidad, no elegidas después de observar resultados. Para los experimentos con clasificación operativa, los umbrales positivo fuerte/débil/negativo se fijan antes de ver los datos para evitar interpretaciones oportunistas al redactar conclusiones.
 
 \newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{#1}}
 \begin{table}[ht]
@@ -931,7 +931,7 @@ H-3-small & Heston   & Swish     & $L_1(\text{precio})$ & 100k uniforme & E5 \\
 H-6-small & Heston   & Swish     & $L_1(\text{precio}) + L_1(\Delta)$ & 100k uniforme + $\Delta$ & E5 \\
 \bottomrule
 \end{tabular}
-\caption{Los once surrogates del trabajo. Todos los comparados dentro de un mismo experimento comparten arquitectura, optimizador, hiperparámetros y semilla.}
+\caption{Los once surrogates del trabajo. Todos los comparados dentro de un mismo experimento comparten arquitectura, optimizador, hiperparámetros y protocolo de evaluación; las semillas quedan fijadas por configuración para garantizar reproducibilidad.}
 \label{tab:surrogates}
 \end{table}
 
@@ -953,7 +953,7 @@ E1 es observacional. Se recalculan, sobre los surrogates ya entrenados BS-3 y H-
 
 \subsection{E2 --- Activaciones y calidad de Delta}\label{sec:res-e2}
 
-E2 compara las cuatro activaciones (ReLU, Softplus, Swish y tanh) sobre Black-Scholes (BS-1..4) y sobre Heston (H-1..4), manteniendo arquitectura, optimizador, dataset y semilla fijos. La métrica primaria es $\text{MAE}_\Delta$ por bin; $\text{MAE}(C/K)$ se reporta como control para verificar que las activaciones suaves no degradan el nivel del precio. La hipótesis es que la falta de suavidad de ReLU se propaga a la Delta calculada por autograd, generando errores sustancialmente mayores aunque el precio sea comparable.
+E2 compara las cuatro activaciones (ReLU, Softplus, Swish y tanh) sobre Black-Scholes (BS-1..4) y sobre Heston (H-1..4), manteniendo arquitectura, optimizador, dataset y protocolo de evaluación fijos. Las semillas de entrenamiento están fijadas por configuración y registradas en los checkpoints, por lo que el experimento es reproducible aunque no use una semilla común para todas las activaciones. La métrica primaria es $\text{MAE}_\Delta$ por bin; $\text{MAE}(C/K)$ se reporta como control para verificar que las activaciones suaves no degradan el nivel del precio. La hipótesis es que la falta de suavidad de ReLU se propaga a la Delta calculada por autograd, generando errores sustancialmente mayores aunque el precio sea comparable.
 
 % TODO: tabla MAE_Delta por activación con percentiles 50/95/99 por bin.
 % TODO: tabla complementaria MAE(C/K) por activación.
