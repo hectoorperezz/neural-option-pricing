@@ -349,7 +349,7 @@ Bajo qué condiciones una red neuronal profunda puede actuar como un surrogate p
 
 Para responderla de forma operativa, descomponemos la pregunta en cinco preguntas más concretas que se traducen en cinco experimentos comparativos. Cada uno varía una sola dimensión del problema mientras mantiene todo lo demás fijo, lo que permite atribuir cualquier diferencia observada a la dimensión que estamos variando y no a otras variables que se hayan colado por accidente.
 
-El resto del documento se organiza como sigue. La \autoref{sec:revision} sintetiza la revisión bibliográfica que ha guiado las decisiones metodológicas. La \autoref{sec:enfoque} describe cómo enfocamos nuestro propio trabajo. La \autoref{sec:metodologia} fija la metodología experimental: \emph{targets}, normalización, solvers, dominio, muestreo y evaluación por \emph{bins}. La \autoref{sec:experimentos} describe los cinco experimentos y los once surrogates que los sostienen. La \autoref{sec:resultados} reporta los resultados de cada experimento. La \autoref{sec:discusion} discute alcance, limitaciones y trabajo en curso.
+El resto del documento se organiza como sigue. La \autoref{sec:revision} sintetiza la revisión bibliográfica que ha guiado las decisiones metodológicas. La \autoref{sec:metodologia} fija los casos de estudio y la metodología experimental: \emph{targets}, normalización, solvers, dominio, muestreo y evaluación por \emph{bins}. La \autoref{sec:experimentos} describe los cinco experimentos y los once surrogates que los sostienen. La \autoref{sec:resultados} reporta los resultados de cada experimento. La \autoref{sec:discusion} discute alcance, limitaciones y trabajo en curso.
 
 % =============================================================================
 \section{Revisión bibliográfica}\label{sec:revision}
@@ -486,30 +486,14 @@ De todo este material, el enfoque de \emph{surrogates} en finanzas es el que mej
 % =============================================================================
 
 % =============================================================================
-\section{Enfoque del trabajo}\label{sec:enfoque}
-% =============================================================================
-
-Después de digerir esta bibliografía, la decisión más importante es cómo enfocar nuestro propio trabajo para complementar y aportar valor al material existente dentro de nuestras limitaciones temporales y computacionales. La estructura más coherente es trabajar en dos niveles. El primer nivel es Black-Scholes como caso de validación. Black-Scholes en la práctica no necesita un surrogate porque la fórmula cerrada ya es muy rápida, pero precisamente por eso es ideal como entorno de prueba: conocemos la solución exacta, conocemos las Deltas analíticas y podemos comparar precio, volatilidad implícita y \emph{Greeks} de forma directa antes de complicar el problema. El segundo nivel es extender a Heston. Heston introduce volatilidad estocástica, es bastante más realista y su evaluación requiere métodos numéricos como Fourier semi-cerrado, así que la motivación de tener un surrogate empieza a cobrar sentido real. Es un paso intermedio entre Black-Scholes y Bates que conserva la esencia del planteamiento sin obligarnos a implementar saltos doble exponenciales.
-
-A partir de ahí, hemos identificado cinco puntos en los que centrar nuestro proyecto de investigación, que enumeramos aquí y desarrollamos en la \autoref{sec:experimentos} como experimentos formales.
-
-El primero es comparar de forma sistemática el error en precio frente al error en volatilidad implícita. Planteamos como pregunta metodológica explícita hasta qué punto puede un surrogate tener un error en precio aparentemente bajo pero un error relevante en \emph{implied volatility} en ciertas zonas del dominio. Esto acerca el trabajo a la práctica real del mercado, donde la volatilidad implícita es la unidad natural de comparación.
-
-El segundo elemento diferencial es comparar funciones de activación con foco en la calidad de los \emph{Greeks}. Entrenaremos redes con la misma arquitectura cambiando solo la activación, probando ReLU, \emph{Softplus}, \emph{Swish/SiLU} y \emph{tanh}, y compararemos el MAE de precio, el MAE de Delta y el MAE de volatilidad implícita en cada caso. La hipótesis, alineada con Chen et al., es que las activaciones suaves producen derivadas más estables aunque los errores de precio sean parecidos. Mostrar que dos redes con MAE de precio similar pueden tener Deltas muy distintas es una conclusión potente para un trabajo de métodos numéricos.
-
-El tercer elemento es comparar muestreo uniforme frente a muestreo enfocado. Generaremos dos \emph{datasets}, uno con muestreo uniforme en todo el dominio y otro con más densidad cerca del \emph{at-the-money} y de vencimientos cortos, donde la función de pricing tiene más curvatura. Evaluaremos ambos surrogates con la misma división por \emph{bins} y analizaremos si el muestreo enfocado reduce el error en regiones críticas. Esto conecta directamente con ideas clásicas de métodos numéricos como la elección adaptativa de puntos de malla.
-
-El cuarto elemento es la medición seria de eficiencia computacional. En Black-Scholes la ganancia será probablemente pequeña porque la fórmula cerrada ya es rapidísima, pero el experimento sirve para validar el pipeline. En Heston mediremos el tiempo necesario para valorar grandes volúmenes de opciones con el solver original frente al surrogate, en función del tamaño del lote, porque la red aprovecha mejor el paralelismo cuando procesa muchos puntos a la vez y reportar un único número aislado sería engañoso.
-
-El quinto elemento, central en nuestro planteamiento, es estudiar el efecto de la pérdida en la calidad del surrogate con especial atención al enfoque de \emph{differential machine learning} de Huge y Savine. En lugar de entrenar la red solo con precios, modificamos la pérdida para que también penalice la diferencia entre la Delta verdadera y la Delta que sale por \emph{autograd} de la red. De este modo, la pérdida queda como una combinación ponderada del error de precio y del error de la derivada y la red aprende simultáneamente a acertar el nivel y la pendiente de la función. El planteamiento tiene una motivación matemática sólida (\autoref{fig:hermite}), análoga a la que justifica la interpolación de Hermite frente a la clásica: disponer del valor y de la derivada en cada punto muestreado permite reconstruir la función con muchos menos puntos. La hipótesis asociada es que el \emph{differential machine learning} ofrece una ventaja sustancial frente al entrenamiento con pérdidas estándar en regímenes de \emph{datasets} pequeños y que esa ventaja se atenúa conforme crece el tamaño de la muestra.
-
-% =============================================================================
 \section{Metodología}\label{sec:metodologia}
 % =============================================================================
 
-Esta sección concreta cómo se traducen las preguntas anteriores en un pipeline experimental ejecutable. Su función no es añadir más tareas sino fijar cómo se ejecuta cada experimento, qué magnitudes se entrenan, qué métricas se reportan y bajo qué condiciones consideramos que una comparación es limpia. En un proyecto de \emph{surrogates}, la parte delicada no es solo entrenar redes, sino asegurar que el dato sintético, la normalización, la métrica y la evaluación responden exactamente a la pregunta que se quiere contestar.
+Esta sección fija cómo se ejecuta cada experimento, qué magnitudes se entrenan, qué métricas se reportan y bajo qué condiciones consideramos que una comparación es limpia. En un proyecto de \emph{surrogates}, la parte delicada no es solo entrenar redes, sino asegurar que el dato sintético, la normalización, la métrica y la evaluación responden exactamente a la pregunta que se quiere contestar. La idea central combina dos líneas de la literatura: la lógica de los \emph{deep surrogates}~\cite{chen2025}, que entrena una red para aproximar un solver financiero caro a partir de datos sintéticos generados por el propio modelo, y la idea del \emph{differential machine learning}~\cite{huge2020}, que añade derivadas verdaderas al \emph{target} de entrenamiento para que la red aprenda también la forma local de la función. En nuestro caso esa derivada será la Delta.
 
-La idea central del proyecto es combinar dos líneas de la literatura. De Chen, Didisheim y Scheidegger~\cite{chen2025} tomamos la lógica de \emph{deep surrogates}: construir una red que aproxime un solver financiero caro a partir de datos sintéticos generados por el propio modelo. De Huge y Savine~\cite{huge2020} tomamos, de forma acotada, la idea de \emph{differential machine learning}: si además del valor de la función conocemos una derivada económicamente relevante, podemos enseñar a la red la forma local de la función y no solo su nivel. En nuestro caso, esa derivada será la Delta.
+\subsection{Casos de estudio: Black-Scholes y Heston}\label{sec:casos-estudio}
+
+El trabajo se articula sobre dos modelos. El primero es Black-Scholes y opera como caso de validación. En la práctica no necesita un \emph{surrogate} porque la fórmula cerrada ya es muy rápida, pero precisamente por eso es ideal como entorno de prueba: conocemos la solución exacta, las Deltas analíticas y la inversión a volatilidad implícita, y podemos comparar precio, IV y \emph{Greeks} contra valores de referencia antes de complicar el problema. El segundo modelo es Heston, donde la motivación del \emph{surrogate} ya es real: introduce volatilidad estocástica, es bastante más realista y su evaluación requiere integración Fourier semi-cerrada. Es un paso intermedio entre Black-Scholes y Bates que conserva la esencia del planteamiento sin obligarnos a implementar saltos doble exponenciales.
 
 \subsection{Pipeline experimental}
 
@@ -782,7 +766,7 @@ La evaluación por \emph{bins} es obligatoria porque los errores medios globales
 
 \subsection{Constantes del pipeline}
 
-Para evitar reabrir discusiones durante la ejecución, fijamos los siguientes valores en código y no los movemos salvo que un hallazgo experimental lo justifique. Cada uno tiene una razón concreta que documentamos a continuación para que el porqué no se pierda con el tiempo.
+La configuración de la red, el optimizador y el régimen de entrenamiento son comunes a todos los \emph{surrogates}. Se fijan en código y no se mueven salvo que un hallazgo experimental lo justifique; los valores se recogen en la \autoref{tab:constantes}.
 
 \begin{table}[ht]
 \centering
@@ -809,15 +793,13 @@ Semilla & fijada por configuración \\
 \label{tab:constantes}
 \end{table}
 
-Un MLP \emph{feed-forward} simple es suficiente porque el teorema universal de aproximación garantiza que basta para funciones suaves en dimensión moderada, y Chen et al. confirman empíricamente que funciona en Bates en dimensión trece. Cuatro capas ocultas y 128 unidades por capa dan del orden de cincuenta mil parámetros. Swish entra como activación por defecto porque, según Chen, es la decisión clave para que las Deltas obtenidas por \emph{autograd} sean estables. Adam con $\text{lr}=10^{-3}$ es el \emph{default} de PyTorch y converge sin sintonización en la inmensa mayoría de problemas de regresión. El \emph{learning rate} se mantiene fijo durante el entrenamiento; la estabilidad final se controla escogiendo el \emph{checkpoint} con menor $\text{MAE}(C/K)$ en validación.
-
-La ausencia de regularización es la decisión metodológica más importante y viene directamente de Chen. En aprendizaje automático clásico la regularización existe porque los datos llevan ruido y la red tendería a memorizarlo. En un surrogate, los \emph{targets} vienen del propio solver, son deterministas y no hay nada que memorizar; la pérdida de validación nunca empeora por \emph{overfitting}, solo se estanca cuando la red llega al límite de su capacidad expresiva. Por eso no usamos \emph{early stopping}, \emph{dropout} ni \emph{weight decay}. El tope de cien épocas funciona como límite práctico.
+El MLP de cuatro capas y 128 unidades por capa da del orden de cincuenta mil parámetros, suficiente para una función suave en la dimensión que manejamos. Swish entra como activación por defecto por la calidad de la Delta obtenida por \emph{autograd}; Adam con \emph{learning rate} fijo evita añadir un \emph{scheduler} a la lista de variables, y la estabilidad final se controla escogiendo el \emph{checkpoint} con menor $\text{MAE}(C/K)$ en validación. No se usa regularización: los \emph{targets} vienen del propio solver y son deterministas, así que la pérdida de validación nunca empeora por \emph{overfitting}, solo se estanca cuando la red llega al límite de su capacidad. El tope de cien épocas actúa como cota práctica.
 
 % =============================================================================
 \section{Diseño experimental}\label{sec:experimentos}
 % =============================================================================
 
-Cinco experimentos cubren los cinco elementos diferenciales descritos en la \autoref{sec:enfoque}. La elección de exactamente cinco no es arbitraria: es la lectura directa del bloque de elementos diferenciales, traducido a comparaciones experimentales concretas. Cada experimento responde a una pregunta única, varía una sola dimensión y mantiene todo lo demás fijo. Esta rigidez es lo que permite atribuir cualquier diferencia observada a la dimensión que estamos variando y no a otras variables que se nos hayan colado por accidente.
+Cinco experimentos comparativos sostienen el trabajo, uno por cada dimensión del problema que aislamos para estudiarla. Cada experimento responde a una pregunta única, varía una sola dimensión y mantiene todo lo demás fijo. Esta rigidez es la que permite atribuir cualquier diferencia observada a la dimensión que estamos variando y no a otras variables que se nos hayan colado por accidente: si se cambia activación no se cambia \emph{dataset}; si se cambia \emph{sampler} no se cambia arquitectura; si se cambia pérdida se conservan tamaño y semilla. Para los experimentos con clasificación operativa, los umbrales \emph{positivo fuerte/débil/negativo} se fijan antes de ver los datos para evitar interpretaciones oportunistas al redactar conclusiones.
 
 \newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{#1}}
 \begin{table}[ht]
@@ -837,6 +819,25 @@ ID & Pregunta & Lo que varía & Surrogates & Resultado esperado \\
 \end{tabular}
 \caption{Los cinco experimentos del trabajo. Cada uno responde a una pregunta única, varía una sola dimensión y mantiene todo lo demás fijo.}
 \label{tab:experimentos}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{R{0.5cm} R{5.2cm} R{7.5cm}}
+\toprule
+ID & Métrica primaria & Controles y diagnóstico \\
+\midrule
+E1 & Discrepancia $\text{MAE}(C/K)$ vs $\text{MAE}_{\text{IV}}$ por \emph{bin} & Sin umbral; Vega/proxy, percentiles altos y fallos de IV \\
+E2 & $\text{MAE}_\Delta$ por \emph{bin} & Sin umbral; activaciones suaves vs ReLU y precio como control \\
+E3 & $\text{MAE}_{\text{IV}}$ en \emph{bins} ATM con weekly, short, medium-short & Positivo fuerte si mejora $\geq 10\%$ y global empeora $\leq 10\%$; precio como control \\
+E4 & $\text{speedup} = t_{\text{solver}} / t_{\text{surrogate}}$ por tamaño de lote & Lotes $10^2$--$10^5$, 3 \emph{warmups} + 10 repeticiones, mediana, CPU/GPU separado \\
+E5 & Mejora de $\text{MAE}_\Delta$ de H-6-small vs H-3-small & Positivo fuerte si $\Delta$ mejora $\geq 20\%$ y precio empeora $\leq 10\%$; distancia frente a H-3 \\
+\bottomrule
+\end{tabular}
+\caption{Métrica primaria y controles para cada experimento.}
+\label{tab:metricas}
 \end{table}
 
 E1 es observacional. No requiere entrenar nada nuevo, simplemente recalcula métricas sobre un surrogate que ya está entrenado para otros experimentos. La razón por la que merece llamarse experimento aparte es que la pregunta que responde es metodológica: nos dice si dos surrogates con MAE de precio aparentemente similares pueden tener errores muy distintos en la métrica que de verdad importa en el mercado, que es la volatilidad implícita.
@@ -910,27 +911,6 @@ E4 es de medición, no de comparación. Cronometra evaluaciones de H-3 contra el
 
 E5 prueba la hipótesis central del paper de Huge y Savine en nuestro \emph{setting} de forma acotada: si además de precios generamos Delta verdadera, ¿puede el surrogate aprender mejor la forma local de la función de pricing con menos datos? Delta es la \emph{Greek} más limpia para este primer experimento porque, usando $y = C/K$ y $m = S/K$, se cumple $\Delta = \partial y / \partial m$.
 
-Cada experimento tiene una métrica primaria alineada con su pregunta y métricas secundarias como control. Esto evita que el resultado se reduzca a una tabla grande sin conclusión clara.
-
-\begin{table}[ht]
-\centering
-\small
-\renewcommand{\arraystretch}{1.2}
-\begin{tabular}{R{0.5cm} R{5.2cm} R{7.5cm}}
-\toprule
-ID & Métrica primaria & Controles y diagnóstico \\
-\midrule
-E1 & Discrepancia $\text{MAE}(C/K)$ vs $\text{MAE}_{\text{IV}}$ por \emph{bin} & Sin umbral; Vega/proxy, percentiles altos y fallos de IV \\
-E2 & $\text{MAE}_\Delta$ por \emph{bin} & Sin umbral; activaciones suaves vs ReLU y precio como control \\
-E3 & $\text{MAE}_{\text{IV}}$ en \emph{bins} ATM con weekly, short, medium-short & Positivo fuerte si mejora $\geq 10\%$ y global empeora $\leq 10\%$; precio como control \\
-E4 & $\text{speedup} = t_{\text{solver}} / t_{\text{surrogate}}$ por tamaño de lote & Lotes $10^2$--$10^5$, 3 \emph{warmups} + 10 repeticiones, mediana, CPU/GPU separado \\
-E5 & Mejora de $\text{MAE}_\Delta$ de H-6-small vs H-3-small & Positivo fuerte si $\Delta$ mejora $\geq 20\%$ y precio empeora $\leq 10\%$; distancia frente a H-3 \\
-\bottomrule
-\end{tabular}
-\caption{Métrica primaria y controles para cada experimento.}
-\label{tab:metricas}
-\end{table}
-
 \subsection{Once surrogates}
 
 Once \emph{surrogates} en total. La cifra sale de trabajar hacia atrás desde los cinco experimentos: cada uno necesita un conjunto mínimo de \emph{surrogates} entrenados para sostener su comparación y muchos se solapan. H-3, el \emph{surrogate} de Heston con configuración \emph{baseline}, aparece como referencia en los cinco experimentos. Esa centralidad evita que el coste computacional total se dispare y justifica que dediquemos especial cuidado a su entrenamiento.
@@ -960,11 +940,7 @@ H-6-small & Heston   & Swish     & $L_1(\text{precio}) + L_1(\Delta)$ & 100k uni
 \label{tab:surrogates}
 \end{table}
 
-En E5 sí varía deliberadamente el tamaño del \emph{dataset} porque la pregunta no es solo si DML mejora las \emph{Greeks}, sino si permite alcanzar precisión comparable con menos muestras. Si dejásemos variar la arquitectura entre \emph{surrogates}, la comparación de activaciones quedaría contaminada con el efecto del cambio arquitectónico.
-
-\subsection{Criterios de validez}
-
-Cada experimento se cierra con una comparación que cambia una sola dimensión relevante. Si se cambia activación, no se cambia \emph{dataset}. Si se cambia \emph{sampler}, no se cambia arquitectura. Si se cambia \emph{loss} en E5, se mantiene el mismo tamaño pequeño de \emph{dataset} para H-3-small y H-6-small. Para E3 y E5, en los que sí buscamos una clasificación operativa del resultado, los umbrales \emph{positivo fuerte/débil/negativo} se fijan antes de ver los datos. Esa regla previa es lo que evita interpretar resultados de forma oportunista cuando llegue el momento de redactar conclusiones.
+En E5 sí varía deliberadamente el tamaño del \emph{dataset} porque la pregunta no es solo si DML mejora las \emph{Greeks}, sino si permite alcanzar precisión comparable con menos muestras. Esa es la única excepción a la regla de una sola dimensión por experimento, y se gestiona reportando explícitamente la distancia de H-6-small frente a H-3 además de la mejora sobre H-3-small.
 
 % =============================================================================
 \section{Resultados experimentales}\label{sec:resultados}
