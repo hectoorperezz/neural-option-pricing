@@ -1,0 +1,231 @@
+import csv
+import json
+import runpy
+import sys
+from pathlib import Path
+
+import numpy as np
+import pytest
+import torch
+
+from src.models import MLP
+from src.solvers import BlackScholesSolver
+
+
+def _write_heston_like_checkpoint(checkpoint_dir: Path, *, loss: str = "price") -> None:
+    """Write a small 4-input Swish MLP labelled with the requested loss.
+
+    The script doesn't care about the family of the checkpoint — it only
+    reads ``config.json`` and ``checkpoint.pt`` — so we reuse the
+    4-input layout used by other script tests. The loss field is read
+    back into ``labels['loss']`` of the SurrogateInput.
+    """
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    config = {
+        "experiment_id": checkpoint_dir.name,
+        "input_dim": 4,
+        "hidden_width": 8,
+        "hidden_layers": 1,
+        "activation": "swish",
+        "loss": loss,
+        "epochs": 1,
+        "batch_size": 8,
+        "learning_rate": 0.001,
+        "seed": 0,
+        "device": "cpu",
+        "num_workers": 0,
+        "input_names": ["moneyness", "maturity", "rate", "volatility"],
+    }
+    model = MLP(input_dim=4, hidden_width=8, hidden_layers=1, activation="swish")
+    (checkpoint_dir / "config.json").write_text(
+        json.dumps(config, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    torch.save(
+        {
+            "experiment_id": checkpoint_dir.name,
+            "model_state_dict": model.state_dict(),
+            "best_state_dict": model.state_dict(),
+            "best_validation_price_mae": 0.001,
+            "config": config,
+            "history": [],
+        },
+        checkpoint_dir / "checkpoint.pt",
+    )
+
+
+def _write_test_npz_with_deltas(path: Path, n_samples: int = 60) -> None:
+    rng = np.random.default_rng(123)
+    moneyness = rng.uniform(0.6, 1.6, size=n_samples)
+    maturity = rng.uniform(0.1, 1.5, size=n_samples)
+    rate = rng.uniform(0.0, 0.05, size=n_samples)
+    sigma = rng.uniform(0.05, 0.5, size=n_samples)
+    bs = BlackScholesSolver()
+    prices = np.asarray(
+        bs.call_price(
+            spot=moneyness, strike=1.0, maturity=maturity,
+            rate=rate, volatility=sigma, dividend_yield=0.0,
+        ),
+        dtype=np.float32,
+    )
+    deltas = np.asarray(
+        bs.call_delta(
+            spot=moneyness, strike=1.0, maturity=maturity,
+            rate=rate, volatility=sigma, dividend_yield=0.0,
+        ),
+        dtype=np.float32,
+    )
+    raw_inputs = np.stack([moneyness, maturity, rate, sigma], axis=1).astype(np.float32)
+    features = raw_inputs.copy()
+    features[:, 0] = (features[:, 0] - 0.4) / (2.0 - 0.4)
+    features[:, 1] = (features[:, 1] - 7.0 / 365.0) / (2.0 - 7.0 / 365.0)
+    features[:, 2] = features[:, 2] / 0.075
+    features[:, 3] = (features[:, 3] - 0.03) / (1.0 - 0.03)
+    np.savez(
+        path,
+        features=features,
+        raw_inputs=raw_inputs,
+        prices=prices,
+        deltas=deltas,
+        input_names=np.asarray(["moneyness", "maturity", "rate", "volatility"]),
+    )
+
+
+def _write_test_npz_without_deltas(path: Path, n_samples: int = 60) -> None:
+    rng = np.random.default_rng(123)
+    moneyness = rng.uniform(0.6, 1.6, size=n_samples)
+    maturity = rng.uniform(0.1, 1.5, size=n_samples)
+    rate = rng.uniform(0.0, 0.05, size=n_samples)
+    sigma = rng.uniform(0.05, 0.5, size=n_samples)
+    bs = BlackScholesSolver()
+    prices = np.asarray(
+        bs.call_price(
+            spot=moneyness, strike=1.0, maturity=maturity,
+            rate=rate, volatility=sigma, dividend_yield=0.0,
+        ),
+        dtype=np.float32,
+    )
+    raw_inputs = np.stack([moneyness, maturity, rate, sigma], axis=1).astype(np.float32)
+    features = raw_inputs.copy()
+    np.savez(
+        path,
+        features=features,
+        raw_inputs=raw_inputs,
+        prices=prices,
+        input_names=np.asarray(["moneyness", "maturity", "rate", "volatility"]),
+    )
+
+
+def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
+    monkeypatch.setattr(sys, "argv", ["scripts/run_experiment_e5.py", *args])
+    runpy.run_path("scripts/run_experiment_e5.py", run_name="__main__")
+
+
+def test_script_writes_csv_and_heatmaps_two_surrogates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ckpts = tmp_path / "ckpts"
+    _write_heston_like_checkpoint(ckpts / "H-3-small", loss="price")
+    _write_heston_like_checkpoint(ckpts / "H-6-small", loss="differential")
+    test_path = tmp_path / "heston_test.npz"
+    _write_test_npz_with_deltas(test_path)
+    output_csv = tmp_path / "metrics" / "e5_table.csv"
+    figures_dir = tmp_path / "figures"
+
+    _run_script(
+        monkeypatch,
+        [
+            "--small-price-checkpoint", str(ckpts / "H-3-small"),
+            "--small-dml-checkpoint", str(ckpts / "H-6-small"),
+            "--test", str(test_path),
+            "--output", str(output_csv),
+            "--figures-dir", str(figures_dir),
+            "--device", "cpu",
+            "--batch-size", "32",
+        ],
+    )
+
+    assert output_csv.exists()
+    rows = list(csv.DictReader(output_csv.open(encoding="utf-8")))
+    assert len(rows) == 50
+    roles = {row["role"] for row in rows}
+    assert roles == {"small_price", "small_dml"}
+    surrogates_present = {row["surrogate_id"] for row in rows}
+    assert surrogates_present == {"H-3-small", "H-6-small"}
+
+    figures = list(figures_dir.glob("*.png"))
+    assert len(figures) == 4  # 2 surrogates x 2 metrics
+
+
+def test_script_with_baseline_writes_three_surrogate_block(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ckpts = tmp_path / "ckpts"
+    _write_heston_like_checkpoint(ckpts / "H-3-small", loss="price")
+    _write_heston_like_checkpoint(ckpts / "H-6-small", loss="differential")
+    _write_heston_like_checkpoint(ckpts / "H-3", loss="price")
+    test_path = tmp_path / "heston_test.npz"
+    _write_test_npz_with_deltas(test_path)
+    output_csv = tmp_path / "metrics" / "e5_table.csv"
+
+    _run_script(
+        monkeypatch,
+        [
+            "--small-price-checkpoint", str(ckpts / "H-3-small"),
+            "--small-dml-checkpoint", str(ckpts / "H-6-small"),
+            "--baseline-checkpoint", str(ckpts / "H-3"),
+            "--test", str(test_path),
+            "--output", str(output_csv),
+            "--device", "cpu",
+            "--batch-size", "32",
+        ],
+    )
+
+    rows = list(csv.DictReader(output_csv.open(encoding="utf-8")))
+    assert len(rows) == 75
+    roles = {row["role"] for row in rows}
+    assert roles == {"small_price", "small_dml", "baseline_large"}
+
+
+def test_script_rejects_missing_small_dml(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ckpts = tmp_path / "ckpts"
+    _write_heston_like_checkpoint(ckpts / "H-3-small", loss="price")
+    test_path = tmp_path / "heston_test.npz"
+    _write_test_npz_with_deltas(test_path)
+    output_csv = tmp_path / "metrics" / "e5_table.csv"
+
+    with pytest.raises(FileNotFoundError):
+        _run_script(
+            monkeypatch,
+            [
+                "--small-price-checkpoint", str(ckpts / "H-3-small"),
+                "--small-dml-checkpoint", str(ckpts / "H-6-small"),
+                "--test", str(test_path),
+                "--output", str(output_csv),
+                "--device", "cpu",
+            ],
+        )
+
+
+def test_script_rejects_test_set_without_deltas(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ckpts = tmp_path / "ckpts"
+    _write_heston_like_checkpoint(ckpts / "H-3-small", loss="price")
+    _write_heston_like_checkpoint(ckpts / "H-6-small", loss="differential")
+    test_path = tmp_path / "heston_test.npz"
+    _write_test_npz_without_deltas(test_path)
+    output_csv = tmp_path / "metrics" / "e5_table.csv"
+
+    with pytest.raises(ValueError, match="deltas"):
+        _run_script(
+            monkeypatch,
+            [
+                "--small-price-checkpoint", str(ckpts / "H-3-small"),
+                "--small-dml-checkpoint", str(ckpts / "H-6-small"),
+                "--test", str(test_path),
+                "--output", str(output_csv),
+                "--device", "cpu",
+            ],
+        )
