@@ -1,3 +1,13 @@
+"""Estrategias de muestreo del dominio.
+
+Tres samplers cubren las necesidades del proyecto: el uniforme para
+H-1..H-4, el ``FocusedSampler`` con masa adicional en ATM y corto
+plazo (H-5, ver E4) y el ``BalancedBinSampler`` con conteo idéntico por
+bin de moneyness × plazo (evaluación equilibrada). Las rejillas
+``MONEYNESS_BINS`` y ``MATURITY_BINS`` definen los bins usados en E4
+y en los informes.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -31,13 +41,29 @@ class UniformSampler:
     seed: int | None = None
 
     def sample(self, n_samples: int, rng: np.random.Generator | None = None) -> np.ndarray:
+        """Delega en :meth:`Domain.sample_uniform`."""
         rng = np.random.default_rng(self.seed) if rng is None else rng
         return self.domain.sample_uniform(n_samples, rng)
 
 
 @dataclass(frozen=True)
 class FocusedSampler:
-    """Muestreo mixto para H-5: cobertura global y foco ATM/corto plazo."""
+    """Muestreo mixto para H-5: cobertura global y foco ATM/corto plazo.
+
+    Cada punto se sortea uniformemente y con probabilidad
+    ``focused_probability`` se reemplazan ``moneyness`` (normal
+    truncada cerca de ``1.0``) y ``maturity`` (log-uniforme en el
+    corto plazo). El sesgo está alineado con la motivación de E4.
+
+    Attributes:
+        domain: Hipercubo de entrada.
+        seed: Semilla si se llama a ``sample`` sin ``rng`` externo.
+        focused_probability: Fracción esperada de muestras "focused".
+        moneyness_mean: Media de la normal truncada en moneyness.
+        moneyness_std: Desviación típica de la normal truncada.
+        moneyness_bounds: Truncamiento ``[min, max]`` de la moneyness.
+        maturity_bounds: Rango ``[min, max]`` del log-uniforme de plazo.
+    """
 
     domain: Domain
     seed: int | None = None
@@ -48,6 +74,7 @@ class FocusedSampler:
     maturity_bounds: tuple[float, float] = (7.0 / 365.0, 0.25)
 
     def sample(self, n_samples: int, rng: np.random.Generator | None = None) -> np.ndarray:
+        """Mezcla uniforme global con reemplazo focalizado por máscara aleatoria."""
         if not 0.0 <= self.focused_probability <= 1.0:
             raise ValueError("focused_probability must be between 0 and 1")
 
@@ -110,7 +137,22 @@ class FocusedSampler:
 
 @dataclass(frozen=True)
 class BalancedBinSampler:
-    """Muestreo con el mismo número de puntos en cada bin de moneyness y plazo."""
+    """Muestreo con el mismo número de puntos en cada bin de moneyness y plazo.
+
+    Útil para test sets de evaluación, donde queremos que cada bin
+    aporte la misma masa al ``MAE`` reportado por
+    ``BinEvaluator``. Las demás dimensiones se sortean uniformemente
+    sobre el dominio.
+
+    Attributes:
+        domain: Hipercubo de entrada.
+        samples_per_bin: Conteo fijo por celda ``(moneyness × plazo)``.
+        seed: Semilla si se llama a ``sample`` sin ``rng`` externo.
+        moneyness_bins: Particionado de moneyness; por defecto
+            ``MONEYNESS_BINS``.
+        maturity_bins: Particionado de plazo; por defecto
+            ``MATURITY_BINS``.
+    """
 
     domain: Domain
     samples_per_bin: int
@@ -127,12 +169,14 @@ class BalancedBinSampler:
         return self.samples_per_bin * self.n_bins
 
     def iter_bins(self):
+        """Itera ``(bin_id, m_idx, t_idx, m_bounds, t_bounds)`` en orden fila-mayor."""
         for maturity_index, maturity_bounds in enumerate(self.maturity_bins):
             for moneyness_index, moneyness_bounds in enumerate(self.moneyness_bins):
                 bin_id = maturity_index * len(self.moneyness_bins) + moneyness_index
                 yield bin_id, moneyness_index, maturity_index, moneyness_bounds, maturity_bounds
 
     def sample(self, n_samples: int, rng: np.random.Generator | None = None) -> np.ndarray:
+        """Sortea ``samples_per_bin`` puntos por bin y mezcla el orden final."""
         if n_samples != self.total_samples:
             raise ValueError("n_samples must equal samples_per_bin * number_of_bins")
 
@@ -152,6 +196,7 @@ class BalancedBinSampler:
         n_samples: int,
         rng: np.random.Generator,
     ) -> np.ndarray:
+        """Devuelve ``n_samples`` puntos restringidos al bin indicado."""
         if self.samples_per_bin <= 0:
             raise ValueError("samples_per_bin must be strictly positive")
         if n_samples <= 0:

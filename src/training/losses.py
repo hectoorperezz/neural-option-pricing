@@ -1,3 +1,12 @@
+"""Pérdidas usadas en el entrenamiento de los surrogates.
+
+Dos variantes: ``PriceLoss`` para los surrogates clásicos (E1..E4) y
+``DifferentialLoss`` para el ``differential machine learning`` de E5,
+que añade la Delta autograd al objetivo. Ambas devuelven un
+:class:`LossOutput` con la pérdida diferenciable y métricas escalares
+ya desconectadas del grafo, listas para logging.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -11,6 +20,8 @@ from src.models.greeks import surrogate_price_and_delta
 
 @dataclass(frozen=True)
 class LossOutput:
+    """Pérdida total y dict de métricas escalares para logging."""
+
     loss: torch.Tensor
     metrics: dict[str, float]
 
@@ -25,7 +36,19 @@ class PriceLoss(nn.Module):
 
 
 class DifferentialLoss(nn.Module):
-    """Pérdida conjunta de precio y Delta para E5."""
+    """Pérdida conjunta de precio y Delta para E5.
+
+    La Delta se obtiene por autograd con ``create_graph=True`` para que
+    sea diferenciable respecto a los parámetros del modelo. El objetivo
+    es ``price_weight * L1(precio) + delta_weight * L1(Delta)``.
+
+    Args:
+        price_weight: Coeficiente sobre el término de precio.
+        delta_weight: Coeficiente sobre el término de Delta.
+        moneyness_range: Rango original de ``m`` usado por
+            :func:`surrogate_price_and_delta` para deshacer la
+            normalización min-max al calcular la Delta.
+    """
 
     def __init__(
         self,

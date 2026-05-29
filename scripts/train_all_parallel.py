@@ -30,6 +30,8 @@ TRAIN_SCRIPT = REPO_ROOT / "scripts" / "train_surrogate.py"
 
 @dataclass(frozen=True)
 class SurrogateSpec:
+    """Configuración mínima de un surrogate para el lanzador paralelo."""
+
     experiment_id: str
     train_file: str
     validation_file: str
@@ -58,6 +60,7 @@ def build_command(
     spec: SurrogateSpec,
     args: argparse.Namespace,
 ) -> list[str]:
+    """Compone el comando ``python train_surrogate.py ...`` para ``spec``."""
     cmd = [
         sys.executable,
         str(TRAIN_SCRIPT),
@@ -84,6 +87,7 @@ def build_command(
 
 
 def run_surrogate(spec: SurrogateSpec, args: argparse.Namespace) -> tuple[str, int, float]:
+    """Lanza un entrenamiento como subproceso y devuelve (id, exit_code, segundos)."""
     log_file = args.log_dir / f"train_{spec.experiment_id}.log"
     started = datetime.now()
     with log_file.open("w", encoding="utf-8") as handle:
@@ -102,6 +106,7 @@ def run_surrogate(spec: SurrogateSpec, args: argparse.Namespace) -> tuple[str, i
 
 
 def main() -> int:
+    """Lanza los 11 entrenamientos con ``--parallel`` workers concurrentes."""
     parser = argparse.ArgumentParser(description="Entrena los 11 surrogates en paralelo sobre una sola GPU.")
     parser.add_argument("--parallel", type=int, default=4, help="Número de subprocesses de entrenamiento concurrentes.")
     parser.add_argument("--epochs", type=int, default=100)

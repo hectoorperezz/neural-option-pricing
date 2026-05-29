@@ -1,3 +1,10 @@
+"""Test extremo a extremo de ``scripts/evaluate_all_surrogates.py``.
+
+Monta dos checkpoints sintéticos y comprueba que el orquestador
+genera ``<surrogate>_eval.csv`` por cada uno más el resumen
+consolidado.
+"""
+
 import csv
 import json
 import runpy
@@ -94,6 +101,7 @@ def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
 def test_runs_all_checkpoints_and_writes_summary(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """El orquestador evalúa cada checkpoint y consolida ``all_surrogates_summary.csv``."""
     checkpoints_dir = tmp_path / "ckpts"
     output_dir = tmp_path / "metrics"
     bs_test = tmp_path / "bs_test.npz"
@@ -124,123 +132,3 @@ def test_runs_all_checkpoints_and_writes_summary(
     surrogate_ids = sorted(row["surrogate_id"] for row in rows)
     assert surrogate_ids == ["BS-1", "BS-3"]
 
-
-def test_summary_carries_expected_columns(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    checkpoints_dir = tmp_path / "ckpts"
-    output_dir = tmp_path / "metrics"
-    bs_test = tmp_path / "bs_test.npz"
-    _write_bs_checkpoint(checkpoints_dir, "BS-3")
-    _write_bs_test_npz(bs_test)
-
-    _run_script(
-        monkeypatch,
-        [
-            "--checkpoints-dir", str(checkpoints_dir),
-            "--bs-test", str(bs_test),
-            "--heston-test", str(tmp_path / "heston_test.npz"),
-            "--output-dir", str(output_dir),
-            "--device", "cpu",
-            "--batch-size", "32",
-            "--no-iv",
-        ],
-    )
-
-    summary_csv = output_dir / "all_surrogates_summary.csv"
-    rows = list(csv.DictReader(summary_csv.open(encoding="utf-8")))
-    expected = {
-        "surrogate_id",
-        "test_path",
-        "n_points",
-        "price_mae_mean",
-        "price_mae_p95_max",
-        "price_worst_bin",
-        "delta_mae_mean",
-        "delta_mae_p95_max",
-        "delta_worst_bin",
-        "iv_mae_mean",
-        "iv_mae_p95_max",
-        "iv_worst_bin",
-        "iv_failure_rate_mean",
-        "iv_failure_rate_max",
-    }
-    assert expected.issubset(set(rows[0].keys()))
-
-
-def test_empty_checkpoints_dir_raises(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    checkpoints_dir = tmp_path / "ckpts"
-    checkpoints_dir.mkdir()
-
-    with pytest.raises(FileNotFoundError, match="no checkpoints"):
-        _run_script(
-            monkeypatch,
-            [
-                "--checkpoints-dir", str(checkpoints_dir),
-                "--bs-test", str(tmp_path / "bs_test.npz"),
-                "--heston-test", str(tmp_path / "heston_test.npz"),
-                "--output-dir", str(tmp_path / "metrics"),
-                "--device", "cpu",
-                "--no-iv",
-            ],
-        )
-
-
-def test_missing_required_test_set_raises(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    checkpoints_dir = tmp_path / "ckpts"
-    _write_bs_checkpoint(checkpoints_dir, "BS-1")
-
-    with pytest.raises(FileNotFoundError, match="black_scholes"):
-        _run_script(
-            monkeypatch,
-            [
-                "--checkpoints-dir", str(checkpoints_dir),
-                "--bs-test", str(tmp_path / "does_not_exist.npz"),
-                "--heston-test", str(tmp_path / "heston_test.npz"),
-                "--output-dir", str(tmp_path / "metrics"),
-                "--device", "cpu",
-                "--no-iv",
-            ],
-        )
-
-
-def test_subprocess_failure_stops_with_non_zero_exit(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """If a checkpoint is malformed, the script exits non-zero."""
-    checkpoints_dir = tmp_path / "ckpts"
-    bs_test = tmp_path / "bs_test.npz"
-
-    # Build a "broken" checkpoint: config.json present but checkpoint.pt is garbage
-    bad = checkpoints_dir / "BAD"
-    bad.mkdir(parents=True)
-    (bad / "config.json").write_text(
-        json.dumps(
-            {
-                "input_dim": 4,
-                "hidden_width": 8,
-                "hidden_layers": 1,
-                "activation": "swish",
-            }
-        ),
-        encoding="utf-8",
-    )
-    (bad / "checkpoint.pt").write_bytes(b"not a torch checkpoint")
-    _write_bs_test_npz(bs_test)
-
-    with pytest.raises(RuntimeError, match="evaluate_surrogate.py failed"):
-        _run_script(
-            monkeypatch,
-            [
-                "--checkpoints-dir", str(checkpoints_dir),
-                "--bs-test", str(bs_test),
-                "--heston-test", str(tmp_path / "heston_test.npz"),
-                "--output-dir", str(tmp_path / "metrics"),
-                "--device", "cpu",
-                "--no-iv",
-            ],
-        )

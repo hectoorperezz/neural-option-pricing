@@ -40,6 +40,7 @@ from src.utils import load_mlp_checkpoint, load_option_dataset_npz, resolve_torc
 
 
 def parse_args() -> argparse.Namespace:
+    """Parser CLI; los ``help`` describen cada flag."""
     parser = argparse.ArgumentParser(
         description=(
             "Ejecuta E3 (H-3 uniforme frente a H-5 enfocado) y escribe "
@@ -106,6 +107,7 @@ def _build_input(
     bin_id: np.ndarray | None,
     evaluator: BinEvaluator,
 ) -> SurrogateInput:
+    """Carga el checkpoint y lo etiqueta con ``sampler`` para el estudio."""
     model, _config = load_mlp_checkpoint(checkpoint_dir)
     return SurrogateInput(
         surrogate_id=checkpoint_dir.name,
@@ -129,6 +131,7 @@ def _run(
     iv_workers: int,
     iv_progress: bool,
 ) -> ExperimentResult:
+    """Corre ``SamplingStudy`` y vuelca CSV + heatmaps de precio e IV."""
     dataset, bin_id = load_option_dataset_npz(test_path)
     evaluator = BinEvaluator(
         partition=BinPartition.default(),
@@ -176,6 +179,7 @@ def _run(
 
 
 def main() -> None:
+    """Entrada del script: ejecuta E3 sobre H-3 vs H-5."""
     args = parse_args()
     device = resolve_torch_device(args.device)
     print("E3 — Sampling Study (uniform vs focused)")

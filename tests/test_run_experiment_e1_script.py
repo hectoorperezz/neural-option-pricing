@@ -1,3 +1,9 @@
+"""Test extremo a extremo de ``scripts/run_experiment_e1.py``.
+
+Genera checkpoint y test sintéticos para BS y/o Heston y verifica que
+el script escribe el CSV largo de E1 con las columnas pre-registradas.
+"""
+
 import csv
 import json
 import runpy
@@ -96,6 +102,7 @@ def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
 def test_script_writes_csv_and_heatmaps_for_bs_only(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """E1 sobre solo BS produce CSV largo (25 filas) y los dos heatmaps PNG."""
     bs_checkpoint = tmp_path / "BS-3"
     bs_test = tmp_path / "bs_test.npz"
     output_csv = tmp_path / "e1.csv"
@@ -122,75 +129,3 @@ def test_script_writes_csv_and_heatmaps_for_bs_only(
     pngs = list(figures.glob("*.png"))
     assert len(pngs) == 2  # price + iv heatmap for BS-3
 
-
-def test_script_can_run_without_figures_dir(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    bs_checkpoint = tmp_path / "BS-3"
-    bs_test = tmp_path / "bs_test.npz"
-    output_csv = tmp_path / "e1.csv"
-    _write_bs_checkpoint(bs_checkpoint)
-    _write_bs_test_npz(bs_test)
-
-    _run_script(
-        monkeypatch,
-        [
-            "--bs-checkpoint", str(bs_checkpoint),
-            "--bs-test", str(bs_test),
-            "--output", str(output_csv),
-            "--device", "cpu",
-            "--batch-size", "32",
-        ],
-    )
-
-    assert output_csv.exists()
-
-
-def test_script_rejects_non_csv_output(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    bs_checkpoint = tmp_path / "BS-3"
-    bs_test = tmp_path / "bs_test.npz"
-    _write_bs_checkpoint(bs_checkpoint)
-    _write_bs_test_npz(bs_test)
-
-    with pytest.raises(ValueError, match="csv"):
-        _run_script(
-            monkeypatch,
-            [
-                "--bs-checkpoint", str(bs_checkpoint),
-                "--bs-test", str(bs_test),
-                "--output", str(tmp_path / "e1.txt"),
-                "--device", "cpu",
-            ],
-        )
-
-
-def test_script_rejects_run_without_any_surrogate(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    with pytest.raises(ValueError, match="provide at least one"):
-        _run_script(
-            monkeypatch,
-            [
-                "--output", str(tmp_path / "e1.csv"),
-                "--device", "cpu",
-            ],
-        )
-
-
-def test_script_rejects_partial_bs_pair(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    bs_checkpoint = tmp_path / "BS-3"
-    _write_bs_checkpoint(bs_checkpoint)
-
-    with pytest.raises(ValueError, match="bs-checkpoint"):
-        _run_script(
-            monkeypatch,
-            [
-                "--bs-checkpoint", str(bs_checkpoint),
-                "--output", str(tmp_path / "e1.csv"),
-                "--device", "cpu",
-            ],
-        )

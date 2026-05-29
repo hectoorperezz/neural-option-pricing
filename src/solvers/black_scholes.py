@@ -1,3 +1,11 @@
+"""Pricer Black-Scholes para calls europeas.
+
+Devuelve precio, Delta y Vega en forma cerrada. Sirve como ground truth
+del proyecto: los surrogates de Black-Scholes se contrastan contra
+estos valores exactos antes de pasar a Heston (ver ``docs/tasks.md``,
+Fase 0).
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -24,12 +32,14 @@ def _normal_pdf(x: np.ndarray) -> np.ndarray:
 
 
 def _normal_cdf(x: np.ndarray) -> np.ndarray:
+    """Φ(x) usando SciPy si está disponible; fallback a ``erf`` vectorizado."""
     if scipy_normal_cdf is not None:
         return scipy_normal_cdf(x)
     return 0.5 * (1.0 + np.vectorize(erf, otypes=[float])(x / SQRT_2))
 
 
 def _to_output(value: np.ndarray) -> float | np.ndarray:
+    """Colapsa arrays 0-d a ``float`` para no propagar arrays escalares."""
     if value.ndim == 0:
         return float(value)
     return value
@@ -37,7 +47,13 @@ def _to_output(value: np.ndarray) -> float | np.ndarray:
 
 @dataclass(frozen=True)
 class BlackScholesSolver:
-    """Pricer Black-Scholes cerrado para calls europeas."""
+    """Solver analítico Black-Scholes-Merton para calls europeas.
+
+    Cada método acepta escalares o arrays y devuelve el mismo tipo. Los
+    parámetros financieros son los habituales: ``spot``, ``strike``,
+    ``maturity`` (años), ``rate``, ``volatility`` y ``dividend_yield``
+    (por convención del proyecto, ``q = 0``).
+    """
 
     def call_price(
         self,
@@ -48,6 +64,7 @@ class BlackScholesSolver:
         volatility: Any,
         dividend_yield: Any = 0.0,
     ) -> float | np.ndarray:
+        """Precio de la call: ``S e^{-qT} Φ(d_1) - K e^{-rT} Φ(d_2)``."""
         spot_arr, strike_arr, maturity_arr, rate_arr, vol_arr, q_arr = self._as_arrays(
             spot, strike, maturity, rate, volatility, dividend_yield
         )
@@ -67,6 +84,7 @@ class BlackScholesSolver:
         volatility: Any,
         dividend_yield: Any = 0.0,
     ) -> float | np.ndarray:
+        """Delta de la call: ``e^{-qT} Φ(d_1)``."""
         spot_arr, strike_arr, maturity_arr, rate_arr, vol_arr, q_arr = self._as_arrays(
             spot, strike, maturity, rate, volatility, dividend_yield
         )
@@ -83,6 +101,7 @@ class BlackScholesSolver:
         volatility: Any,
         dividend_yield: Any = 0.0,
     ) -> float | np.ndarray:
+        """Vega de la call: ``S e^{-qT} \\sqrt{T}\\,\\varphi(d_1)``."""
         spot_arr, strike_arr, maturity_arr, rate_arr, vol_arr, q_arr = self._as_arrays(
             spot, strike, maturity, rate, volatility, dividend_yield
         )
@@ -99,6 +118,7 @@ class BlackScholesSolver:
         volatility: np.ndarray,
         dividend_yield: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
+        """Calcula ``d_1`` y ``d_2`` con validación de inputs."""
         self._validate_inputs(spot, strike, maturity, volatility)
         vol_sqrt_t = volatility * np.sqrt(maturity)
         d1 = (
@@ -109,6 +129,7 @@ class BlackScholesSolver:
         return d1, d2
 
     def _as_arrays(self, *values: Any) -> tuple[np.ndarray, ...]:
+        """Convierte cada entrada a ``ndarray`` y aplica broadcasting común."""
         broadcast = np.broadcast_arrays(*[np.asarray(value, dtype=float) for value in values])
         return tuple(broadcast)
 

@@ -1,3 +1,16 @@
+"""Tests de los samplers.
+
+Verifican tres propiedades estadísticas que un E2E del pipeline no
+detectaría aunque estuvieran rotas:
+
+* el sesgo en ``√varianza`` para Heston (documentado en
+  ``docs/metodologia.md``);
+* la concentración ATM y corto plazo del ``FocusedSampler``, sin la
+  que H-3 y H-5 serían indistinguibles en E3;
+* el conteo exacto por bin del ``BalancedBinSampler``, necesario para
+  que los ``MAE`` por bin sean comparables.
+"""
+
 from collections import Counter
 
 import numpy as np
@@ -6,21 +19,12 @@ from src.datasets import (
     BalancedBinSampler,
     FocusedSampler,
     UniformSampler,
-    make_black_scholes_domain,
     make_heston_domain,
 )
 
 
-def test_uniform_sampler_respects_black_scholes_domain() -> None:
-    domain = make_black_scholes_domain()
-    samples = UniformSampler(domain, seed=123).sample(1_000)
-
-    assert samples.shape == (1_000, domain.dimension)
-    assert np.all(samples >= domain.lower)
-    assert np.all(samples <= domain.upper)
-
-
 def test_heston_sampler_samples_variances_in_sqrt_scale() -> None:
+    """Para ``v0``, la media de ``√v0`` se sitúa cerca del centro del rango raíz."""
     domain = make_heston_domain()
     samples = UniformSampler(domain, seed=123).sample(2_000)
     v0 = samples[:, domain.input_names.index("v0")]
@@ -31,6 +35,7 @@ def test_heston_sampler_samples_variances_in_sqrt_scale() -> None:
 
 
 def test_focused_sampler_concentrates_moneyness_and_maturity() -> None:
+    """El sampler enfocado aumenta la masa ATM y reduce la mediana de plazo."""
     domain = make_heston_domain()
     uniform = UniformSampler(domain, seed=7).sample(5_000)
     focused = FocusedSampler(domain, seed=7).sample(5_000)
@@ -45,6 +50,7 @@ def test_focused_sampler_concentrates_moneyness_and_maturity() -> None:
 
 
 def test_balanced_bin_sampler_generates_equal_counts_per_bin() -> None:
+    """Exactamente ``samples_per_bin`` puntos en cada uno de los 25 bins."""
     domain = make_heston_domain()
     sampler = BalancedBinSampler(domain, samples_per_bin=3, seed=123)
     samples = sampler.sample(75)

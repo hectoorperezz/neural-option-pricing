@@ -1,3 +1,11 @@
+"""Inversión a volatilidad implícita Black-Scholes para calls europeas.
+
+El proyecto evalúa los surrogates tanto en la escala de precio como en
+la de IV (ver E1). Este inversor se usa solo en evaluación, nunca como
+target de entrenamiento, y combina Newton sobre Vega con un respaldo
+por bisección para los puntos donde la Vega cae a casi cero.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -9,7 +17,19 @@ from src.solvers.black_scholes import BlackScholesSolver
 
 @dataclass(frozen=True)
 class ImpliedVolatilityInverter:
-    """Inversor de volatilidad implícita Black-Scholes para calls europeas."""
+    """Recupera la volatilidad implícita Black-Scholes a partir del precio.
+
+    Estrategia: Newton sobre la diferencia ``modelo - precio`` mientras
+    la Vega sea estable; en caso contrario, bisección sobre el intervalo
+    de búsqueda.
+
+    Attributes:
+        solver: Pricer Black-Scholes usado en cada iteración.
+        min_volatility: Cota inferior del intervalo de búsqueda.
+        max_volatility: Cota superior del intervalo de búsqueda.
+        tolerance: Tolerancia absoluta sobre la diferencia de precio.
+        max_iterations: Número máximo de iteraciones por método.
+    """
 
     solver: BlackScholesSolver = BlackScholesSolver()
     min_volatility: float = 1e-8
@@ -27,6 +47,13 @@ class ImpliedVolatilityInverter:
         dividend_yield: float = 0.0,
         initial_guess: float = 0.2,
     ) -> float:
+        """Devuelve la IV que reproduce ``price`` bajo Black-Scholes.
+
+        Comprueba primero las cotas de no arbitraje y, si el precio está
+        en el valor intrínseco, devuelve ``min_volatility``. A partir de
+        ``initial_guess`` itera Newton; si la Vega se vuelve degenerada,
+        cae a bisección.
+        """
         self._validate_inputs(price, spot, strike, maturity, rate, dividend_yield)
 
         lower = self._lower_bound(spot, strike, maturity, rate, dividend_yield)
@@ -56,6 +83,7 @@ class ImpliedVolatilityInverter:
                 break
             sigma = float(next_sigma)
 
+        # Newton no converge o sale del intervalo: respaldo por bisección.
         return self._bisect(price, spot, strike, maturity, rate, dividend_yield)
 
     def _bisect(
@@ -67,6 +95,7 @@ class ImpliedVolatilityInverter:
         rate: float,
         dividend_yield: float,
     ) -> float:
+        """Bisección en ``[min_volatility, max_volatility]``."""
         low = self.min_volatility
         high = self.max_volatility
 
@@ -123,6 +152,7 @@ class ImpliedVolatilityInverter:
         rate: float,
         dividend_yield: float,
     ) -> float:
+        """Valor intrínseco descontado, suelo teórico del precio de la call."""
         forward_intrinsic = (
             spot * np.exp(-dividend_yield * maturity) - strike * np.exp(-rate * maturity)
         )

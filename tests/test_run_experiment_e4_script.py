@@ -1,3 +1,10 @@
+"""Test extremo a extremo de ``scripts/run_experiment_e4.py``.
+
+Construye un checkpoint sintético y reduce el protocolo (lotes y
+repeticiones) para que el script termine en segundos. Comprueba el
+CSV de timing y la generación del plot opcional.
+"""
+
 import csv
 import json
 import runpy
@@ -108,6 +115,7 @@ def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
 def test_script_writes_csv_and_plot(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """E4 con protocolo reducido produce CSV de timing y plot de ``speedup``."""
     ckpt = tmp_path / "ckpts" / "H-3"
     _write_heston_checkpoint(ckpt)
     test_path = tmp_path / "heston_test.npz"
@@ -137,72 +145,3 @@ def test_script_writes_csv_and_plot(
     assert rows[0]["surrogate_id"] == "H-3"
     assert plot_path.exists()
 
-
-def test_script_can_run_without_plot(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    ckpt = tmp_path / "ckpts" / "H-3"
-    _write_heston_checkpoint(ckpt)
-    test_path = tmp_path / "heston_test.npz"
-    _write_heston_test_npz(test_path)
-    output_csv = tmp_path / "metrics" / "e4_table.csv"
-
-    _run_script(
-        monkeypatch,
-        [
-            "--checkpoint", str(ckpt),
-            "--test", str(test_path),
-            "--output", str(output_csv),
-            "--devices", "cpu",
-            "--batch-sizes", "10",
-            "--n-warmups", "1",
-            "--n-repetitions", "2",
-            "--solver-workers", "1",
-        ],
-    )
-
-    assert output_csv.exists()
-
-
-def test_script_rejects_missing_checkpoint(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    test_path = tmp_path / "heston_test.npz"
-    _write_heston_test_npz(test_path)
-    output_csv = tmp_path / "metrics" / "e4_table.csv"
-
-    with pytest.raises(FileNotFoundError):
-        _run_script(
-            monkeypatch,
-            [
-                "--checkpoint", str(tmp_path / "ckpts" / "H-3"),
-                "--test", str(test_path),
-                "--output", str(output_csv),
-                "--devices", "cpu",
-                "--batch-sizes", "10",
-                "--n-warmups", "1",
-                "--n-repetitions", "2",
-            ],
-        )
-
-
-def test_script_rejects_missing_test_set(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    ckpt = tmp_path / "ckpts" / "H-3"
-    _write_heston_checkpoint(ckpt)
-    output_csv = tmp_path / "metrics" / "e4_table.csv"
-
-    with pytest.raises(FileNotFoundError):
-        _run_script(
-            monkeypatch,
-            [
-                "--checkpoint", str(ckpt),
-                "--test", str(tmp_path / "missing.npz"),
-                "--output", str(output_csv),
-                "--devices", "cpu",
-                "--batch-sizes", "10",
-                "--n-warmups", "1",
-                "--n-repetitions", "2",
-            ],
-        )

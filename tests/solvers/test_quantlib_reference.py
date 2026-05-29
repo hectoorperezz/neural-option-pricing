@@ -1,3 +1,12 @@
+"""Validación de los solvers contra QuantLib.
+
+Solo se ejecuta si ``QuantLib`` está instalado (en CI no siempre lo
+está, por eso la suite principal lo excluye explícitamente). Cubre
+Black-Scholes (precio, Delta y Vega) y Heston (precio analítico y
+Delta por diferencias finitas) sobre una rejilla representativa del
+dominio del proyecto.
+"""
+
 import QuantLib as ql
 import pytest
 
@@ -17,6 +26,7 @@ def quantlib_black_scholes_call(
     volatility: float,
     dividend_yield: float = 0.0,
 ) -> tuple[float, float, float]:
+    """Precio, Delta y Vega de una call europea por ``AnalyticEuropeanEngine``."""
     ql.Settings.instance().evaluationDate = REFERENCE_DATE
     maturity_date = REFERENCE_DATE + maturity_days
     option = ql.VanillaOption(
@@ -53,6 +63,7 @@ def quantlib_heston_call_price(
     rho: float,
     dividend_yield: float = 0.0,
 ) -> float:
+    """Precio Heston de referencia con ``AnalyticHestonEngine``."""
     ql.Settings.instance().evaluationDate = REFERENCE_DATE
     maturity_date = REFERENCE_DATE + maturity_days
     option = ql.VanillaOption(
@@ -110,6 +121,7 @@ def test_black_scholes_matches_quantlib_price_delta_and_vega(
     volatility: float,
     dividend_yield: float,
 ) -> None:
+    """Coincide con QuantLib sobre la rejilla ``BLACK_SCHOLES_REFERENCE_CASES``."""
     solver = BlackScholesSolver()
     maturity = maturity_days / 365.0
 
@@ -335,6 +347,7 @@ def test_heston_matches_quantlib_price(
     rho: float,
     dividend_yield: float,
 ) -> None:
+    """Precio Heston coincide con QuantLib bajo tolerancias estrictas."""
     solver = HestonSolver(absolute_tolerance=1e-9, relative_tolerance=1e-9, quad_limit=500)
     maturity = maturity_days / 365.0
 
@@ -384,6 +397,7 @@ def test_heston_delta_matches_quantlib_central_finite_difference(
     rho: float,
     dividend_yield: float,
 ) -> None:
+    """Delta Heston coincide con FD centrada calculada sobre QuantLib."""
     solver = HestonSolver(absolute_tolerance=1e-9, relative_tolerance=1e-9, quad_limit=500)
     params = {
         "spot": spot,

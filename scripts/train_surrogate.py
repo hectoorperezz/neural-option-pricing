@@ -1,3 +1,13 @@
+"""Script de entrenamiento de un surrogate desde ``.npz``.
+
+Carga train + validation, construye un :class:`~src.models.MLP`, lo
+entrena con :class:`~src.training.Trainer` y guarda
+``checkpoint.pt``, ``config.json`` e historiales (CSV + JSON) en
+``--output-dir``. Soporta dos pérdidas (``price`` y ``differential``,
+esta última para E5) y dos rutas de carga: ``DataLoader`` clásico o
+``--preload-to-device`` para mantener tensores en VRAM.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -76,6 +86,7 @@ from src.utils import load_option_dataset_npz, resolve_torch_device, set_global_
 
 
 def parse_args() -> argparse.Namespace:
+    """Parser CLI; los ``help`` describen cada flag."""
     parser = argparse.ArgumentParser(description="Entrena un surrogate de pricing desde datos NPZ.")
     parser.add_argument("--train", type=Path, required=True)
     parser.add_argument("--validation", type=Path, required=True)
@@ -109,6 +120,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def make_loss(args: argparse.Namespace) -> torch.nn.Module:
+    """Devuelve ``PriceLoss`` o ``DifferentialLoss`` según ``--loss``."""
     if args.loss == "price":
         return PriceLoss()
     return DifferentialLoss(
@@ -119,6 +131,7 @@ def make_loss(args: argparse.Namespace) -> torch.nn.Module:
 
 
 def write_history(output_dir: Path, history: list[dict[str, float]]) -> None:
+    """Vuelca el historial de métricas a ``history.json`` y ``history.csv``."""
     (output_dir / "history.json").write_text(
         json.dumps(history, indent=2, sort_keys=True),
         encoding="utf-8",
@@ -133,6 +146,7 @@ def write_history(output_dir: Path, history: list[dict[str, float]]) -> None:
 
 
 def write_config(output_dir: Path, config: dict[str, Any]) -> None:
+    """Persiste la configuración del entrenamiento en ``config.json``."""
     (output_dir / "config.json").write_text(
         json.dumps(config, indent=2, sort_keys=True),
         encoding="utf-8",
@@ -140,6 +154,7 @@ def write_config(output_dir: Path, config: dict[str, Any]) -> None:
 
 
 def main() -> None:
+    """Entrada del script: ajusta el modelo y persiste checkpoint + métricas."""
     args = parse_args()
     if args.epochs <= 0:
         raise ValueError("--epochs must be strictly positive")

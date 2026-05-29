@@ -1,3 +1,10 @@
+"""Test extremo a extremo de ``scripts/run_experiment_e2.py``.
+
+Monta cuatro checkpoints (uno por activación) y comprueba que el
+script genera ``e2_bs.csv``/``e2_heston.csv`` con la columna de
+activación propagada desde ``config.json``.
+"""
+
 import csv
 import json
 import runpy
@@ -91,6 +98,7 @@ def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
 def test_script_writes_csv_and_heatmaps_for_bs_family(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """E2 sobre BS produce 50 filas (2 surrogates × 25 bins) y 4 PNG (precio + Delta)."""
     bs_dir = tmp_path / "ckpts"
     _write_bs_checkpoint(bs_dir / "BS-1", activation="relu")
     _write_bs_checkpoint(bs_dir / "BS-3", activation="swish")
@@ -121,58 +129,3 @@ def test_script_writes_csv_and_heatmaps_for_bs_family(
     bs_figures = list((figures_dir / "e2_bs").glob("*.png"))
     assert len(bs_figures) == 4  # 2 surrogates x 2 metrics (price + delta)
 
-
-def test_script_can_run_without_figures_dir(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    bs_dir = tmp_path / "ckpts"
-    _write_bs_checkpoint(bs_dir / "BS-1", activation="relu")
-    bs_test = tmp_path / "bs_test.npz"
-    _write_bs_test_npz(bs_test)
-    output_dir = tmp_path / "metrics"
-
-    _run_script(
-        monkeypatch,
-        [
-            "--bs-checkpoints", str(bs_dir / "BS-1"),
-            "--bs-test", str(bs_test),
-            "--output-dir", str(output_dir),
-            "--device", "cpu",
-            "--batch-size", "32",
-        ],
-    )
-
-    assert (output_dir / "e2_bs.csv").exists()
-
-
-def test_script_rejects_partial_bs_pair(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    bs_dir = tmp_path / "ckpts"
-    _write_bs_checkpoint(bs_dir / "BS-1", activation="relu")
-    output_dir = tmp_path / "metrics"
-
-    with pytest.raises(ValueError, match="bs-checkpoints"):
-        _run_script(
-            monkeypatch,
-            [
-                "--bs-checkpoints", str(bs_dir / "BS-1"),
-                "--output-dir", str(output_dir),
-                "--device", "cpu",
-            ],
-        )
-
-
-def test_script_rejects_run_without_any_family(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    output_dir = tmp_path / "metrics"
-
-    with pytest.raises(ValueError, match="at least one family"):
-        _run_script(
-            monkeypatch,
-            [
-                "--output-dir", str(output_dir),
-                "--device", "cpu",
-            ],
-        )

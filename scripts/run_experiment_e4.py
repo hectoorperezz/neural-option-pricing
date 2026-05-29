@@ -39,6 +39,7 @@ from src.utils import load_mlp_checkpoint, load_npz_features_and_raw_inputs
 
 
 def parse_args() -> argparse.Namespace:
+    """Parser CLI; los ``help`` describen cada flag."""
     parser = argparse.ArgumentParser(
         description=(
             "Ejecuta E4, benchmark temporal de H-3 frente al solver Heston, "
@@ -117,6 +118,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def resolve_devices(requested: list[str] | None) -> tuple[str, ...]:
+    """Devuelve los devices a cronometrar; añade ``cuda`` si está disponible."""
     if requested is not None:
         return tuple(requested)
     if torch.cuda.is_available():
@@ -125,6 +127,7 @@ def resolve_devices(requested: list[str] | None) -> tuple[str, ...]:
 
 
 def main() -> EfficiencyResult:
+    """Entrada del script: corre ``EfficiencyStudy`` y vuelca CSV + plot."""
     args = parse_args()
     devices = resolve_devices(args.devices)
 

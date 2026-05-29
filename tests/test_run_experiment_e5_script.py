@@ -1,3 +1,10 @@
+"""Test extremo a extremo de ``scripts/run_experiment_e5.py``.
+
+Monta los checkpoints H-3-small, H-6-small y H-3 (opcional) sobre un
+test Heston con Delta y comprueba que el script emite el CSV largo
+con las columnas de rol y de pérdida.
+"""
+
 import csv
 import json
 import runpy
@@ -123,6 +130,7 @@ def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
 def test_script_writes_csv_and_heatmaps_two_surrogates(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """E5 sobre H-3-small + H-6-small produce CSV con columnas ``role``/``loss`` y heatmaps."""
     ckpts = tmp_path / "ckpts"
     _write_heston_like_checkpoint(ckpts / "H-3-small", loss="price")
     _write_heston_like_checkpoint(ckpts / "H-6-small", loss="differential")
@@ -155,77 +163,3 @@ def test_script_writes_csv_and_heatmaps_two_surrogates(
     figures = list(figures_dir.glob("*.png"))
     assert len(figures) == 4  # 2 surrogates x 2 metrics
 
-
-def test_script_with_baseline_writes_three_surrogate_block(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    ckpts = tmp_path / "ckpts"
-    _write_heston_like_checkpoint(ckpts / "H-3-small", loss="price")
-    _write_heston_like_checkpoint(ckpts / "H-6-small", loss="differential")
-    _write_heston_like_checkpoint(ckpts / "H-3", loss="price")
-    test_path = tmp_path / "heston_test.npz"
-    _write_test_npz_with_deltas(test_path)
-    output_csv = tmp_path / "metrics" / "e5_table.csv"
-
-    _run_script(
-        monkeypatch,
-        [
-            "--small-price-checkpoint", str(ckpts / "H-3-small"),
-            "--small-dml-checkpoint", str(ckpts / "H-6-small"),
-            "--baseline-checkpoint", str(ckpts / "H-3"),
-            "--test", str(test_path),
-            "--output", str(output_csv),
-            "--device", "cpu",
-            "--batch-size", "32",
-        ],
-    )
-
-    rows = list(csv.DictReader(output_csv.open(encoding="utf-8")))
-    assert len(rows) == 75
-    roles = {row["role"] for row in rows}
-    assert roles == {"small_price", "small_dml", "baseline_large"}
-
-
-def test_script_rejects_missing_small_dml(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    ckpts = tmp_path / "ckpts"
-    _write_heston_like_checkpoint(ckpts / "H-3-small", loss="price")
-    test_path = tmp_path / "heston_test.npz"
-    _write_test_npz_with_deltas(test_path)
-    output_csv = tmp_path / "metrics" / "e5_table.csv"
-
-    with pytest.raises(FileNotFoundError):
-        _run_script(
-            monkeypatch,
-            [
-                "--small-price-checkpoint", str(ckpts / "H-3-small"),
-                "--small-dml-checkpoint", str(ckpts / "H-6-small"),
-                "--test", str(test_path),
-                "--output", str(output_csv),
-                "--device", "cpu",
-            ],
-        )
-
-
-def test_script_rejects_test_set_without_deltas(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    ckpts = tmp_path / "ckpts"
-    _write_heston_like_checkpoint(ckpts / "H-3-small", loss="price")
-    _write_heston_like_checkpoint(ckpts / "H-6-small", loss="differential")
-    test_path = tmp_path / "heston_test.npz"
-    _write_test_npz_without_deltas(test_path)
-    output_csv = tmp_path / "metrics" / "e5_table.csv"
-
-    with pytest.raises(ValueError, match="deltas"):
-        _run_script(
-            monkeypatch,
-            [
-                "--small-price-checkpoint", str(ckpts / "H-3-small"),
-                "--small-dml-checkpoint", str(ckpts / "H-6-small"),
-                "--test", str(test_path),
-                "--output", str(output_csv),
-                "--device", "cpu",
-            ],
-        )

@@ -44,6 +44,7 @@ from src.utils import (
 
 
 def parse_args() -> argparse.Namespace:
+    """Parser CLI; los ``help`` describen cada flag."""
     parser = argparse.ArgumentParser(
         description="Evalúa un surrogate entrenado sobre un test set y escribe CSV por bin."
     )
@@ -88,6 +89,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def _top_n_finite(arr: np.ndarray, n: int) -> np.ndarray:
+    """Devuelve los ``n`` índices de mayor valor finito en ``arr``."""
     finite_indices = np.where(np.isfinite(arr))[0]
     if finite_indices.size == 0:
         return np.array([], dtype=np.int64)
@@ -96,6 +98,7 @@ def _top_n_finite(arr: np.ndarray, n: int) -> np.ndarray:
 
 
 def print_summary(report: Report, elapsed: float) -> None:
+    """Imprime resumen global y los tres peores bins por métrica."""
     print()
     print("=== Summary ===")
     print(f"  surrogate_id    {report.surrogate_id}")
@@ -143,6 +146,7 @@ def print_summary(report: Report, elapsed: float) -> None:
 
 
 def main() -> None:
+    """Entrada del script: evalúa el surrogate y vuelca CSV + resumen."""
     args = parse_args()
 
     if args.output.suffix.lower() != ".csv":

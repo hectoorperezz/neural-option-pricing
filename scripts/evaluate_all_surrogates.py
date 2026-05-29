@@ -40,6 +40,7 @@ DEFAULT_HESTON_TEST = REPO_ROOT / "data" / "heston_test_125k_balanced_delta.npz"
 
 
 def parse_args() -> argparse.Namespace:
+    """Parser CLI; los ``help`` describen cada flag."""
     parser = argparse.ArgumentParser(
         description="Evalúa todos los checkpoints de un directorio y escribe un CSV resumen."
     )
@@ -79,6 +80,7 @@ def find_checkpoints(checkpoints_dir: Path) -> list[Path]:
 
 
 def detect_family(checkpoint_dir: Path) -> str:
+    """Deduce ``"black_scholes"`` o ``"heston"`` desde el ``input_dim`` del config."""
     config = json.loads((checkpoint_dir / "config.json").read_text(encoding="utf-8"))
     input_dim = int(config["input_dim"])
     if input_dim == 4:
@@ -149,6 +151,7 @@ def summarize_one(
 
 
 def write_summary(rows: list[dict[str, Any]], output_path: Path) -> None:
+    """Escribe el CSV consolidado con una fila por surrogate."""
     if not rows:
         raise ValueError("nothing to summarize")
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -198,6 +201,7 @@ def _format(value: float) -> Any:
 
 
 def _resolve_test_path(family: str, bs_test: Path, heston_test: Path) -> Path:
+    """Devuelve el test set por defecto que corresponde a la familia detectada."""
     test_path = bs_test if family == "black_scholes" else heston_test
     if not test_path.exists():
         raise FileNotFoundError(
@@ -208,6 +212,7 @@ def _resolve_test_path(family: str, bs_test: Path, heston_test: Path) -> Path:
 
 
 def main() -> None:
+    """Recorre checkpoints, evalúa cada uno y consolida el CSV global."""
     args = parse_args()
     checkpoints = find_checkpoints(args.checkpoints_dir)
     args.output_dir.mkdir(parents=True, exist_ok=True)

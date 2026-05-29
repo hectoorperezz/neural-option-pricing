@@ -1,3 +1,17 @@
+"""Script de generación de datasets sintéticos de opciones.
+
+Wrapper de línea de comandos sobre :mod:`src.datasets`. Combina el
+solver de la familia indicada (``black_scholes`` o ``heston``) con un
+sampler (``uniform``, ``focused`` o ``balanced``), aplica el filtro
+de no arbitraje y escribe el resultado en un ``.npz`` con su
+``metadata.json`` asociado.
+
+Soporta generación en paralelo con ``--workers > 1`` usando
+``SeedSequence`` para que las subsemillas sean deterministas. El
+sampler ``balanced`` añade columnas ``bin_id``, ``moneyness_bin`` y
+``maturity_bin`` consumidas por ``BinEvaluator``.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -22,6 +36,8 @@ from src.solvers import BlackScholesSolver, HestonSolver
 
 @dataclass(frozen=True)
 class GeneratedArrayBatch:
+    """Resultado de una ronda local de muestreo + filtrado por no arbitraje."""
+
     raw_inputs: np.ndarray
     features: np.ndarray
     prices: np.ndarray
@@ -32,6 +48,7 @@ class GeneratedArrayBatch:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parser CLI; los ``help`` describen cada flag."""
     parser = argparse.ArgumentParser(description="Genera datasets sintéticos de pricing de opciones.")
     parser.add_argument("--family", choices=("black_scholes", "heston"), required=True)
     parser.add_argument("--sampler", choices=("uniform", "focused", "balanced"), default="uniform")
@@ -73,6 +90,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def build_components(args: argparse.Namespace) -> tuple[object, Domain, object]:
+    """Instancia solver, dominio y sampler a partir de los flags CLI."""
     if args.family == "black_scholes":
         domain = make_black_scholes_domain()
         solver = BlackScholesSolver()
@@ -100,6 +118,7 @@ def price_batch(
     include_delta: bool,
     strike: float = 1.0,
 ) -> tuple[np.ndarray, np.ndarray | None]:
+    """Llama al solver con la firma adecuada según ``family``."""
     if family == "black_scholes":
         prices = solver.call_price(
             spot=raw_inputs[:, 0],
@@ -161,6 +180,7 @@ def valid_mask(
     strike: float = 1.0,
     no_arbitrage_tolerance: float = 1e-7,
 ) -> np.ndarray:
+    """Máscara booleana de muestras que respetan las cotas de no arbitraje."""
     moneyness = raw_inputs[:, 0]
     maturity = raw_inputs[:, 1]
     rate = raw_inputs[:, 2]
@@ -187,6 +207,7 @@ def generate_batch(
     rng: np.random.Generator,
     include_delta: bool,
 ) -> GeneratedArrayBatch:
+    """Una ronda de sample + price + valid_mask en arrays NumPy."""
     raw_batch = sampler.sample(draw_count, rng=rng)
     price_batch_values, delta_batch_values = price_batch(
         solver, domain, family, raw_batch, include_delta
@@ -212,6 +233,7 @@ def initialize_memmaps(
     dtype: np.dtype[Any],
     include_bins: bool = False,
 ) -> dict[str, np.memmap]:
+    """Crea ``np.memmap`` temporales para escribir en disco sin retener todo en RAM."""
     arrays = {
         "features": np.memmap(
             output_dir / "features.dat", mode="w+", dtype=dtype, shape=(n_samples, input_dim)
@@ -249,6 +271,7 @@ def save_npz(
     input_names: tuple[str, ...],
     compression: str,
 ) -> None:
+    """Vuelca los ``memmap`` a un único ``.npz`` (opcionalmente comprimido)."""
     payload: dict[str, np.ndarray] = {
         "features": np.asarray(arrays["features"]),
         "raw_inputs": np.asarray(arrays["raw_inputs"]),
@@ -273,6 +296,7 @@ def write_metadata(output: Path, metadata: dict[str, Any]) -> None:
 
 
 def validate_args(args: argparse.Namespace) -> int:
+    """Valida combinaciones de flags y devuelve el ``n_samples`` efectivo."""
     if args.sampler == "balanced":
         if args.samples_per_bin is None or args.samples_per_bin <= 0:
             raise ValueError("--samples-per-bin must be positive when --sampler balanced")
@@ -312,6 +336,7 @@ def fill_balanced_dataset(
     arrays: dict[str, np.memmap],
     dtype: np.dtype[Any],
 ) -> tuple[int, int, int, float]:
+    """Rellena los memmaps bin a bin para el sampler balanced (serie)."""
     rng = np.random.default_rng(args.seed)
     accepted_total = 0
     attempted_total = 0
@@ -473,6 +498,7 @@ def _worker_balanced_bins(
 
 
 def main() -> None:
+    """Entrada del script: orquesta serie o paralelo, vuelca ``.npz`` y metadata."""
     args = parse_args()
     n_samples = validate_args(args)
     if args.batch_size <= 0:

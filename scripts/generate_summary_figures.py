@@ -53,6 +53,7 @@ ACTIVATION_LABELS = {
 
 
 def parse_args() -> argparse.Namespace:
+    """Parser CLI; los ``help`` describen cada flag."""
     parser = argparse.ArgumentParser(
         description="Genera figuras de síntesis desde los CSV de métricas."
     )
@@ -72,11 +73,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def read_rows(path: Path) -> list[dict[str, str]]:
+    """Lee un CSV como lista de dicts ``{columna: cadena}``."""
     with path.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
 
 
 def as_float(row: dict[str, str], key: str) -> float:
+    """Parsea ``row[key]`` a ``float``; cadena vacía se traduce a ``NaN``."""
     value = row[key]
     if value == "":
         return float("nan")
@@ -84,6 +87,7 @@ def as_float(row: dict[str, str], key: str) -> float:
 
 
 def mean(values: Iterable[float]) -> float:
+    """Media ignorando ``NaN``; devuelve ``NaN`` si no hay valores finitos."""
     arr = np.asarray(list(values), dtype=float)
     finite = arr[np.isfinite(arr)]
     if finite.size == 0:
@@ -92,6 +96,7 @@ def mean(values: Iterable[float]) -> float:
 
 
 def group_mean(rows: Iterable[dict[str, str]], group_key: str, value_key: str) -> dict[str, float]:
+    """Agrupa por ``group_key`` y devuelve la media de ``value_key`` por grupo."""
     grouped: dict[str, list[float]] = {}
     for row in rows:
         grouped.setdefault(row[group_key], []).append(as_float(row, value_key))
@@ -103,6 +108,7 @@ def grid_by_surrogate(
     surrogate_id: str,
     value_key: str,
 ) -> np.ndarray:
+    """Vuelca ``value_key`` de un surrogate a la malla 5x5 ``(maturity, moneyness)``."""
     grid = np.full((len(MATURITY_LABELS), len(MONEYNESS_LABELS)), np.nan)
     for row in rows:
         if row["surrogate_id"] != surrogate_id:
@@ -120,6 +126,7 @@ def save_relative_heatmap(
     title: str,
     cbar_label: str,
 ) -> Path:
+    """Guarda un heatmap centrado en 0 con anotaciones en porcentaje."""
     output.parent.mkdir(parents=True, exist_ok=True)
     finite = grid[np.isfinite(grid)]
     max_abs = float(np.max(np.abs(finite))) if finite.size else 1.0
@@ -158,6 +165,7 @@ def save_relative_heatmap(
 
 
 def plot_e1_vega_scatter(metrics_dir: Path, figures_dir: Path) -> Path:
+    """E1: amplificación de IV (``MAE_IV/MAE(C/K)``) frente a Vega proxy."""
     rows = read_rows(metrics_dir / "e1_table.csv")
     output = figures_dir / "e1" / "vega_proxy_vs_iv_ratio.png"
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -201,6 +209,7 @@ def plot_e1_vega_scatter(metrics_dir: Path, figures_dir: Path) -> Path:
 
 
 def plot_e2_activation_ranking(metrics_dir: Path, figures_dir: Path) -> Path:
+    """E2: ranking de activaciones por ``MAE_Delta`` medio (BS y Heston)."""
     bs_rows = read_rows(metrics_dir / "e2_bs.csv")
     heston_rows = read_rows(metrics_dir / "e2_heston.csv")
     output = figures_dir / "e2" / "activation_delta_ranking.png"
@@ -239,6 +248,7 @@ def plot_e2_activation_ranking(metrics_dir: Path, figures_dir: Path) -> Path:
 
 
 def plot_e3_relative_improvement(metrics_dir: Path, figures_dir: Path) -> Path:
+    """E3: mejora relativa de ``MAE_IV`` de H-5 respecto a H-3 por bin."""
     rows = read_rows(metrics_dir / "e3_table.csv")
     h3 = grid_by_surrogate(rows, "H-3", "iv_mae_mean")
     h5 = grid_by_surrogate(rows, "H-5", "iv_mae_mean")
@@ -252,6 +262,7 @@ def plot_e3_relative_improvement(metrics_dir: Path, figures_dir: Path) -> Path:
 
 
 def plot_e5_relative_improvement(metrics_dir: Path, figures_dir: Path) -> Path:
+    """E5: mejora relativa de ``MAE_Delta`` del DML respecto al price-only."""
     rows = read_rows(metrics_dir / "e5_table.csv")
     price_only = grid_by_surrogate(rows, "H-3-small", "delta_mae_mean")
     dml = grid_by_surrogate(rows, "H-6-small", "delta_mae_mean")
@@ -265,6 +276,7 @@ def plot_e5_relative_improvement(metrics_dir: Path, figures_dir: Path) -> Path:
 
 
 def plot_e5_metric_comparison(metrics_dir: Path, figures_dir: Path) -> Path:
+    """E5: barras comparando precio y Delta para los tres surrogates de E5."""
     rows = read_rows(metrics_dir / "e5_table.csv")
     price = group_mean(rows, "surrogate_id", "price_mae_mean")
     delta = group_mean(rows, "surrogate_id", "delta_mae_mean")
@@ -293,6 +305,7 @@ def plot_e5_metric_comparison(metrics_dir: Path, figures_dir: Path) -> Path:
 
 
 def main() -> None:
+    """Entrada del script: genera las 5 figuras de síntesis (E1-E5)."""
     args = parse_args()
     metrics_dir = args.metrics_dir
     figures_dir = args.figures_dir

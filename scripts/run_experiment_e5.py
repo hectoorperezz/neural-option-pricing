@@ -41,6 +41,7 @@ from src.utils import load_mlp_checkpoint, load_option_dataset_npz, resolve_torc
 
 
 def parse_args() -> argparse.Namespace:
+    """Parser CLI; los ``help`` describen cada flag."""
     parser = argparse.ArgumentParser(
         description=(
             "Ejecuta E5: H-3-small frente a H-6-small, con H-3 opcional "
@@ -103,6 +104,7 @@ def _build_input(
     bin_id: np.ndarray | None,
     evaluator: BinEvaluator,
 ) -> SurrogateInput:
+    """Carga el checkpoint y lo etiqueta con ``role`` y ``loss`` para DMLStudy."""
     model, config = load_mlp_checkpoint(checkpoint_dir)
     labels = {
         "role": role,
@@ -129,6 +131,7 @@ def _run(
     device: str,
     batch_size: int,
 ) -> ExperimentResult:
+    """Corre ``DMLStudy`` y vuelca CSV + heatmaps de precio y Delta."""
     dataset, bin_id = load_option_dataset_npz(test_path, require_delta=True)
     evaluator = BinEvaluator(
         partition=BinPartition.default(),
@@ -183,6 +186,7 @@ def _run(
 
 
 def main() -> None:
+    """Entrada del script: ejecuta E5 sobre los pequeños (+ baseline opcional)."""
     args = parse_args()
     device = resolve_torch_device(args.device)
     print("E5 — Differential ML con Delta")

@@ -1,3 +1,11 @@
+"""Carga y resolución de artefactos del pipeline.
+
+Helpers para reconstruir un surrogate (modelo + dataset + solver) a
+partir de los ficheros que producen los scripts de generación y
+entrenamiento. Concentra aquí la lectura de ``.npz`` y de los
+``checkpoint.pt`` para que los experimentos solo orquesten.
+"""
+
 from __future__ import annotations
 
 import json
@@ -16,7 +24,13 @@ if TYPE_CHECKING:
 
 
 def resolve_torch_device(device: str, *, require_cuda: bool = False) -> str:
-    """Resuelve ``auto`` a CPU o CUDA y valida CUDA si se exige."""
+    """Resuelve ``"auto"`` y valida disponibilidad de CUDA si se exige.
+
+    Args:
+        device: ``"auto"``, ``"cpu"`` o ``"cuda"``.
+        require_cuda: Si ``True`` y se pide CUDA sin estar disponible,
+            lanza ``RuntimeError`` en vez de degradar a CPU.
+    """
     if device == "auto":
         return "cuda" if torch.cuda.is_available() else "cpu"
     if require_cuda and device == "cuda" and not torch.cuda.is_available():
@@ -25,7 +39,15 @@ def resolve_torch_device(device: str, *, require_cuda: bool = False) -> str:
 
 
 def load_mlp_checkpoint(checkpoint_dir: Path) -> tuple[nn.Module, dict[str, Any]]:
-    """Carga un checkpoint de entrenamiento y reconstruye su MLP."""
+    """Reconstruye un MLP desde ``config.json`` + ``checkpoint.pt``.
+
+    Prefiere ``best_state_dict`` (el que minimiza ``MAE(C/K)`` en
+    validación) sobre ``model_state_dict``; coincide con la regla de
+    selección de checkpoint del proyecto.
+
+    Returns:
+        El modelo en modo ``eval`` y la configuración original como dict.
+    """
     config_path = checkpoint_dir / "config.json"
     checkpoint_path = checkpoint_dir / "checkpoint.pt"
     if not config_path.exists():
@@ -53,7 +75,19 @@ def load_option_dataset_npz(
     require_delta: bool = False,
     dataset_label: str = "test set",
 ) -> tuple[OptionDataset, np.ndarray | None]:
-    """Carga un ``.npz`` de opciones como ``OptionDataset`` y ``bin_id``."""
+    """Carga un ``.npz`` de opciones como ``OptionDataset`` + ``bin_id``.
+
+    Args:
+        path: Ruta al ``.npz``.
+        require_delta: Si ``True`` y el fichero no trae ``deltas``,
+            lanza ``ValueError`` con la pista de regenerar el dataset
+            con ``--include-delta``.
+        dataset_label: Etiqueta usada en mensajes de error.
+
+    Returns:
+        El dataset listo para entrenar y, si lo había en el ``.npz``,
+        el array ``bin_id`` para evaluación por bins.
+    """
     if not path.exists():
         raise FileNotFoundError(f"{dataset_label} not found at {path}")
 
@@ -89,7 +123,12 @@ def load_option_dataset_npz(
 def load_npz_features_and_raw_inputs(
     path: Path,
 ) -> tuple[np.ndarray, np.ndarray, tuple[str, ...]]:
-    """Carga solo ``features``, ``raw_inputs`` e ``input_names`` desde NPZ."""
+    """Versión ligera de :func:`load_option_dataset_npz`.
+
+    Devuelve solo ``features``, ``raw_inputs`` e ``input_names``, sin
+    construir ``OptionDataset``. Útil cuando solo se necesitan los
+    inputs (por ejemplo, para invocar al solver de referencia).
+    """
     if not path.exists():
         raise FileNotFoundError(f"test set not found at {path}")
 
@@ -104,7 +143,11 @@ def resolve_pricer(
     requested: str,
     input_names: tuple[str, ...],
 ) -> "BlackScholesSolver | HestonSolver":
-    """Devuelve el solver de referencia pedido o lo infiere por dimensión."""
+    """Devuelve el solver de referencia explícito o lo infiere por dimensión.
+
+    Cuatro inputs apuntan a Black-Scholes; ocho, a Heston. Cualquier
+    otra dimensión obliga a pasar ``requested`` explícito.
+    """
     from src.solvers import BlackScholesSolver, HestonSolver
 
     if requested == "black_scholes":

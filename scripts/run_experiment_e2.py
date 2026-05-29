@@ -40,6 +40,7 @@ from src.utils import load_mlp_checkpoint, load_option_dataset_npz, resolve_torc
 
 
 def parse_args() -> argparse.Namespace:
+    """Parser CLI; los ``help`` describen cada flag."""
     parser = argparse.ArgumentParser(
         description=(
             "Ejecuta E2 sobre BS-1..4 y/o H-1..4 y escribe CSVs por bin "
@@ -86,6 +87,7 @@ def _build_family_inputs(
     device: str,
     batch_size: int,
 ) -> list[SurrogateInput]:
+    """Construye un ``SurrogateInput`` por checkpoint, etiquetado con su activación."""
     dataset, bin_id = load_option_dataset_npz(test_path)
     evaluator = BinEvaluator(
         partition=BinPartition.default(),
@@ -117,6 +119,7 @@ def _run_family(
     figures_dir: Path | None,
     figures_subdir_name: str,
 ) -> ExperimentResult:
+    """Corre ``ActivationStudy`` para una familia y persiste CSV + heatmaps."""
     print(
         f"\n=== {family_label}: {len(inputs)} surrogates "
         f"({', '.join(item.surrogate_id for item in inputs)}) ==="
@@ -140,6 +143,7 @@ def _run_family(
 
 
 def main() -> None:
+    """Entrada del script: ejecuta E2 por familia (BS y/o Heston)."""
     args = parse_args()
 
     bs_has_checkpoints = args.bs_checkpoints is not None

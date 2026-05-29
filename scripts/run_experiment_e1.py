@@ -42,6 +42,7 @@ from src.utils import load_mlp_checkpoint, load_option_dataset_npz, resolve_torc
 
 
 def parse_args() -> argparse.Namespace:
+    """Parser CLI; los ``help`` describen cada flag."""
     parser = argparse.ArgumentParser(
         description=(
             "Ejecuta E1 sobre los baseline BS-3 y/o H-3 y escribe el CSV "
@@ -89,6 +90,7 @@ def _build_input(
     iv_workers: int,
     iv_progress: bool,
 ) -> SurrogateInput:
+    """Carga modelo + dataset y empaqueta el ``SurrogateInput`` para el estudio."""
     model, _ = load_mlp_checkpoint(checkpoint_dir)
     dataset, bin_id = load_option_dataset_npz(test_path)
     evaluator = BinEvaluator(
@@ -109,6 +111,7 @@ def _build_input(
 
 
 def main() -> None:
+    """Entrada del script: corre ``PriceVsIVStudy`` y vuelca CSV + heatmaps."""
     args = parse_args()
     if args.output.suffix.lower() != ".csv":
         raise ValueError("--output must end with .csv")

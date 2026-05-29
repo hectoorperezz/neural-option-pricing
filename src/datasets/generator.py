@@ -1,3 +1,12 @@
+"""Generación de datasets sintéticos de opciones.
+
+Acopla un solver de referencia (Black-Scholes o Heston) con un
+:class:`~src.datasets.sampler.Sampler` y produce los ``OptionDataset``
+que consumen los entrenamientos. Aquí se aplica además el filtro de no
+arbitraje: las muestras cuyo precio cae fuera de las cotas teóricas se
+descartan y se vuelven a sortear.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -11,13 +20,26 @@ from src.datasets.domain import Domain
 
 
 class Sampler(Protocol):
+    """Interfaz mínima que esperan los generadores."""
+
     def sample(self, n_samples: int, rng: np.random.Generator | None = None) -> np.ndarray:
         ...
 
 
 @dataclass(frozen=True)
 class OptionDataset(Dataset):
-    """Dataset de Torch con inputs normalizados y precios de call normalizados."""
+    """Dataset de Torch con inputs normalizados y precios de call normalizados.
+
+    Attributes:
+        features: Inputs en ``[0, 1]^d`` listos para alimentar la red.
+        prices: Precios de call normalizados ``C/K``.
+        deltas: Deltas analíticas si el dataset las trae (solo training
+            differencial). ``None`` en caso contrario.
+        raw_inputs: Inputs en escala financiera; útiles para evaluar el
+            solver de referencia sin re-denormalizar.
+        input_names: Nombres de columnas en el mismo orden que
+            ``features`` y ``raw_inputs``.
+    """
 
     features: torch.Tensor
     prices: torch.Tensor
@@ -41,6 +63,12 @@ class OptionDataset(Dataset):
 
 @dataclass(frozen=True)
 class GeneratedBatch:
+    """Resultado de una ronda de muestreo del :class:`DatasetGenerator`.
+
+    Lleva, además de las muestras aceptadas, los conteos necesarios
+    para diagnosticar la tasa de rechazo por no arbitraje.
+    """
+
     raw_inputs: np.ndarray
     features: np.ndarray
     prices: np.ndarray
@@ -52,7 +80,26 @@ class GeneratedBatch:
 
 @dataclass(frozen=True)
 class DatasetGenerator:
-    """Genera datasets sintéticos combinando un solver y un sampler."""
+    """Genera datasets sintéticos combinando un solver y un sampler.
+
+    El generador sobre-muestrea (factor ``1.2``) y vuelve a sortear si
+    quedan huecos tras filtrar por no arbitraje, hasta diez rondas. Si
+    al cabo no se completa ``n_samples``, lanza ``RuntimeError``.
+
+    Attributes:
+        solver: Pricer de referencia (``BlackScholesSolver`` o
+            ``HestonSolver``).
+        domain: Hipercubo de entrada y normalización min-max.
+        sampler: Estrategia de muestreo del dominio.
+        model_family: ``"black_scholes"`` o ``"heston"``; selecciona la
+            firma del solver al pedir precio (y, si aplica, Delta).
+        include_delta: Si ``True``, computa y guarda la Delta analítica
+            para entrenamientos diferenciales (E5).
+        strike: Strike fijo del proyecto (``K = 1``).
+        no_arbitrage_tolerance: Holgura para aceptar precios y Deltas
+            cercanos a las cotas teóricas.
+        dtype: dtype de los tensores resultantes.
+    """
 
     solver: object
     domain: Domain
@@ -64,6 +111,7 @@ class DatasetGenerator:
     dtype: torch.dtype = torch.float32
 
     def generate(self, n_samples: int, seed: int | None = None) -> OptionDataset:
+        """Devuelve un dataset con exactamente ``n_samples`` puntos válidos."""
         if n_samples <= 0:
             raise ValueError("n_samples must be strictly positive")
 
@@ -96,6 +144,7 @@ class DatasetGenerator:
         return self.to_dataset(raw_inputs, prices, deltas)
 
     def generate_batch(self, draw_count: int, rng: np.random.Generator) -> GeneratedBatch:
+        """Una sola ronda de sampleo + pricing + filtro de no arbitraje."""
         if draw_count <= 0:
             raise ValueError("draw_count must be strictly positive")
 

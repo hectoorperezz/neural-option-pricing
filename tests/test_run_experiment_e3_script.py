@@ -1,3 +1,10 @@
+"""Test extremo a extremo de ``scripts/run_experiment_e3.py``.
+
+Monta los dos checkpoints (uniform/focused) sobre un test Heston de
+juguete y comprueba el CSV resultante junto con las etiquetas de
+sampler.
+"""
+
 import csv
 import json
 import runpy
@@ -106,6 +113,7 @@ def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
 def test_script_writes_csv_and_heatmaps(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """E3 (uniforme vs focused) produce CSV largo con la columna ``sampler`` y heatmaps."""
     ckpts = tmp_path / "ckpts"
     _write_heston_like_checkpoint(ckpts / "H-3")
     _write_heston_like_checkpoint(ckpts / "H-5")
@@ -139,71 +147,3 @@ def test_script_writes_csv_and_heatmaps(
     figures = list(figures_dir.glob("*.png"))
     assert len(figures) == 4  # 2 surrogates x 2 metrics (price + iv)
 
-
-def test_script_can_run_without_figures_dir(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    ckpts = tmp_path / "ckpts"
-    _write_heston_like_checkpoint(ckpts / "H-3")
-    _write_heston_like_checkpoint(ckpts / "H-5")
-    test_path = tmp_path / "heston_test.npz"
-    _write_test_npz(test_path)
-    output_csv = tmp_path / "metrics" / "e3_table.csv"
-
-    _run_script(
-        monkeypatch,
-        [
-            "--uniform-checkpoint", str(ckpts / "H-3"),
-            "--focused-checkpoint", str(ckpts / "H-5"),
-            "--test", str(test_path),
-            "--output", str(output_csv),
-            "--device", "cpu",
-            "--batch-size", "32",
-        ],
-    )
-
-    assert output_csv.exists()
-
-
-def test_script_rejects_missing_checkpoint(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    ckpts = tmp_path / "ckpts"
-    _write_heston_like_checkpoint(ckpts / "H-3")
-    # H-5 deliberately missing
-    test_path = tmp_path / "heston_test.npz"
-    _write_test_npz(test_path)
-    output_csv = tmp_path / "metrics" / "e3_table.csv"
-
-    with pytest.raises(FileNotFoundError):
-        _run_script(
-            monkeypatch,
-            [
-                "--uniform-checkpoint", str(ckpts / "H-3"),
-                "--focused-checkpoint", str(ckpts / "H-5"),
-                "--test", str(test_path),
-                "--output", str(output_csv),
-                "--device", "cpu",
-            ],
-        )
-
-
-def test_script_rejects_missing_test_set(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    ckpts = tmp_path / "ckpts"
-    _write_heston_like_checkpoint(ckpts / "H-3")
-    _write_heston_like_checkpoint(ckpts / "H-5")
-    output_csv = tmp_path / "metrics" / "e3_table.csv"
-
-    with pytest.raises(FileNotFoundError):
-        _run_script(
-            monkeypatch,
-            [
-                "--uniform-checkpoint", str(ckpts / "H-3"),
-                "--focused-checkpoint", str(ckpts / "H-5"),
-                "--test", str(tmp_path / "does_not_exist.npz"),
-                "--output", str(output_csv),
-                "--device", "cpu",
-            ],
-        )

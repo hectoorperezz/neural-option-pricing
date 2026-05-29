@@ -1,3 +1,5 @@
+"""Punto único para fijar semillas y determinismo de PyTorch."""
+
 from __future__ import annotations
 
 import os
@@ -8,7 +10,14 @@ import torch
 
 
 def set_global_seed(seed: int, deterministic_torch: bool = True) -> None:
-    """Fija las semillas de Python, NumPy y PyTorch desde un único punto."""
+    """Fija ``PYTHONHASHSEED``, ``random``, ``numpy`` y ``torch`` desde un único punto.
+
+    Args:
+        seed: Semilla no negativa; las semillas por surrogate están
+            documentadas en ``docs/metodologia.md``.
+        deterministic_torch: Si ``True``, fuerza ``cudnn`` a modo
+            determinista (más lento pero reproducible).
+    """
 
     if seed < 0:
         raise ValueError("seed must be non-negative")

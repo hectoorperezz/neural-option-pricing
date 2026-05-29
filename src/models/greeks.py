@@ -1,3 +1,9 @@
+"""Delta del surrogate por autograd, con corrección de min-max.
+
+La red trabaja con la moneyness normalizada ``m_norm``; aplicamos la
+regla de la cadena para volver a la escala financiera ``m = S/K``.
+"""
+
 from __future__ import annotations
 
 import torch
@@ -11,7 +17,22 @@ def surrogate_price_and_delta(
     moneyness_index: int = 0,
     create_graph: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Devuelve precio y Delta corrigiendo la normalización min-max de moneyness."""
+    """Calcula precio y Delta en una sola pasada con autograd.
+
+    La Delta se obtiene derivando la salida respecto a la moneyness
+    normalizada y dividiendo por la anchura del rango, equivalente a
+    ``∂ŷ/∂m`` en la escala original.
+
+    Args:
+        model: Surrogate entrenado, en modo evaluación o entrenamiento.
+        features: Tensor ``(N, d)`` con los inputs ya normalizados.
+        moneyness_range: Mínimo y máximo de ``m`` usados en la
+            normalización del dataset.
+        moneyness_index: Columna de ``features`` que corresponde a la
+            moneyness; por convención del proyecto es la 0.
+        create_graph: ``True`` cuando la Delta se va a usar dentro de la
+            pérdida (E5, differential ML); ``False`` para evaluación.
+    """
 
     if moneyness_range[1] <= moneyness_range[0]:
         raise ValueError("moneyness_range must satisfy min < max")
@@ -26,6 +47,7 @@ def surrogate_price_and_delta(
         retain_graph=create_graph,
         only_inputs=True,
     )[0]
+
     moneyness_width = moneyness_range[1] - moneyness_range[0]
     deltas = gradients[:, moneyness_index : moneyness_index + 1] / moneyness_width
     return prices, deltas
@@ -38,6 +60,7 @@ def surrogate_delta(
     moneyness_index: int = 0,
     create_graph: bool = False,
 ) -> torch.Tensor:
+    """Devuelve solo la Delta; descarta el precio."""
     _, deltas = surrogate_price_and_delta(
         model,
         features,

@@ -1,3 +1,16 @@
+"""Pricer Heston por Fourier semi-cerrado.
+
+El precio se obtiene a partir de las dos probabilidades ``P_1`` y
+``P_2`` definidas por integración de la función característica:
+
+    ``C = S e^{-qT} P_1 - K e^{-rT} P_2``
+
+Con ``q = 0`` (convención del proyecto, ver ``docs/metodologia.md``) la
+Delta de la call se reduce a ``P_1``, que es el target diferencial del
+experimento E5. La integración por ``scipy.integrate.quad`` es la parte
+computacionalmente cara que el surrogate aprende a aproximar.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,6 +21,7 @@ from scipy.integrate import quad
 
 
 def _to_output(value: np.ndarray) -> float | np.ndarray:
+    """Colapsa arrays 0-d a ``float`` para no devolver escalares envueltos."""
     if value.ndim == 0:
         return float(value)
     return value
@@ -15,7 +29,22 @@ def _to_output(value: np.ndarray) -> float | np.ndarray:
 
 @dataclass(frozen=True)
 class HestonSolver:
-    """Pricer de Heston por Fourier para calls europeas."""
+    """Solver semi-cerrado para calls europeas bajo Heston.
+
+    Las tolerancias del integrador y la cota inferior de ``u`` se exponen
+    como atributos para poder ajustarlas en estudios de estabilidad
+    numérica; los valores por defecto son los usados al generar los
+    datasets.
+
+    Attributes:
+        integration_upper_bound: Límite superior de la integral en ``u``.
+        integration_lower_bound: Límite inferior estrictamente positivo.
+        absolute_tolerance: ``epsabs`` para ``quad``.
+        relative_tolerance: ``epsrel`` para ``quad``.
+        quad_limit: Máximo de subintervalos adaptativos.
+        no_arbitrage_tolerance: Holgura para recortar el precio a las
+            cotas teóricas de no arbitraje.
+    """
 
     integration_upper_bound: float = float("inf")
     integration_lower_bound: float = 1e-8
@@ -37,6 +66,7 @@ class HestonSolver:
         rho: Any,
         dividend_yield: Any = 0.0,
     ) -> float | np.ndarray:
+        """Precio de la call vectorizado sobre cualquier shape compatible."""
         arrays = self._as_arrays(
             spot, strike, maturity, rate, v0, theta, kappa, xi, rho, dividend_yield
         )
@@ -67,6 +97,7 @@ class HestonSolver:
         rho: Any,
         dividend_yield: Any = 0.0,
     ) -> float | np.ndarray:
+        """Delta de la call: ``e^{-qT} P_1``."""
         arrays = self._as_arrays(
             spot, strike, maturity, rate, v0, theta, kappa, xi, rho, dividend_yield
         )
@@ -93,6 +124,7 @@ class HestonSolver:
         rho: Any,
         dividend_yield: Any = 0.0,
     ) -> tuple[float | np.ndarray, float | np.ndarray]:
+        """Precio y Delta en una sola pasada para ahorrar integraciones repetidas."""
         arrays = self._as_arrays(
             spot, strike, maturity, rate, v0, theta, kappa, xi, rho, dividend_yield
         )
@@ -125,6 +157,11 @@ class HestonSolver:
         rho: float,
         dividend_yield: float = 0.0,
     ) -> tuple[float, float]:
+        """Devuelve ``(P_1, P_2)`` para un único punto del dominio.
+
+        Útil para análisis diagnósticos donde interesa inspeccionar las
+        dos probabilidades por separado.
+        """
         return self._call_probabilities_scalar(
             spot, strike, maturity, rate, v0, theta, kappa, xi, rho, dividend_yield
         )
@@ -142,6 +179,7 @@ class HestonSolver:
         rho: float,
         dividend_yield: float,
     ) -> tuple[float, float]:
+        """``P_1`` y ``P_2`` para un punto, vía integración de Fourier."""
         self._validate_inputs(spot, strike, maturity, v0, theta, kappa, xi, rho)
         log_strike = np.log(strike)
         forward_spot = spot * np.exp((rate - dividend_yield) * maturity)
@@ -178,6 +216,7 @@ class HestonSolver:
         rho: float,
         dividend_yield: float,
     ) -> float:
+        """``P_1`` o ``P_2`` aislada; evita el coste de calcular ambas cuando solo interesa una."""
         if probability_index not in (1, 2):
             raise ValueError("probability_index must be 1 or 2")
         self._validate_inputs(spot, strike, maturity, v0, theta, kappa, xi, rho)
@@ -226,6 +265,12 @@ class HestonSolver:
         rate: float,
         dividend_yield: float,
     ) -> float:
+        """Recorta el precio a las cotas de no arbitraje con tolerancia configurable.
+
+        Heston por Fourier puede salirse de las cotas teóricas por
+        errores numéricos pequeños; aquí lo absorbemos sin contaminar la
+        métrica de validación.
+        """
         lower = max(
             spot * np.exp(-dividend_yield * maturity) - strike * np.exp(-rate * maturity),
             0.0,
@@ -238,6 +283,7 @@ class HestonSolver:
         return price
 
     def _integrate(self, integrand: Callable[[float], float]) -> float:
+        """Cuadratura adaptativa con las tolerancias del solver."""
         value, _ = quad(
             integrand,
             self.integration_lower_bound,
@@ -261,6 +307,12 @@ class HestonSolver:
         xi: float,
         rho: float,
     ) -> complex:
+        """Función característica de Heston en su forma "trap" (Albrecher et al.).
+
+        La elección de esta parametrización evita el problema de la rama
+        del logaritmo complejo y es la que da estabilidad numérica en el
+        rango del proyecto.
+        """
         iu = 1j * u
         variance_scale = xi * xi
         drift = rate - dividend_yield
@@ -283,6 +335,7 @@ class HestonSolver:
         return complex(np.exp(c + d_term * v0))
 
     def _as_arrays(self, *values: Any) -> tuple[np.ndarray, ...]:
+        """Convierte cada entrada a ``ndarray`` y aplica broadcasting común."""
         broadcast = np.broadcast_arrays(*[np.asarray(value, dtype=float) for value in values])
         return tuple(broadcast)
 
