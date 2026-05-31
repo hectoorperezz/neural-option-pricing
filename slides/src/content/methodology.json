@@ -1,0 +1,36 @@
+{
+  "eyebrow": "Metodología",
+  "headline": [
+    "Cómo se ",
+    { "text": "genera, entrena y evalúa", "highlight": true },
+    " cada surrogate"
+  ],
+  "body": "Todos los experimentos comparten el mismo pipeline: se muestrea un dominio de inputs, se etiqueta con el solver verdadero, se entrena la red y se evalúa por bins. Cada experimento varía una sola dimensión y deja el resto fijo.",
+  "blocks": [
+    {
+      "title": "Dominio y muestreo",
+      "formula": "p_{\\mathrm{foc}}(x) = (1-\\lambda)\\,p_{\\mathrm{unif}}(x) + \\lambda\\,p_{\\mathrm{conc}}(x)",
+      "bullets": [
+        "Hipercubo $\\mathcal{D} = \\prod_k [l_k, u_k]$; muestreo uniforme con varianzas en escala raíz ($p_k \\propto x_k^{-1/2}$).",
+        "Sampler enfocado (E3): mezcla con $\\lambda = \\tfrac12$ y $m \\sim \\mathcal{N}_{[0.7,1.3]}(1, 0.15^2)$, $\\log T$ log-uniforme en el corto plazo."
+      ]
+    },
+    {
+      "title": "Targets y métricas",
+      "formula": "\\mathrm{MAE}_g(S) = \\frac{1}{|S|}\\sum_{x\\in S} \\bigl| \\hat{g}(x) - g(x) \\bigr|",
+      "bullets": [
+        "Target: precio normalizado $y = C/K$; input $m = S/K$. Delta por autograd: $\\hat{\\Delta} = \\partial \\hat{y}/\\partial m$.",
+        "Tres errores: precio $g=C/K$, volatilidad implícita $g=\\sigma_{\\mathrm{IV}}$ y Delta $g=\\Delta$."
+      ]
+    },
+    {
+      "title": "Evaluación por bins",
+      "formula": "\\mathrm{MAE}_g(B_{ij}) = \\frac{1}{|S\\cap B_{ij}|}\\sum_{x\\in S\\cap B_{ij}} \\bigl| \\hat{g}(x) - g(x) \\bigr|",
+      "bullets": [
+        "Partición $5\\times 5$ en moneyness $\\times$ vencimiento: 25 bins $B_{ij} = M_i \\times T_j$.",
+        "Test balanceado de 125k puntos (5k por bin); el error por bin aísla las regiones difíciles."
+      ],
+      "accent": true
+    }
+  ]
+}

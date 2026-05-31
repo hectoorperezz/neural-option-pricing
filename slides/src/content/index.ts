@@ -10,6 +10,8 @@ import motivationData from "./motivation.json";
 import literatureData from "./literature.json";
 import surrogateData from "./surrogate.json";
 import casesData from "./cases.json";
+import methodologyData from "./methodology.json";
+import trainingData from "./training.json";
 import experimentsOverviewData from "./experiments-overview.json";
 import experimentsData from "./experiments.json";
 import closingData from "./closing.json";
@@ -20,7 +22,9 @@ import type {
   ExperimentContent,
   ExperimentsOverviewContent,
   LiteratureContent,
+  MethodologyContent,
   MotivationContent,
+  TrainingContent,
   QuestionContent,
   SurrogateContent,
   TitleContent,
@@ -32,6 +36,8 @@ export const motivation = motivationData as MotivationContent;
 export const literature = literatureData as LiteratureContent;
 export const surrogate = surrogateData as SurrogateContent;
 export const cases = casesData as CasesContent;
+export const methodology = methodologyData as MethodologyContent;
+export const training = trainingData as TrainingContent;
 export const experimentsOverview =
   experimentsOverviewData as ExperimentsOverviewContent;
 export const experiments = experimentsData as ExperimentContent[];

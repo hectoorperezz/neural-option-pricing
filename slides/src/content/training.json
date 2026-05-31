@@ -1,0 +1,46 @@
+{
+  "eyebrow": "Entrenamiento",
+  "headline": [
+    "Hardware, ",
+    { "text": "entrenamiento y escalado", "highlight": true },
+    " de las redes"
+  ],
+  "body": "Los once surrogates comparten arquitectura y régimen de entrenamiento. Todo el pipeline —generación, entrenamiento y evaluación— se ejecutó en una sola estación de trabajo, lo que nos permitió escalar los datasets de forma sustancial.",
+  "photos": [
+    {
+      "src": "/train_rig.jpeg",
+      "alt": "Interior de la estación de trabajo",
+      "caption": "Estación de trabajo: CPU Intel i9-14900K, 64 GB de RAM y GPU NVIDIA RTX 4060, con refrigeración líquida."
+    },
+    {
+      "src": "/train_pipeline.jpeg",
+      "alt": "Pantalla del pipeline de generación de datasets 50x",
+      "caption": "Generación del dataset escalado 50×: 9 datasets, 32 workers en paralelo, $\\approx$10 h de cómputo."
+    }
+  ],
+  "blocks": [
+    {
+      "title": "Hardware",
+      "bullets": [
+        "CPU Intel Core i9-14900K — 32 workers para la generación de datos.",
+        "64 GB de RAM y GPU NVIDIA RTX 4060 (8 GB de VRAM)."
+      ]
+    },
+    {
+      "title": "Proceso de entrenamiento",
+      "bullets": [
+        "MLP $4\\times 128$ con Swish; Adam $\\mathrm{lr}=10^{-3}$; 100 épocas, sin scheduler ni regularización.",
+        "Batch 32 768 (16 384 en variantes small); checkpoint por menor $\\mathrm{MAE}(C/K)$ en validación.",
+        "Los 11 surrogates entrenados en $\\approx$63 min (RTX 4060, dos en paralelo)."
+      ]
+    },
+    {
+      "title": "Experimento de escalado",
+      "bullets": [
+        "El diseño inicial (200k / 500k) se estancaba en $\\mathrm{MAE}(C/K)\\approx 10^{-2}$.",
+        "Densidad muestral: $\\sim$10 muestras/parámetro frente a $\\sim$1000 de Chen et al. $\\Rightarrow$ escalamos $\\times 50$.",
+        "Datasets 50× (10M / 25M / 5M): el error cayó un 37–91 %, hasta $\\approx 10^{-3}$, con la arquitectura fija."
+      ]
+    }
+  ]
+}

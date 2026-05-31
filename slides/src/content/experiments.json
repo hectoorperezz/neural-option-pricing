@@ -5,40 +5,117 @@
     "question": "Recalculamos métricas sobre BS-3 y H-3 por bin para ver si dos surrogates con MAE de precio similar pueden tener errores muy distintos en IV.",
     "metric": "$\\mathrm{MAE}(C/K)$ vs $\\mathrm{MAE}_{\\mathrm{IV}}$",
     "surrogates": ["BS-3", "H-3"],
-    "hypothesis": "En bins de Vega baja el error de precio se amplifica al pasar a IV: dos surrogates con $\\mathrm{MAE}(C/K)$ comparable pueden tener $\\mathrm{MAE}_{\\mathrm{IV}}$ muy distintos."
+    "hypothesis": "En bins de Vega baja el error de precio se amplifica al pasar a IV: dos surrogates con $\\mathrm{MAE}(C/K)$ comparable pueden tener $\\mathrm{MAE}_{\\mathrm{IV}}$ muy distintos.",
+    "figure": {
+      "src": "/e1_scatter.png",
+      "alt": "Error de IV frente a error de precio por bin",
+      "caption": "Cada punto es un bin. Eje X: error de precio; eje Y: error de IV (log-log). Color: Vega del bin. Diagonales: razón constante $\\mathrm{MAE}_{\\mathrm{IV}}/\\mathrm{MAE}(C/K)$."
+    },
+    "findings": [
+      "El $\\mathrm{MAE}(C/K)$ es casi uniforme por bin; el $\\mathrm{MAE}_{\\mathrm{IV}}$ recorre tres órdenes de magnitud.",
+      "Mecanismo: $\\delta\\sigma \\approx \\delta C / \\mathcal{V}$ — al caer la Vega, el error de IV se dispara.",
+      "Peor bin (H-3, deep OTM weekly): $\\mathrm{MAE}(C/K)\\approx 1.1\\times 10^{-3}$ pero $\\mathrm{MAE}_{\\mathrm{IV}}\\approx 1.57$ (razón $\\approx 1400$).",
+      "El patrón es idéntico en BS-3 y H-3: es una propiedad de la métrica, no del solver."
+    ],
+    "conclusion": "La métrica de evaluación no es neutral: un MAE de precio bajo no garantiza un MAE de IV bajo. Validar y reportar en IV es parte del diseño.",
+    "notes": {
+      "setup": "E1 es observacional: no entrena nada nuevo, solo recalcula métricas sobre BS-3 y H-3. La pregunta es metodológica: ¿da igual medir el error en precio o en volatilidad implícita?",
+      "results": "Insistir en la lectura por columnas verticales: a igual error de precio, los bins se reparten en varias diagonales de razón. El color ordena la dispersión: los puntos altos son los de Vega baja. La consecuencia práctica es que los experimentos sensibles a regiones difíciles (E3) se juzgan en IV."
+    }
   },
   {
     "id": "E2",
     "title": "Activaciones y calidad de Delta",
-    "question": "Comparamos ReLU, Softplus, Swish y tanh con arquitectura, optimizador y semilla fijos. La hipótesis: las activaciones suaves dan Deltas mejores aunque el precio sea comparable.",
+    "question": "Comparamos ReLU, Softplus, Swish y tanh con arquitectura, optimizador y semilla fijos: ¿qué activación da mejores Greeks sin degradar el precio?",
     "metric": "$\\mathrm{MAE}_{\\Delta}\\ \\text{por bin}$",
     "surrogates": ["BS-1..4", "H-1..4"],
-    "hypothesis": "La discontinuidad de $\\mathrm{ReLU}'$ en $0$ se propaga a la Delta por autograd. Las activaciones suaves (Softplus, Swish, tanh) dan derivadas más estables a $\\mathrm{MAE}(C/K)$ comparable."
+    "hypothesis": "La discontinuidad de $\\mathrm{ReLU}'$ en $0$ se propaga a la Delta por autograd. Las activaciones suaves dan derivadas más estables a $\\mathrm{MAE}(C/K)$ comparable.",
+    "figure": {
+      "src": "/e2_tradeoff.png",
+      "alt": "Compromiso precio frente a Delta por activación",
+      "caption": "Cada punto es una activación, promediada sobre los bins. Eje X: error de precio; eje Y: error de Delta. Abajo a la izquierda = mejor en ambas."
+    },
+    "findings": [
+      "Swish domina en las dos familias: la mejor Delta y un precio igual o inferior al resto.",
+      "BS: Swish $1.8\\times 10^{-2}$ vs ReLU $2.7\\times 10^{-2}$ ($-34\\%$); Heston: $1.1$ vs $1.6\\times 10^{-2}$ ($-32\\%$).",
+      "El error de precio apenas varía: la activación gobierna la derivada, no el nivel de la función.",
+      "Matiz: 'suave $>$ ReLU' no es limpio — tanh, también suave, da la peor Delta en Heston."
+    ],
+    "conclusion": "Entre las cuatro, Swish es la única elección que mejora las derivadas sin coste apreciable en precio.",
+    "notes": {
+      "setup": "El kink de ReLU en cero (visible en la figura de activaciones) se propaga a la Delta por autograd. Por eso la activación es ante todo una decisión sobre la calidad de las derivadas.",
+      "results": "La clave del plano es la separación de ejes: vertical (Delta) varía mucho, horizontal (precio) casi nada. Honestidad: el resultado robusto es que Swish gana, no que las suaves barran a ReLU."
+    }
   },
   {
     "id": "E3",
     "title": "Muestreo uniforme vs enfocado",
-    "question": "H-3 frente a H-5: misma arquitectura, mismo dataset total, único cambio el sampler. Mide si concentrar masa cerca del ATM mejora los bins críticos.",
+    "question": "H-3 frente a H-5: misma arquitectura, mismo dataset total, único cambio el sampler. ¿Concentrar masa cerca del ATM mejora los bins críticos?",
     "metric": "$\\mathrm{MAE}_{\\mathrm{IV}}\\ \\text{en ATM} \\times \\{\\text{weekly, short, m-short}\\}$",
     "surrogates": ["H-3", "H-5"],
     "hypothesis": "Concentrar masa en zonas de mayor curvatura (ATM y vencimientos cortos) reduce el error donde más importa para trading.",
-    "threshold": "Positivo fuerte: mejora $\\geq 10\\%$ en bins críticos y deterioro global $\\leq 10\\%$."
+    "figure": {
+      "src": "/e3_diff_iv.png",
+      "alt": "Mejora relativa de IV por bin de H-5 frente a H-3",
+      "caption": "Mejora relativa $(\\mathrm{MAE}^{\\mathrm{H\\text{-}3}} - \\mathrm{MAE}^{\\mathrm{H\\text{-}5}})/\\mathrm{MAE}^{\\mathrm{H\\text{-}3}}$ por bin. Verde: el muestreo enfocado reduce el error; rojo: lo aumenta."
+    },
+    "findings": [
+      "Mejora en los bins críticos ATM: $+79.7\\%$ en $\\mathrm{MAE}_{\\mathrm{IV}}$.",
+      "El error global no empeora; mejora $+21\\%$ en media y $+32\\%$ en mediana.",
+      "Control en precio (sin amplificación de Vega) lo confirma: gana en ATM/corto, cuesta en alas OTM largas.",
+      "H-5 mejor en 19 de 25 bins; el deterioro se confina a las alas de baja liquidez."
+    ],
+    "conclusion": "Concentrar el muestreo donde la curvatura es alta mejora la calidad donde más importa, a cambio de un deterioro acotado en las alas.",
+    "notes": {
+      "setup": "Como H-3 y H-5 solo difieren en el sampler, cualquier diferencia es atribuible al muestreo. La idea es la de métodos numéricos: más puntos donde la función es difícil.",
+      "results": "El heatmap de diferencia traslada la geometría del sampler a la rejilla. El control en precio des-intoxica la lectura: el deep-OTM-long exagera en IV (−85%) frente a precio (−57%) por la Vega baja."
+    }
   },
   {
     "id": "E4",
     "title": "Eficiencia computacional",
-    "question": "Cronometra evaluaciones del surrogate frente al solver original de Heston en lotes crecientes: tres warmups, diez repeticiones medidas, mediana y rango intercuartílico, CPU y GPU por separado.",
-    "metric": "$\\text{speedup} = t_{\\text{solver}} / t_{\\text{surrogate}}$",
+    "question": "Cronometramos H-3 frente al solver de Heston en lotes crecientes: tres warmups, diez repeticiones medidas, mediana y rango intercuartílico, CPU y GPU por separado.",
+    "metric": "$s(B) = t_{\\text{solver}} / t_{\\text{surrogate}}$",
     "surrogates": ["H-3"],
-    "hypothesis": "El speedup crece con el tamaño de lote: la red amortiza el coste fijo de la pasada cuando procesa muchos puntos en paralelo, especialmente en GPU."
+    "hypothesis": "El speedup crece con el tamaño de lote: la red amortiza el coste fijo de la pasada al procesar muchos puntos en paralelo, especialmente en GPU.",
+    "figure": {
+      "src": "/e4_timing.png",
+      "alt": "Tiempo y speedup frente al tamaño de lote",
+      "caption": "Izquierda: tiempo mediano por lote (log-log, solver / surrogate CPU / GPU). Derecha: speedup frente al solver."
+    },
+    "findings": [
+      "Speedup creciente con el lote: CPU de $\\times 66$ a $\\times 748$; GPU de $\\times 175$ a $\\times 6434$ ($10^2 \\to 10^5$).",
+      "El solver escala $\\sim$lineal (punto a punto); el surrogate amortiza el coste fijo.",
+      "A lote $10^5$: la GPU evalúa $\\sim 12$M opciones/s frente a $\\sim 2$k del solver con 22 núcleos."
+    ],
+    "conclusion": "La ventaja se materializa en el régimen de lotes grandes: calibración diaria, Greeks masivas, simulación de escenarios.",
+    "notes": {
+      "setup": "E4 es de medición, no de comparación. Por eso reportamos el speedup como curva frente al tamaño de lote, no como un único número.",
+      "results": "El mensaje: para una opción suelta el surrogate no aporta (el solver ya es rápido); el valor está en evaluar millones de veces, donde minutos pasan a milisegundos."
+    }
   },
   {
     "id": "E5",
     "title": "Differential ML con Delta",
-    "question": "H-3-small frente a H-6-small (la única diferencia es añadir MAE(Δ) a la pérdida) con H-3 como referencia de muestra grande. Mide si la información diferencial mejora la eficiencia muestral.",
-    "metric": "Mejora de $\\mathrm{MAE}_{\\Delta}$ vs precio comparable",
+    "question": "H-3-small frente a H-6-small (la única diferencia es añadir $\\mathrm{MAE}(\\Delta)$ a la pérdida), con H-3 como referencia de muestra grande. ¿Mejora la información diferencial la eficiencia muestral?",
+    "metric": "Mejora de $\\mathrm{MAE}_{\\Delta}$ a precio comparable",
     "surrogates": ["H-3-small", "H-6-small", "H-3"],
-    "hypothesis": "Análogo a Hermite frente a Lagrange: añadir la derivada al training set reconstruye mejor la forma local de $f$ con menos muestras.",
-    "threshold": "Positivo fuerte: $\\mathrm{MAE}_{\\Delta}$ mejora $\\geq 20\\%$ y $\\mathrm{MAE}(C/K)$ no empeora más de $10\\%$."
+    "hypothesis": "Análogo a Hermite frente a Lagrange: añadir la derivada al objetivo reconstruye mejor la forma local de $f$ con menos muestras.",
+    "figure": {
+      "src": "/e5_tradeoff.png",
+      "alt": "Compromiso precio frente a Delta de los tres surrogates",
+      "caption": "Tres surrogates en el plano precio↔Delta. H-3-small y H-6-small comparten datos (5M) y solo difieren en la pérdida; H-3 es el baseline de 25M."
+    },
+    "findings": [
+      "El término diferencial mejora la Delta de H-6-small sobre H-3-small en $+58.9\\%$...",
+      "...y el precio también mejora ($-40.6\\%$): la ganancia no se paga en precio.",
+      "Eficiencia muestral: con 5$\\times$ menos datos, H-6-small bate a H-3 en Delta ($-35.8\\%$), aunque H-3 gana en precio.",
+      "H-6-small mejor en Delta en 25 de 25 bins frente a H-3-small."
+    ],
+    "conclusion": "Añadir la derivada verdadera al entrenamiento mejora las Greeks y la eficiencia muestral: Huge & Savine reproducido en nuestro entorno.",
+    "notes": {
+      "setup": "Importante: ninguna red predice la Delta directamente; todas la obtienen por autograd del precio. Lo único que cambia en H-6-small es que la pérdida penaliza esa Delta.",
+      "results": "Leer el plano: H-6-small (verde) domina a H-3-small en ambas métricas, y queda por debajo de H-3 en Delta pese a usar 5× menos datos. El precio es lo único donde más datos siguen ganando."
+    }
   }
 ]

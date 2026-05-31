@@ -8,6 +8,10 @@ interface SlideChromeProps {
   /** Si true, muestra el contador "01 / 12" a la izquierda. En slides
    *  con SideRail visible esto sobra. */
   showCounter?: boolean;
+  /** Paso actual dentro de la diapositiva. */
+  step?: number;
+  /** Pasos totales de la diapositiva (0 = sin sub-pasos). */
+  maxStep?: number;
 }
 
 /**
@@ -20,6 +24,8 @@ export function SlideChrome({
   onPrev,
   onNext,
   showCounter = false,
+  step = 0,
+  maxStep = 0,
 }: SlideChromeProps) {
   return (
     <motion.div
@@ -40,7 +46,23 @@ export function SlideChrome({
         <span />
       )}
 
-      <div className="pointer-events-auto flex items-center gap-2">
+      <div className="pointer-events-auto flex items-center gap-3">
+        {maxStep > 0 && (
+          <div className="mr-1 flex items-center gap-1.5">
+            {Array.from({ length: maxStep + 1 }).map((_, i) => (
+              <span
+                key={i}
+                className="inline-block h-[6px] w-[6px] rounded-full transition-colors"
+                style={{
+                  background:
+                    i <= step
+                      ? "var(--color-uni-yellow)"
+                      : "rgba(0,0,0,0.18)",
+                }}
+              />
+            ))}
+          </div>
+        )}
         <NavButton onClick={onPrev} disabled={index === 0} ariaLabel="Anterior">
           <ArrowIcon direction="left" />
         </NavButton>

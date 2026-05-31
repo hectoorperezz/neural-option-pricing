@@ -131,6 +131,38 @@ export interface CasesContent {
   }[];
 }
 
+// -------- Methodology ---------------------------------------------------
+
+export interface MethodologyContent {
+  eyebrow: string;
+  headline: Fragment[];
+  body: string;
+  blocks: {
+    title: string;
+    /** Fórmula en display (KaTeX). Opcional. */
+    formula?: string;
+    /** Viñetas; admiten LaTeX inline (`$...$`). */
+    bullets: string[];
+    accent?: boolean;
+  }[];
+}
+
+// -------- Training ------------------------------------------------------
+
+export interface TrainingContent {
+  eyebrow: string;
+  headline: Fragment[];
+  body: string;
+  /** Fotos del montaje (PC y pantalla del pipeline). */
+  photos: { src: string; alt: string; caption: string }[];
+  /** Bloques de información (hardware, proceso, escalado). */
+  blocks: {
+    title: string;
+    /** Viñetas; admiten LaTeX inline (`$...$`). */
+    bullets: string[];
+  }[];
+}
+
 // -------- ExperimentsOverview -------------------------------------------
 
 export interface ExperimentsOverviewContent {
@@ -156,9 +188,14 @@ export interface ExperimentContent {
   surrogates: string[];
   /** Hipótesis previa al experimento. Admite LaTeX inline. */
   hypothesis?: string;
-  /** Criterio de clasificación operativa (positivo fuerte / débil / negativo).
-   *  Solo aplica a E3 y E5. */
-  threshold?: string;
+  /** Figura de resultados (PNG en `public/`). */
+  figure: { src: string; alt: string; caption: string };
+  /** Hallazgos cuantitativos. Admiten LaTeX inline (`$...$`). */
+  findings: string[];
+  /** Conclusión del experimento. Admite LaTeX inline. */
+  conclusion: string;
+  /** Notas de orador para la vista de presentador (tecla N). */
+  notes?: { setup?: string; results?: string };
 }
 
 // -------- Closing -------------------------------------------------------
