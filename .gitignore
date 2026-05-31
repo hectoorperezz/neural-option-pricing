@@ -37,3 +37,6 @@ results/**/*.npy
 
 # Training results synced from the remote server
 remote_training_results/
+
+# Editor local (no compartido)
+.vscode/

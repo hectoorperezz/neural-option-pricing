@@ -21,6 +21,7 @@
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{float}  % opción [H] para fijar figuras dentro de su subsección
 \usepackage{titlesec}
 \captionsetup{font=small,labelfont=bf,margin=1em}
 
@@ -115,6 +116,19 @@
   {\textcolor{uniyellow}{\rule[0.05em]{0.18em}{0.95em}}\hspace{0.5em}\thesubsection}
   {0.4em}
   {}
+
+% --- Ajustes tipográficos: lectura más aireada y pulida ---------------------
+\setlength{\parskip}{0.7em plus 0.15em minus 0.05em}  % más separación entre párrafos
+\linespread{1.05}                                      % interlineado ligeramente abierto
+\widowpenalty=10000                                    % evita líneas viudas
+\clubpenalty=10000                                     % evita líneas huérfanas
+\setlength{\emergencystretch}{1em}                     % menos overfull por justificación
+% Más aire alrededor de las ecuaciones (los displayskip por defecto quedan
+% comprimidos frente al parskip ampliado).
+\setlength{\abovedisplayskip}{1em plus 0.2em minus 0.1em}
+\setlength{\belowdisplayskip}{1em plus 0.2em minus 0.1em}
+\setlength{\abovedisplayshortskip}{0.6em plus 0.2em}
+\setlength{\belowdisplayshortskip}{0.8em plus 0.2em}
 
 \begin{document}
 
@@ -272,28 +286,30 @@ Black-Scholes y Heston\par}
 \noindent
 \begin{tikzpicture}
   \node[draw=uniyellow, line width=1.4pt, rounded corners=2pt,
-        fill=uniyellowsoft!30, inner sep=14pt,
+        fill=uniyellowsoft!30, inner sep=10pt,
         text width=\dimexpr\textwidth-30pt\relax]{%
     {\bfseries\scshape\large Resumen}\par
-    \vspace{4pt}
+    \vspace{3pt}
     {\color{uniyellow}\rule{0.12\textwidth}{1.4pt}}\par
-    \vspace{8pt}
+    \vspace{6pt}
     \small\setlength{\parskip}{4pt}
-    Este trabajo estudia bajo qué condiciones una red neuronal profunda puede actuar como un surrogate preciso, rápido y diferenciable de una función de pricing de opciones, entendida como sustituto numérico de un solver matemático ya conocido. La motivación no es predecir nada sobre el mercado sino abaratar la evaluación de modelos cuya solución analítica no existe o es cara: una vez entrenada offline a partir de datos sintéticos generados por el propio solver, la red puede sustituir al modelo original en tareas que exigen millones de evaluaciones, como la calibración diaria, el cálculo de Greeks o la simulación masiva de escenarios. El enfoque combina la lógica de los deep surrogates~\cite{chen2025} con la idea de differential machine learning~\cite{huge2020}. Nuestro objeto de estudio son las opciones europeas vainilla bajo dos modelos: Black-Scholes como caso de validación con solución cerrada y Heston como caso principal, donde la integración por Fourier semi-cerrada es lo suficientemente costosa como para justificar el surrogate. El trabajo se articula en torno a cinco experimentos comparativos que varían cada uno una sola dimensión del problema: métrica de evaluación, activación de la red, distribución del muestreo, eficiencia computacional y uso de información diferencial en la pérdida.
-
+    Este trabajo estudia bajo qué condiciones una red neuronal profunda puede actuar como un surrogate preciso, rápido y diferenciable de una función de pricing de opciones, entendida como sustituto numérico de un solver matemático ya conocido. El objetivo es abaratar la evaluación de modelos cuya solución analítica no existe o es cara, una vez entrenada offline a partir de datos sintéticos generados por el propio solver, la red puede sustituir al modelo original en tareas que exigen millones de evaluaciones, como la calibración diaria, el cálculo de Greeks o la simulación por Montecarlo. Nuestro objeto de estudio son las opciones europeas vainilla bajo dos modelos: Black-Scholes como caso de validación con solución cerrada y Heston como caso principal, donde la integración por Fourier semi-cerrada es lo suficientemente costosa como para justificar el surrogate. El trabajo se articula en torno a cinco experimentos que tienen como objetivo evaluar la eficiencia de los surrogates desde distintas perspectivas del problema; métrica de evaluación, activación de la red, distribución del muestreo, eficiencia computacional y uso de información diferencial en la pérdida. Cada uno de los experimentos realizados conduce a diferentes conclusiones muy valiosas sobre las mejoras de eficiencia y las diferentes técnicas que hacen de los surrogates una opción muy atractiva para la industria financiera.
     \smallskip
+    
     {\bfseries\scshape Palabras clave.}\enspace
     deep surrogates, pricing de opciones, Heston, Black-Scholes, differential machine learning, métodos numéricos.
   };
 \end{tikzpicture}
 \endgroup
 
-\vspace{1.2em}
+\vspace{0.2em}
 
 % --- Índice general --------------------------------------------------------
 \renewcommand{\contentsname}{Índice general}
 \begingroup
   \hypersetup{linkcolor=uniblack}
+  \setlength{\parskip}{0pt}   % evita que parskip espacie cada entrada del índice
+  \linespread{1}\selectfont   % índice con interlineado normal (el cuerpo va más abierto)
   \tableofcontents
 \endgroup
 \newpage
@@ -302,9 +318,9 @@ Black-Scholes y Heston\par}
 \section{Introducción}
 % =============================================================================
 
-El objetivo general de este trabajo es estudiar cómo se pueden usar las redes neuronales como herramienta numérica para aproximar modelos de pricing de opciones. Es decir, no nos interesa la red como un sistema que aprende del mercado, sino como un aproximador funcional capaz de imitar a un solver matemático ya conocido. La distinción puede parecer sutil pero cambia completamente lo que se está haciendo: no estamos prediciendo nada, estamos sustituyendo un cálculo costoso por una aproximación rápida y diferenciable.
+El objetivo general de este trabajo es estudiar cómo se pueden usar las redes neuronales como herramienta numérica para aproximar modelos de pricing de opciones. Es decir, no nos interesa la red como un sistema que aprende del mercado, sino como un aproximador funcional capaz de imitar a un solver matemático ya conocido. La distinción puede parecer sutil pero es fundamental para comprender el valor que aporta este enfoque, la idea es sustituir un cálculo costoso por una aproximación rápida y diferenciable.
 
-En finanzas cuantitativas hay muchos modelos de pricing de opciones, desde el clásico Black-Scholes hasta modelos modernos con volatilidad estocástica, saltos o memoria. Todos ellos tienen una estructura común: dado un conjunto de inputs, que pueden ser características del contrato y parámetros del modelo, devuelven un precio o una volatilidad implícita. El problema es que conforme los modelos ganan realismo también se vuelven más caros computacionalmente. Lo que en Black-Scholes es una fórmula cerrada se convierte en Heston en una integral que hay que resolver por Fourier, y en Bates o en rough volatility en algo aún más pesado. Cuando estos modelos hay que evaluarlos miles o millones de veces, por ejemplo en calibración diaria, en cálculo de Greeks o en simulación de escenarios, el coste se vuelve un cuello de botella real.
+En finanzas cuantitativas hay muchos modelos de pricing de opciones, desde el clásico Black-Scholes hasta modelos modernos con volatilidad estocástica, saltos o memoria. Todos ellos tienen una estructura común, dado un conjunto de inputs, que pueden ser características del contrato y parámetros del modelo, devuelven un precio o una volatilidad implícita. El problema es que conforme los modelos ganan realismo también se vuelven más caros de evaluar computacionalmente. Lo que en Black-Scholes es una fórmula cerrada se convierte en Heston en una integral que hay que resolver por Fourier y en Bates o en rough volatility en algo aún más costoso. Cuando estos modelos hay que evaluarlos miles o millones de veces, por ejemplo en calibración diaria, en cálculo de Greeks o en simulación de Montecarlo, el coste se vuelve un cuello de botella real.
 
 La idea de los deep surrogates es resolver ese cuello de botella entrenando una red neuronal a partir de datos sintéticos generados por el propio modelo, de forma que la red aprenda la función de pricing. Si llamamos $f : \mathcal{X} \subset \mathbb{R}^d \to \mathbb{R}$ a la función de pricing del modelo verdadero, lo que hacemos es entrenar una red $\hat{f}_\theta$ con parámetros $\theta$ para que
 \begin{equation}
@@ -339,23 +355,25 @@ Una vez entrenada, evaluarla es órdenes de magnitud más rápido que llamar al 
 \label{fig:pipeline}
 \end{figure}
 
-La red no reemplaza la teoría financiera, simplemente aprende a imitar al solver. El objetivo no es aplicar las técnicas de deep learning a datos de mercado ruidosos, sino utilizar estas técnicas para resolver un problema clásico de aproximación numérica con la ventaja añadida de que el resultado es diferenciable por construcción.
+La red no reemplaza la teoría financiera, simplemente aprende a imitar el solver. El objetivo no es aplicar las técnicas de deep learning a datos de mercado ruidosos, sino utilizar estas técnicas para resolver un problema clásico de aproximación numérica con la ventaja añadida de que el resultado es diferenciable por construcción.
 
-En Black-Scholes la fórmula cerrada ya es muy rápida y un surrogate no aporta valor práctico, pero es ideal como caso de validación, porque conocemos la solución exacta y podemos medir errores de precio, Delta y volatilidad implícita con precisión. El objetivo del proyecto es verificar si se pueden utilizar surrogates con modelos más complejos sin perder precisión, y para ello combinamos Black-Scholes como entorno controlado con Heston como caso principal de estudio. La pregunta de investigación que estructura todo el trabajo se formula así:
+Para Black-Scholes la fórmula cerrada ya es muy rápida y un surrogate no aporta valor práctico, sin embargo, es ideal como caso de validación, porque conocemos la solución exacta y podemos medir errores de precio, Delta y volatilidad implícita con precisión. El objetivo de este trabajo es verificar si se pueden utilizar surrogates con modelos más complejos sin perder precisión, y para ello utilizamos Black-Scholes como baseline y Heston como caso principal de estudio. La pregunta de investigación que estructura todo el trabajo es la siguiente:
 
 \begin{quote}\itshape
-Bajo qué condiciones una red neuronal profunda puede actuar como un surrogate preciso, rápido y diferenciable para funciones de pricing de opciones.
+¿Bajo qué condiciones una red neuronal profunda puede actuar como un surrogate preciso, rápido y diferenciable para funciones de pricing de opciones?
 \end{quote}
 
-Para responderla de forma operativa, descomponemos la pregunta en cinco preguntas más concretas que se traducen en cinco experimentos comparativos. Cada uno varía una sola dimensión del problema mientras mantiene todo lo demás fijo, lo que permite atribuir cualquier diferencia observada a la dimensión que estamos variando y no a otras variables que se hayan colado por accidente.
+Para responder esta pregunta en la práctica, hemos decidido segmentar el estudio en cinco preguntas más concretas que se traducen en cinco experimentos. Cada uno de estos experimentos ataca una perspectiva distinta de la pregunta. No solo nos interesa estudiar si un surrogate es preciso a la hora de imitar el modelo original, sino también estudiar bajo qué condiciones se puede exprimir la eficiencia y precisión de está herramienta.
 
-El resto del documento se organiza como sigue. La \autoref{sec:revision} sintetiza la revisión bibliográfica que ha guiado las decisiones metodológicas. La \autoref{sec:metodologia} fija los casos de estudio y la metodología experimental: targets, normalización, solvers, dominio, muestreo y evaluación por bins. La \autoref{sec:experimentos} describe los cinco experimentos y los once surrogates que los sostienen. La \autoref{sec:resultados} reporta los resultados de cada experimento. La \autoref{sec:discusion} discute alcance, limitaciones y trabajo en curso.
+El documento se organiza de la siguiente manera, la \autoref{sec:revision} sirve para sintetizar la revisión bibliográfica que ha guiado las decisiones metodológicas del trabajo, es además una sección fundamental para ganar contexto histórico sobre la bibliografía existente y poder afrontar la lectura del trabajo de una forma más contextualizada. La \autoref{sec:metodologia} fija los casos de estudio y la metodología experimental. La \autoref{sec:experimentos} describe los cinco experimentos y las características técnicas de los once surrogates que los sostienen. La \autoref{sec:resultados} reporta los resultados de cada experimento. La \autoref{sec:discusion} discute alcance, limitaciones y trabajo en curso.
+
+El código que implementa el pipeline completo solvers, generación de datos sintéticos, entrenamiento de los surrogates y evaluación por bins junto con los scripts que reproducen las tablas y figuras de este trabajo está disponible en \url{https://github.com/hectoorperezz/proyecto-final-metodos-numericos}.
 
 % =============================================================================
 \section{Revisión bibliográfica}\label{sec:revision}
 % =============================================================================
 
-La primera fase de nuestro trabajo ha consistido en una investigación bibliográfica profunda para tener una visión global de los temas relevantes y situar nuestra propuesta dentro del panorama existente. Hay cinco artículos que hemos trabajado a fondo y que forman el núcleo de la revisión: los tres primeros eran una recomendación de los profesores como punto de partida, un cuarto, el de deep surrogates, lo encontramos buscando trabajos más recientes en la línea de aproximación numérica de modelos de pricing, y un quinto, el de differential machine learning de Huge y Savine, lo hemos incorporado como complemento al anterior porque ofrece una pieza metodológica que conecta directamente con nuestras preocupaciones sobre la calidad de las derivadas aprendidas.
+La primera fase de nuestro trabajo ha consistido en una investigación bibliográfica profunda para tener una visión global de los temas relevantes y situar nuestra propuesta dentro del panorama existente. Hay cinco artículos que hemos trabajado a fondo y que forman el núcleo de la revisión: los tres primeros eran una recomendación de los profesores como punto de partida, un cuarto, el de deep surrogates, lo encontramos buscando trabajos más recientes en la línea de aproximación numérica de modelos de pricing, y un quinto, el de differential machine learning de Huge y Savine, , que incorporamos como complemento al anterior porque aporta una técnica, que hemos utilizado como inspiración para diseñar el último experimento.
 
 \subsection{Hutchinson, Lo y Poggio (1994): el punto de partida histórico}
 
@@ -373,13 +391,13 @@ Para nuestra revisión es importante porque ilustra una línea claramente distin
 
 El tercer paper recomendado es la revisión bibliográfica de Ruf y Wang~\cite{ruf2020}, que funciona como mapa general del campo. Los autores compilan y comparan más de ciento cincuenta artículos en una tabla detallada que cataloga cada estudio según seis dimensiones, entre ellas las variables de entrada, las salidas de la red, los modelos benchmark, las métricas de rendimiento, el método de partición de los datos y los activos subyacentes. Cubren tanto el enfoque puramente no paramétrico, donde la red aprende directamente el precio a partir de variables como subyacente, strike, vencimiento y volatilidad, como los enfoques híbridos que combinan fórmulas paramétricas tipo Black-Scholes con correcciones aprendidas, además de variantes más recientes orientadas a calibración, resolución de PDEs, aproximación de funciones de valor en problemas de control óptimo y deep hedging.
 
-Lo más útil de este paper son las lecciones que extrae del repaso exhaustivo: la importancia de usar inputs estacionarios como la moneyness en lugar de precio y strike por separado, la necesidad de elegir benchmarks que no trivialicen la comparación y, sobre todo, el problema del data leakage que aparece cuando la partición train/test se hace de forma aleatoria sobre datos con estructura temporal, rompiendo el orden cronológico, contaminando el test e infraestimando sistemáticamente el error de generalización. Para nuestro trabajo es una referencia útil porque ofrece un panorama de la disciplina, permite situar nuestra propuesta dentro de las distintas líneas históricas y nos advierte de errores típicos que conviene evitar, aunque la mayor parte de la bibliografía que analiza versa sobre el uso de técnicas de machine learning directamente sobre datos de mercado y no sobre el problema de aproximar un solver conocido.
+Lo más útil de este paper son las lecciones que extrae del repaso exhaustivo, la importancia de usar inputs estacionarios como la moneyness en lugar de precio y strike por separado y sobre todo, el problema del data leakage que aparece cuando la partición train/test se hace de forma aleatoria sobre datos con estructura temporal, rompiendo el orden cronológico, contaminando el test e infraestimando sistemáticamente el error de generalización. Para nuestro trabajo es una referencia útil porque ofrece un panorama de la disciplina, permite situar nuestra propuesta dentro de las distintas líneas históricas y nos advierte de errores típicos que conviene evitar, aunque la mayor parte de la bibliografía que analiza versa sobre el uso de técnicas de machine learning directamente sobre datos de mercado y no sobre el problema de aproximar un solver conocido.
 
 \subsection{Chen, Didisheim y Scheidegger (2025): deep surrogates en finanzas}\label{sec:chen}
 
-Chen, Didisheim y Scheidegger~\cite{chen2025} proponen los deep surrogates como una clase de aproximadores numéricos para modelos estructurales costosos: sustituyen la función original por una red neuronal profunda entrenada con muestras simuladas, que toma exactamente los mismos inputs y devuelve la misma salida a un coste computacional drásticamente menor, además de proporcionar gradientes a un coste que no escala con el número de inputs. Aplican la idea al modelo de Bates con saltos doble exponenciales, que tiene cinco variables de estado y ocho parámetros estructurales, resultando en un input de trece dimensiones, y entrenan la red sobre mil millones de observaciones sintéticas para mapear ese input a la volatilidad implícita Black-Scholes asociada.
+Chen, Didisheim y Scheidegger~\cite{chen2025} proponen los deep surrogates como una clase de aproximadores numéricos para modelos estructurales costosos, sustituyen la función original por una red neuronal profunda entrenada con muestras simuladas, que toma exactamente los mismos inputs y devuelve la misma salida a un coste computacional drásticamente menor, además de proporcionar gradientes a un coste que no escala con el número de inputs. Aplican la idea al modelo de Bates con saltos doble exponenciales, que tiene cinco variables de estado y ocho parámetros estructurales, resultando en un input de trece dimensiones, y entrenan la red sobre mil millones de observaciones sintéticas para mapear ese input a la volatilidad implícita Black-Scholes asociada.
 
-Una idea crucial del paper es que la maldición de la dimensionalidad queda mitigada por dos factores que se refuerzan entre sí. Por un lado, los datos de entrenamiento se generan de manera sintética y determinista a partir del propio modelo, sin ruido estadístico, lo que elimina la necesidad de cubrir el espacio de inputs con una densidad de muestras que permita promediar errores aleatorios. Por otro lado, la función de pricing en modelos afines como Heston o Bates es analíticamente suave, lo que controla el problema de aproximación y permite a una red profunda representar el mapa de inputs a precio con un número de parámetros que escala de forma manejable con la dimensión. Esta intuición se apoya en resultados teóricos: el trabajo clásico de Barron~\cite{barron1993} sobre aproximación de funciones con norma de Barron acotada y, más recientemente, los de Grohs, Hornung, Jentzen y von Wurstemberger~\cite{grohs2018} demuestran formalmente cómo las redes neuronales profundas escapan a la maldición de la dimensionalidad en la aproximación de soluciones de la ecuación de Black-Scholes en alta dimensión. Juntas, estas dos propiedades justifican que un deep surrogate sea una herramienta de aproximación numérica plausible en problemas de dimensión moderada-alta, no solo un truco que funciona empíricamente.
+Una idea crucial del paper es que la maldición de la dimensionalidad queda mitigada por dos factores que se refuerzan entre sí. Por un lado, los datos de entrenamiento se generan de manera sintética y determinista a partir del propio modelo, sin ruido estadístico, lo que elimina la necesidad de cubrir el espacio de inputs con una densidad de muestras que permita promediar errores aleatorios. Por otro lado, la función de pricing en modelos afines como Heston o Bates es analíticamente suave, lo que controla el problema de aproximación y permite a una red profunda representar el mapa de inputs a precio con un número de parámetros que escala de forma manejable con la dimensión. Esta intuición se apoya en resultados teóricos: el trabajo clásico de Barron~\cite{barron1993} sobre aproximación de funciones con norma de Barron acotada y, más recientemente, los de Grohs, Hornung, Jentzen y von Wurstemberger~\cite{grohs2018} demuestran formalmente cómo las redes neuronales profundas escapan a la maldición de la dimensionalidad en la aproximación de soluciones de la ecuación de Black-Scholes en alta dimensión. Juntas, estas dos propiedades justifican que un deep surrogate sea una herramienta de aproximación numérica plausible en problemas de dimensión moderada-alta.
 
 El paper también argumenta de forma explícita por qué las redes neuronales son la familia de aproximadores adecuada frente a alternativas naturales como polinomios globales, splines, sparse grids o Gaussian processes. Los polinomios funcionan razonablemente en funciones suaves pero les cuesta capturar rasgos locales fuertes como kinks, y eso en opciones es un problema serio porque el payoff tiene un kink claro en el strike, con oscilaciones de Runge si se intenta una aproximación global. Los splines capturan bien rasgos locales por tramos pero escalan muy mal en alta dimensión. Las sparse grids mitigan parte del problema de las mallas cartesianas pero rinden peor en dominios irregulares, frecuentes en finanzas por las restricciones entre parámetros. Los Gaussian processes son elegantes pero su coste matricial $O(n^3)$ los hace inviables con millones de observaciones. Las redes neuronales son las únicas que cumplen los cuatro criterios de forma razonable, como resume la \autoref{tab:metodos}.
 
@@ -401,17 +419,16 @@ Gaussian processes & \textcolor{papergreen}{$+$}    & \textcolor{papergreen}{$+$
 \label{tab:metodos}
 \end{table}
 
-A esta capacidad de aproximación se añade una ventaja decisiva en el contexto de los métodos numéricos: el jacobiano de la red está disponible a un coste muy reducido mediante diferenciación automática. Esto es crítico en finanzas porque muchas magnitudes que importan no son el precio en sí sino sus derivadas, las Greeks, que en el modelo original suelen calcularse por diferencias finitas a un coste considerable. Chen et al. documentan que la calibración diaria del modelo de Bates pasa de las aproximadamente $125$ horas que requiere la inversión FFT a poco más de dos horas en CPU y unas decenas de minutos en GPU cuando se usa el surrogate, una reducción de órdenes de magnitud que abre la puerta a aplicaciones empíricas hasta entonces inviables.
+A esta capacidad de aproximación se añade una ventaja decisiva en el contexto de los métodos numéricos, el jacobiano de la red está disponible a un coste muy reducido mediante diferenciación automática. Esto es crítico en finanzas porque muchas magnitudes que importan no son el precio en sí sino sus derivadas, las griegas, que en el modelo original suelen calcularse por diferencias finitas a un coste considerable para modelos complejos. Chen et al. documentan que la calibración diaria del modelo de Bates pasa de las aproximadamente $125$ horas que requiere la inversión FFT a poco más de dos horas en CPU y unas decenas de minutos en GPU cuando se usa el surrogate, una reducción de órdenes de magnitud que abre la puerta a aplicaciones empíricas hasta entonces inviables.
 
-Cuatro decisiones técnicas concretas del paper son las que guían directamente las nuestras y se justifican en detalle en la \autoref{sec:metodologia} y la \autoref{sec:experimentos}. Primero, usar una activación suave (Swish) en lugar de ReLU: ReLU produce errores de precio comparables pero Deltas sustancialmente peores porque su derivada es discontinua en cero, mientras que las activaciones suaves dan derivadas estables; esta observación motiva directamente nuestro experimento E2. Segundo, evaluar en volatilidad implícita Black-Scholes en vez de en precio, porque IV es la unidad común que pone todas las opciones en una escala homogénea sin importar moneyness ni vencimiento; nosotros mantenemos el precio como target de entrenamiento pero evaluamos en ambas escalas, y esa comparación es justamente E1. Tercero, definir un hipercubo amplio y muestrear puntos aleatorios dentro de él, recortando un cinco por ciento de los bordes en evaluación para no contaminar las métricas con errores de frontera; este esquema es la base de nuestro pipeline de generación de datos y E3 explora muestreos no uniformes dentro de él. Cuarto, prescindir de la regularización clásica del machine learning (sin early stopping, sin dropout, sin weight decay) porque los datos son sintéticos y deterministas, sin nada que sobreajustar.
 
-El protocolo de validación que se sigue en~\cite{chen2025} también encaja con nuestra metodología. Distingue explícitamente dos niveles de error: el error de aproximación, que mide cuánto se aleja el surrogate del solver original para parámetros conocidos y se reporta por bins de moneyness y vencimiento, y el error de estimación, que mide el coste económico de calibrar con el surrogate dentro de un procedimiento de optimización. En el primer nivel se reporta que el percentil 95 del error absoluto en volatilidad implícita y en Delta queda por debajo de $8\cdot 10^{-4}$ para opciones con más de siete días a vencimiento. Esta distinción entre los dos niveles de error es la que nos lleva a evaluar siempre por bins en lugar de reportar promedios globales y a separar precio, IV y Delta como métricas independientes en los cinco experimentos.
+De este paper hemos extraido cuatro lecciones técnicas que han servido para formular nuestros experimentos y orientar las diferentes decisiones arquitectónicas que hemos tomado a lo largo del trabajo. Primero, usar una activación suave (Swish) en lugar de ReLU. ReLU produce errores de precio comparables pero Deltas sustancialmente peores porque su derivada es discontinua en cero, mientras que las activaciones suaves dan derivadas más estables, esta observación motiva directamente nuestro experimento E2. Segundo, evaluar en volatilidad implícita Black-Scholes en vez de en precio, porque IV es la unidad común que pone todas las opciones en una escala homogénea sin importar moneyness ni vencimiento, nosotros mantenemos el precio como target de entrenamiento pero evaluamos en ambas escalas. Tercero, definir un hipercubo amplio y muestrear puntos aleatorios dentro de él; este esquema es la base de nuestro método de generación de datos y el experimento 3 explora la comparación de muestreos uniformes contra muestreos enfocados. Por último, la cuarta lección que extraemos de este paper es prescindir de la regularización clásica del machine learning (sin early stopping, sin dropout, sin weight decay) porque los datos son sintéticos y deterministas, por tanto el ruido en los datos no es un factor a tener en cuenta durante el proceso de entrenamiento.
 
 \subsection{Huge y Savine (2020): differential machine learning}
 
-El quinto paper es el de Huge y Savine sobre differential machine learning~\cite{huge2020}. Originalmente lo teníamos como uno más del panorama, pero al pensar en cómo podríamos innovar respecto al paper de deep surrogates nos hemos dado cuenta de que ofrece una pieza metodológica muy potente y muy alineada con nuestras preocupaciones. La idea es que cuando se entrena un surrogate con datos sintéticos, normalmente la red solo ve el valor de la función en cada punto, por ejemplo el precio de la opción, y aprende a predecirlo. Sin embargo, si el modelo verdadero es diferenciable, también se conoce la pendiente de la función en cada punto, es decir, las Greeks. Differential machine learning aprovecha esa información añadiendo los gradientes verdaderos al conjunto de entrenamiento y modificando la pérdida para que la red no solo estime el precio, sino también su derivada respecto a los inputs. El resultado es que se consiguen aproximaciones mucho más precisas, especialmente en términos de Greeks, con datasets sustancialmente más pequeños.
+El quinto paper es el de Huge y Savine sobre differential machine learning~\cite{huge2020}. Este paper ha sido crucial para plantear el experimento 5. La idea es que cuando se entrena un surrogate con datos sintéticos, normalmente la red solo ve el valor de la función en cada punto, por ejemplo el precio de la opción y aprende a predecirlo. Sin embargo, si el modelo verdadero es diferenciable, también se conoce la pendiente de la función en cada punto. Differential machine learning aprovecha esa información añadiendo los gradientes verdaderos al conjunto de entrenamiento y modificando la pérdida para que la red no solo estime el precio, sino también su derivada respecto a los inputs. El resultado es que se consiguen aproximaciones mucho más precisas con datasets sustancialmente más pequeños.
 
-Para nuestro trabajo es una referencia clave por dos razones. La primera es que conecta directamente con la necesidad de validar Greeks que motiva el conjunto del proyecto. La segunda es que tiene una motivación matemática sólida desde el punto de vista de aproximación de funciones, análoga a la que justifica la interpolación de Hermite frente a la clásica: disponer del valor y de la derivada de una función en cada punto muestreado permite reconstruirla con muchos menos puntos. La \autoref{fig:hermite} ilustra esta intuición.
+Para nuestro trabajo es una referencia clave ya que tiene una motivación matemática sólida desde el punto de vista de aproximación de funciones, análoga a la que justifica la interpolación de Hermite frente a la clásica, disponer del valor y de la derivada de una función en cada punto muestreado permite reconstruirla con muchos menos puntos. La \autoref{fig:hermite} ilustra esta intuición.
 
 % --- FIGURA: Hermite vs Lagrange ---------------------------------------------
 \begin{figure}[ht]
@@ -435,7 +452,7 @@ Para nuestro trabajo es una referencia clave por dos razones. La primera es que 
   \addplot[domain=0:3, samples=2, paperred, very thick, dashed] {sin(deg(0))*exp(0) + (sin(deg(6))*exp(-0.75) - sin(deg(0))*exp(0))/3 * x};
   \addlegendentry{aprox. solo con valores}
   % nodos
-  \addplot[only marks, mark=*, mark size=1.4pt, paperblue] coordinates {(0,0) (3,-0.218)};
+  \addplot[only marks, mark=*, mark size=1.4pt, paperblue] coordinates {(0,0) (3,-0.1320)};
 \end{axis}
 \end{tikzpicture}
 \caption{Aproximación que usa solo valores de la función en dos nodos.}
@@ -457,13 +474,14 @@ Para nuestro trabajo es una referencia clave por dos razones. La primera es que 
   \addlegendentry{$f(x)$}
   % Hermite cúbico exacto con valores f(0)=0, f'(0)=2 y f(3) aprox, f'(3) aprox
   % usamos un cúbico simbólico que casa pendientes
+  % Hermite cúbico real en [0,3]: H(0)=0, H'(0)=2, H(3)=f(3), H'(3)=f'(3)
   \addplot[domain=0:3, samples=120, papergreen, very thick, dashed]
-    {2*x - 1.6*x*x + 0.31*x*x*x};
+    {2*x - 1.691*x*x + 0.3366*x*x*x};
   \addlegendentry{aprox. con valor y pendiente}
-  \addplot[only marks, mark=*, mark size=1.4pt, paperblue] coordinates {(0,0) (3,-0.218)};
-  % tangentes
-  \draw[paperorange, thick] (axis cs:0,-0.5) -- (axis cs:0.6,0.7);
-  \draw[paperorange, thick] (axis cs:2.5,0.6) -- (axis cs:3.3,-0.9);
+  \addplot[only marks, mark=*, mark size=1.4pt, paperblue] coordinates {(0,0) (3,-0.1320)};
+  % tangentes (pendientes reales en los nodos: 2 en x=0, 0.941 en x=3)
+  \draw[paperorange, thick] (axis cs:-0.25,-0.5) -- (axis cs:0.35,0.7);
+  \draw[paperorange, thick] (axis cs:2.55,-0.556) -- (axis cs:3.15,0.009);
 \end{axis}
 \end{tikzpicture}
 \caption{Aproximación que incorpora el valor y la derivada en cada nodo (estilo Hermite).}
@@ -478,7 +496,7 @@ Más allá de estos cinco pilares, hemos revisado otros trabajos que ayudan a en
 
 Una segunda línea busca acelerar la valoración aprendiendo directamente la función de precios, y aquí el trabajo de Ferguson y Green~\cite{ferguson2018} muestra que una red profunda entrenada con datos sintéticos generados por Monte Carlo puede valorar opciones basket millones de veces más rápido que el modelo subyacente. Una tercera vertiente aborda la cobertura de carteras como un problema de aprendizaje por refuerzo, como en el deep hedging de Buehler et al.~\cite{buehler2019}, que parametriza la estrategia de cobertura mediante redes neuronales y la optimiza directamente bajo medidas de riesgo convexas, incorporando de forma natural costes de transacción y otras fricciones de mercado sin necesidad de Greeks. La calibración de modelos estocásticos también se ha beneficiado de estas técnicas: trabajos recientes aplican differential ML al modelo de Heston para reducir drásticamente el tiempo de calibración~\cite{dlcalib2023}.
 
-De todo este material, el enfoque de surrogates en finanzas es el que mejor encaja con nuestros objetivos. La razón principal es que aborda un problema relevante en la práctica de la industria: abaratar el coste computacional de los modelos de pricing y reducir los tiempos de calibración y estimación de parámetros. Es un problema actual en mesas de derivados y en research cuantitativo, sobre todo a medida que los modelos se vuelven más realistas y por tanto más caros de evaluar. Además, desde el punto de vista de métodos numéricos es el planteamiento más completo de los repasados, porque entrelaza muestreo, aproximación de funciones, validación numérica y cálculo de derivadas en un mismo marco.
+De todo este material, el enfoque de surrogates en finanzas es el que mejor encaja con nuestros objetivos. La razón principal es que aborda un problema relevante en la práctica de la industria, abaratar el coste computacional de los modelos de pricing y reducir los tiempos de calibración y estimación de parámetros. Es un problema actual en mesas de derivados y en research cuantitativo, sobre todo a medida que los modelos se vuelven más realistas y por tanto más caros de evaluar. Además, desde el punto de vista de métodos numéricos es el planteamiento más completo porque entrelaza muestreo, aproximación de funciones, validación numérica y cálculo de derivadas en un mismo marco.
 
 % =============================================================================
 % (sección "Análisis del paper de referencia" disuelta dentro de §2.4
@@ -489,15 +507,39 @@ De todo este material, el enfoque de surrogates en finanzas es el que mejor enca
 \section{Metodología}\label{sec:metodologia}
 % =============================================================================
 
-Esta sección fija cómo se ejecuta cada experimento, qué magnitudes se entrenan, qué métricas se reportan y bajo qué condiciones consideramos que una comparación es limpia. En un proyecto de surrogates, la parte delicada no es solo entrenar redes, sino asegurar que el dato sintético, la normalización, la métrica y la evaluación responden exactamente a la pregunta que se quiere contestar. La idea central combina dos líneas de la literatura: la lógica de los deep surrogates~\cite{chen2025}, que entrena una red para aproximar un solver financiero caro a partir de datos sintéticos generados por el propio modelo, y la idea del differential machine learning~\cite{huge2020}, que añade derivadas verdaderas al target de entrenamiento para que la red aprenda también la forma local de la función. En nuestro caso esa derivada será la Delta.
+En esta sección se expondrá cómo se ejecuta cada experimento, qué magnitudes se entrenan y qué métricas se reportan. En un proyecto de surrogates, la parte delicada no es solo entrenar redes, sino asegurar que el dato sintético, la normalización, la métrica y la evaluación responden exactamente a la pregunta que se quiere contestar. La idea central combina dos líneas de la literatura, la lógica de los deep surrogates~\cite{chen2025}, que entrena una red para aproximar un solver financiero caro a partir de datos sintéticos generados por el propio modelo y la idea del differential machine learning~\cite{huge2020}, que añade derivadas verdaderas al target de entrenamiento para que la red aprenda también la forma local de la función. En nuestro caso esa derivada será la Delta.
 
 \subsection{Casos de estudio: Black-Scholes y Heston}\label{sec:casos-estudio}
 
-El trabajo se articula sobre dos modelos. El primero es Black-Scholes y opera como caso de validación. En la práctica no necesita un surrogate porque la fórmula cerrada ya es muy rápida, pero precisamente por eso es ideal como entorno de prueba: conocemos la solución exacta, las Deltas analíticas y la inversión a volatilidad implícita, y podemos comparar precio, IV y Greeks contra valores de referencia antes de complicar el problema. El segundo modelo es Heston, donde la motivación del surrogate ya es real: introduce volatilidad estocástica, es bastante más realista y su evaluación requiere integración Fourier semi-cerrada. Es un paso intermedio entre Black-Scholes y Bates que conserva la esencia del planteamiento sin obligarnos a implementar saltos doble exponenciales.
+El trabajo se articula sobre dos modelos. El primero es Black-Scholes y opera como caso de validación. En la práctica no necesita un surrogate porque la fórmula cerrada ya es muy rápida, pero precisamente por eso es ideal como entorno de prueba, conocemos la solución exacta, las Deltas analíticas y la inversión a volatilidad implícita, y podemos comparar precio, IV y Greeks contra valores de referencia antes de complicar el problema. El segundo modelo es Heston, donde la motivación del surrogate ya es real, introduce volatilidad estocástica, es bastante más realista y su evaluación requiere integración Fourier semi-cerrada.
+
+Black-Scholes asume que el subyacente sigue un movimiento browniano geométrico bajo la medida de riesgo neutral, con volatilidad $\sigma$ constante:
+\begin{equation}
+dS_t = (r - q)\,S_t\,dt + \sigma\,S_t\,dW_t.
+\label{eq:bs-sde}
+\end{equation}
+El precio de una call europea tiene forma cerrada,
+\begin{equation}
+C = S\,e^{-qT} N(d_1) - K\,e^{-rT} N(d_2), \qquad
+d_{1,2} = \frac{\ln(S/K) + \left(r - q \pm \tfrac{1}{2}\sigma^2\right)T}{\sigma\sqrt{T}},
+\label{eq:bs-price}
+\end{equation}
+con $d_2 = d_1 - \sigma\sqrt{T}$, de donde la Delta es $\Delta = e^{-qT} N(d_1)$ . El único parámetro de modelo es la volatilidad $\sigma$, que junto con la moneyness $m = S/K$, el vencimiento $T$ y el tipo $r$ forma el espacio de entradas. Esta solución exacta es la que usamos como referencia para validar el pipeline.
+
+Heston añade volatilidad estocástica, la varianza instantánea $v_t$ sigue un proceso de reversión a la media correlacionado con el subyacente,
+\begin{equation}
+\begin{aligned}
+dS_t &= (r - q)\,S_t\,dt + \sqrt{v_t}\,S_t\,dW_t^{S}, \\
+dv_t &= \kappa(\theta - v_t)\,dt + \xi\,\sqrt{v_t}\,dW_t^{v},
+\qquad dW_t^{S}\,dW_t^{v} = \rho\,dt,
+\end{aligned}
+\label{eq:heston-sde}
+\end{equation}
+cuyos parámetros son la velocidad de reversión $\kappa$, la varianza a largo plazo $\theta$, la volatilidad de la varianza $\xi$, la correlación $\rho$ entre los dos brownianos y la varianza inicial $v_0$. Estos cinco parámetros, junto con la moneyness $m = S/K$, el vencimiento $T$ y el tipo $r$, son las entradas que el surrogate aprende a recorrer, de modo que una única red cubre todas las parametrizaciones del modelo. Para este modelo ya no hay fórmula cerrada, el precio se obtiene mediante una representación semi-cerrada de Fourier, lo bastante costosa como para justificar el uso de un surrogate.
 
 \subsection{Pipeline experimental}
 
-Todos los experimentos siguen el mismo flujo base. Primero se define un dominio de inputs y una distribución de muestreo. Después se genera un dataset sintético evaluando el solver verdadero en cada punto. A continuación se entrena un surrogate con una configuración cerrada y versionada. Finalmente se evalúa el surrogate sobre un conjunto independiente, separando los resultados por bins de moneyness y vencimiento. La separación entre generación, entrenamiento y evaluación es importante porque evita contaminar las conclusiones: el sampler decide dónde preguntamos al modelo verdadero, el solver decide cuáles son los targets, el trainer decide cómo aprende la red y el evaluador decide cómo medimos el error. La \autoref{fig:mlp} esquematiza la arquitectura concreta de la red que usamos y la relación entre el target de precio y la Delta obtenida por autograd.
+Todos los experimentos de este trabajo siguen la misma dinámica. Primero se define un dominio de inputs y una distribución de muestreo. Después se genera un dataset sintético evaluando el solver verdadero en cada punto. A continuación, se entrena un surrogate con una configuración cerrada y versionada. Finalmente se evalúa el surrogate sobre un conjunto independiente, separando los resultados por bins de moneyness y vencimiento. La separación entre generación, entrenamiento y evaluación es importante porque evita contaminar las conclusiones, el sampler decide dónde preguntamos al modelo verdadero, el solver decide cuáles son los targets, el trainer decide cómo aprende la red y el evaluador decide cómo medimos el error. La \autoref{fig:mlp} esquematiza la arquitectura concreta de la red que usamos y la relación entre el target de precio y la Delta obtenida por autograd.
 
 % --- FIGURA: MLP y autograd para Delta ---------------------------------------
 \begin{figure}[ht]
@@ -553,8 +595,8 @@ Todos los experimentos siguen el mismo flujo base. Primero se define un dominio 
 \label{fig:mlp}
 \end{figure}
 
-\paragraph{Constantes del pipeline.}
-La configuración de la red, el optimizador y el régimen de entrenamiento son comunes a todos los surrogates. Se fijan en código y no se mueven salvo que un hallazgo experimental lo justifique; los valores se recogen en la \autoref{tab:constantes}.
+\paragraph{Constantes Experimentales}
+La configuración de la red, el optimizador y el régimen de entrenamiento son comunes a todos los surrogates. Se fijan en código y los valores se recogen en la \autoref{tab:constantes}.
 
 \begin{table}[ht]
 \centering
@@ -566,58 +608,56 @@ Parámetro & Valor \\
 Arquitectura & MLP, 4 capas ocultas, 128 unidades \\
 Activación por defecto & Swish \\
 Optimizador & Adam, $\text{lr}=10^{-3}$ fijo \\
-Batch size & 1024 (baseline) \\
+Batch size & 32\,768 (16\,384 en variantes small) \\
 Épocas máximas & 100 \\
 Regularización & ninguna (datos sintéticos) \\
 Moneyness & $m = S/K$ \\
 Normalización de inputs & min-max a $[0, 1]$ \\
 Output & precio normalizado $C/K$ \\
 Dividend yield & $q = 0$ \\
-Recorte de bordes & 5\% en cada cara del hipercubo \\
 Semilla & fijada por configuración \\
 \bottomrule
 \end{tabular}
-\caption{Constantes del pipeline comunes a todos los surrogates.}
+\caption{Constantes comunes a todos los surrogates.}
 \label{tab:constantes}
 \end{table}
 
-El MLP de cuatro capas y 128 unidades por capa da del orden de cincuenta mil parámetros, suficiente para una función suave en la dimensión que manejamos. Swish entra como activación por defecto por la calidad de la Delta obtenida por autograd; Adam con learning rate fijo evita añadir un scheduler a la lista de variables, y la estabilidad final se controla escogiendo el checkpoint con menor $\text{MAE}(C/K)$ en validación. No se usa regularización: los targets vienen del propio solver y son deterministas, así que la pérdida de validación nunca empeora por overfitting, solo se estanca cuando la red llega al límite de su capacidad. El tope de cien épocas actúa como cota práctica.
+El objetivo global del trabajo no es optimizar la arquitectura de la red o el algoritmo de entrenamiento, el foco está en responder a las diferentes preguntas planteadas sobre las técnicas de muestreo, variables de entrada y métricas de rendimiento. Por este motivo las constantes experimentales que se han fijado no pretenden ser la configuración óptima sino más bien un punto de partida que nos permita comparar de forma limpia los distintos experimentos.
+
+La arquitectura se fija como un MLP de cuatro capas ocultas y 128 unidades por capa. No la presentamos como óptima, sino como una base controlada y suficientemente expresiva para el alcance del trabajo. Mantenerla fija permite que los experimentos midan las decisiones que realmente queremos aislar: activación, distribución de muestreo y pérdida diferencial.
+
+Swish se usa como activación de referencia por su suavidad y por la evidencia del paper de Chen et al., donde se observa que ReLU puede dar errores de precio comparables pero Deltas peores al no ser diferenciable en cero.
+
+El optimizador es Adam con learning rate fijo. Esta elección no busca tampoco optimizar al máximo el entrenamiento, sino mantener una referencia simple y común a todos los surrogates. No usamos scheduler porque introduciría otra decisión de ajuste y dificultaría atribuir las diferencias observadas a la variable experimental principal.
+
+Las cien épocas se entienden como un presupuesto fijo de entrenamiento, común a todos los modelos. Esta decisión nos ofrece un estándar homogéneo para comparar los surrogates sin introducir reglas de parada distintas entre experimentos. Por último, la semilla se fija por configuración para que cada surrogate sea reproducible y para que las comparaciones dentro de un experimento no dependan de la suerte de la inicialización.
 
 \subsection{Targets, normalización y métricas}
 
-El target principal de entrenamiento es el precio normalizado por strike, $y = C/K$, y el input financiero principal es la moneyness simple, $m = S/K$. Esta decisión elimina una escala redundante del problema: si spot y strike se multiplican por la misma constante, el precio de una call europea escala con el strike. Trabajar con $C/K$ y $S/K$ permite que la red aprenda una función más estable y facilita la interpretación de la Delta, porque
+El target principal de entrenamiento es el precio normalizado por strike, $y = C/K$, y el input financiero principal es la moneyness simple, $m = S/K$. Esta decisión elimina una escala redundante del problema, si spot y strike se multiplican por la misma constante, el precio de una call europea escala con el strike. Trabajar con $C/K$ y $S/K$ permite que la red aprenda una función más estable y facilita la interpretación de la Delta, porque
 \begin{equation}
 \Delta = \frac{\partial C}{\partial S} = \frac{\partial (C/K)}{\partial (S/K)} = \frac{\partial y}{\partial m}.
 \end{equation}
-No usamos la moneyness normalizada de Chen et al. porque nuestro objetivo no es replicar la escala empírica del S\&P 500, sino construir un entorno controlado donde la relación entre precio normalizado y Delta sea directa. También fijamos $q = 0$ en todos los experimentos: el dividend yield no forma parte de las preguntas centrales del trabajo y eliminarlo reduce la dimensión del dominio sin afectar a las comparaciones.
+También fijamos $q = 0$ en todos los experimentos, el dividend yield no forma parte de las preguntas centrales del trabajo y eliminarlo reduce la dimensión del dominio sin afectar a las comparaciones.
 
-Además de esta normalización financiera, todos los inputs se normalizan numéricamente a $[0, 1]$ antes de entrar en la red. Esta normalización no cambia el problema matemático pero mejora la estabilidad del optimizador porque evita que dimensiones como $T$, $\rho$, $v_0$ o $\kappa$ vivan en escalas muy distintas. Cuando se calculan derivadas de la red se aplica la regla de la cadena para volver a la escala financiera. En particular, si $m_{\text{norm}} = (m - m_{\min}) / (m_{\max} - m_{\min})$, entonces
+Además de esta normalización financiera, todos los inputs se normalizan numéricamente a $[0, 1]$ antes de entrar en la red. Este ajuste no cambia el problema matemático pero mejora la estabilidad del optimizador porque evita que dimensiones como $T$, $\rho$, $v_0$ o $\kappa$ vivan en escalas muy distintas. Cuando se calculan derivadas de la red se aplica la regla de la cadena para volver a la escala financiera. En particular, si $m_{\text{norm}} = (m - m_{\min}) / (m_{\max} - m_{\min})$, entonces
 \begin{equation}
 \hat{\Delta} = \frac{\partial \hat{y}}{\partial m} = \frac{1}{m_{\max} - m_{\min}} \cdot \frac{\partial \hat{y}}{\partial m_{\text{norm}}}.
 \end{equation}
-La Delta del surrogate se calcula con autograd sobre la red, no con diferencias finitas. La Delta verdadera del dataset viene del solver ($N(d_1)$ en Black-Scholes y $P_1$ en Heston), mientras que la Delta predicha se obtiene derivando $\hat{y}$ respecto a $m_{\text{norm}}$ y aplicando la corrección anterior. En evaluación se usa \param{create\_graph=False} porque solo se mide la derivada. En el experimento que entrena con pérdida diferencial se usa \param{create\_graph=True} porque la pérdida contiene $\text{MAE}(\Delta)$ y PyTorch necesita derivar esa pérdida respecto a los pesos de la red. Esto incrementa coste y memoria pero es el coste esperado del entrenamiento diferencial.
+La Delta del surrogate se calcula con autograd sobre la red, no con diferencias finitas. La Delta verdadera del dataset viene del solver ($N(d_1)$ en Black-Scholes y $P_1$ en Heston), mientras que la Delta predicha se obtiene derivando $\hat{y}$ respecto a $m_{\text{norm}}$ y aplicando la corrección anterior. En evaluación se usa \param{create\_graph=False} porque solo se mide el valor de la derivada y no hace falta retropropagar a través de ella. En el experimento que entrena con pérdida diferencial se usa \param{create\_graph=True} porque la Delta es una derivada, y el término $\text{MAE}(\Delta)$ obliga a derivarla de nuevo respecto a los pesos de la red, lo que constituye una derivada de segundo orden. PyTorch solo puede calcularla si conserva el grafo de la primera pasada hacia atrás, que es justo lo que activa esa opción. Esto incrementa cómputo y memoria por el doble \emph{backward}.
 
-La volatilidad implícita Black-Scholes no será el target principal de entrenamiento, sino una métrica de evaluación. Esta elección mantiene el entrenamiento más directo, porque el solver genera precios, y evita introducir fallos de inversión de volatilidad implícita durante la generación del dataset. Al mismo tiempo, evaluar también en IV permite comprobar si un error pequeño en precio es realmente pequeño en la escala que se usa en mercado.
+La volatilidad implícita Black-Scholes no será el target principal de entrenamiento, sino una métrica de evaluación. Esta elección mantiene el entrenamiento más directo, porque el solver genera precios, y evita introducir fallos de inversión de volatilidad implícita durante la generación del dataset.
 
-Las métricas mínimas de evaluación son $\text{MAE}(C/K)$, el error absoluto en precio normalizado, $\text{MAE}_{\text{IV}}$ y $\text{MAE}_{\Delta}$. Para cada una se reportan promedios y percentiles por bin, con especial atención al percentil 95, porque los errores de cola son los que revelan si el surrogate falla en regiones operativamente importantes.
-
-\subsection{Solvers y validación numérica}
-
-Black-Scholes funciona como entorno de control. El precio, la Delta, la Vega y la inversión a volatilidad implícita tienen fórmulas cerradas o procedimientos numéricos muy estables, así que cualquier fallo en Black-Scholes apunta a un error del pipeline y no a una dificultad intrínseca del modelo.
-
-Heston es el caso principal. El precio se calcula mediante una formulación semi-cerrada de Fourier, expresada en términos de las probabilidades $P_1$ y $P_2$,
+Las métricas de evaluación son tres errores absolutos medios, uno por cada magnitud de interés. Para una magnitud $g$ y un conjunto de puntos de test $S$, definimos
 \begin{equation}
-C = S e^{-qT} P_1 - K e^{-rT} P_2.
+\text{MAE}_g(S) = \frac{1}{|S|} \sum_{x \in S} \bigl| \hat{g}(x) - g(x) \bigr|,
+\label{eq:mae}
 \end{equation}
-Esta formulación tiene una ventaja metodológica importante para el experimento de DML: la Delta de una call europea se obtiene como $\Delta = e^{-qT} P_1$. Si fijamos $q = 0$, entonces $\Delta = P_1$. Esta Delta es el target diferencial del experimento E5. Antes de generar datasets con Delta, la implementación se valida contra diferencias finitas centrales en una grid pequeña de puntos representativos del dominio. La validación no busca que las diferencias finitas sean el método principal, sino detectar errores de implementación, escalado o inestabilidad numérica. El criterio de aceptación es error absoluto medio inferior a $10^{-4}$ en Delta; los errores extremos se revisan manualmente porque pueden señalar problemas de integración, vencimientos demasiado cortos o puntos cercanos a frontera.
-
-Más allá de los tests internos, la implementación se valida también de forma cruzada con QuantLib sobre una grid representativa de inputs. Esta validación externa cubre precio y Delta en Black-Scholes y en Heston, y es lo que cierra la primera fase del proyecto antes de generar datasets grandes. Mantener esta capa de validación es lo que permite descartar que cualquier patrón posterior se deba a un error silencioso en el solver, escenario que contaminaría todo el resto del trabajo.
-
-La inversión a volatilidad implícita se usa solo en evaluación. El inversor debe controlar precios fuera de límites de arbitraje, zonas de Vega baja y fallos de convergencia. Los fallos no se ocultan: se reportan como parte del diagnóstico, especialmente en vencimientos muy cortos o regiones muy fuera del dinero.
+donde $g(x)$ es el valor del solver de referencia y $\hat{g}(x)$ el del surrogate. Las tres magnitudes son el precio normalizado ($g = C/K$), la volatilidad implícita ($g = \sigma_{\text{IV}}$) y la Delta ($g = \Delta$), que dan $\text{MAE}(C/K)$, $\text{MAE}_{\text{IV}}$ y $\text{MAE}_{\Delta}$.
 
 \subsection{Dominio, muestreo y particiones}
 
-Los datasets se generan muestreando un hipercubo de inputs. Esta decisión sigue la lógica de Chen et al.: tratamos los parámetros del modelo como pseudo-estados para que una única red aprenda la función de pricing en muchas parametrizaciones posibles. La distribución base es uniforme, porque cubre el dominio completo y no replica únicamente las regiones más frecuentes del mercado. La \autoref{tab:dominio} fija el dominio contractual común y el dominio adicional de Heston.
+Los datasets de entrenamiento de los surrogates se generan muestreando un hipercubo de inputs. La distribución base es uniforme, porque cubre el dominio completo y no replica únicamente las regiones más frecuentes del mercado. La \autoref{tab:dominio} fija el dominio contractual común y el dominio adicional de Heston.
 
 \begin{table}[ht]
 \centering
@@ -639,15 +679,30 @@ $\xi$ & $[0.10,\ 3.00]$ & Heston, vol-of-vol moderada a extrema \\
 $\rho$ & $[-0.95,\ -0.05]$ & Heston, skew negativo típico de equity \\
 \bottomrule
 \end{tabular}
-\caption{Dominio contractual común y dominio adicional de Heston. Es deliberadamente amplio: incluye weeklies, wings profundas y volatilidades de estrés.}
+\caption{Dominio contractual común y dominio adicional de Heston. Es deliberadamente amplio e incluye weeklies, wings profundas y volatilidades de estrés.}
 \label{tab:dominio}
 \end{table}
 
-La elección de $v_0$ y $\theta$ se expresa en varianza pero se interpreta a través de su raíz cuadrada porque esa es la escala financiera natural. El rango cubre desde volatilidades bajas hasta episodios de estrés severo sin forzar al solver a vivir permanentemente en casos extremos. No imponemos la condición de Feller $2\kappa\theta \geq \xi^2$ como restricción de muestreo. Tratarla como filtro obligatorio haría el problema más limpio pero menos representativo de calibraciones reales, donde muchas violaciones aparecen en condiciones de mercado normales. En su lugar, se guarda como variable diagnóstica.
+La elección de $v_0$ y $\theta$ se expresa en varianza pero se interpreta a través de su raíz cuadrada porque esa es la escala financiera natural. El rango cubre desde volatilidades bajas hasta episodios de estrés severo. No imponemos la condición de Feller $2\kappa\theta \geq \xi^2$ como restricción de muestreo. Tratarla como filtro obligatorio haría el problema más limpio pero menos representativo de calibraciones reales, donde muchas violaciones aparecen en condiciones de mercado normales.
 
-El muestreo baseline es uniforme en la escala financiera elegida. Para Black-Scholes, esto significa uniforme directo sobre $m$, $T$, $r$ y $\sigma$. Para Heston, $\sqrt{v_0}$ y $\sqrt{\theta}$ se muestrean uniformemente en $[0.03, 1.00]$ y después se elevan al cuadrado; $\kappa$, $\xi$ y $\rho$ se muestrean uniformemente en sus rangos. Esta decisión evita una distorsión importante: una uniforme directa sobre varianza sobreponderaría volatilidades muy altas.
+El muestreo baseline es uniforme en la escala financiera elegida. Formalmente, el dominio de inputs es el hipercubo $\mathcal{D} = \prod_{k=1}^{d} [l_k, u_k]$, y el sampler uniforme genera cada punto con coordenadas independientes, de densidad
+\begin{equation}
+p_{\text{unif}}(x) = \prod_{k=1}^{d} p_k(x_k), \qquad x \in \mathcal{D}.
+\label{eq:p-unif}
+\end{equation}
+Para Black-Scholes cada $p_k$ es uniforme directa sobre $m$, $T$, $r$ y $\sigma$. Para Heston, $\kappa$, $\xi$ y $\rho$ se muestrean también de forma uniforme, pero las varianzas se muestrean en escala de raíz, tomando $\sqrt{v_0} \sim \mathcal{U}[\sqrt{l},\sqrt{u}]$ —y análogamente $\theta$— y elevando al cuadrado, lo que equivale a una densidad $p_k(x_k) \propto x_k^{-1/2}$ sobre el intervalo. Esta transformación traslada masa hacia las volatilidades bajas y evita que una uniforme directa sobre la varianza sobreponderase las volatilidades extremas.
 
-La comparación de métodos de muestreo se concentra únicamente en el experimento E3. El resto de experimentos usa el baseline uniforme. En E3 se añade un sampler enfocado, con más masa cerca del at-the-money y de vencimientos cortos, donde la función de pricing tiene mayor curvatura. La construcción concreta es una mezcla 50/50: la mitad de las muestras sigue el baseline uniforme completo y la otra mitad usa $m \sim \mathrm{TruncNormal}(1.0, 0.15, [0.7, 1.3])$ y $T \sim \mathrm{LogUniform}(7/365, 0.25)$. La \autoref{fig:samplers} compara ambas distribuciones en el plano $(m, T)$.
+La comparación de métodos de muestreo se concentra únicamente en el experimento E3. El resto de experimentos usa el baseline uniforme. En E3 se añade un sampler enfocado, con más masa cerca del at-the-money y de vencimientos cortos, donde la función de pricing tiene mayor curvatura. La construcción concreta es una mezcla con peso $\lambda = 1/2$ entre el baseline uniforme y una componente concentrada,
+\begin{equation}
+p_{\text{foc}}(x) = (1-\lambda)\, p_{\text{unif}}(x) + \lambda\, p_{\text{conc}}(x).
+\label{eq:p-foc}
+\end{equation}
+La componente concentrada $p_{\text{conc}}$ mantiene $r$ y los parámetros de Heston con la misma ley uniforme del baseline, pero reemplaza la moneyness y el vencimiento por una normal truncada centrada en el at-the-money y una log-uniforme en el corto plazo,
+\begin{equation}
+m \sim \mathcal{N}_{[0.7,\,1.3]}\!\left(1.0,\, 0.15^2\right), \qquad \log T \sim \mathcal{U}\!\left[\log\tfrac{7}{365},\, \log 0.25\right].
+\label{eq:p-conc}
+\end{equation}
+Así, $p_{\text{foc}}$ conserva la cobertura global del dominio a través de su componente uniforme y añade densidad donde la aproximación es más difícil. La \autoref{fig:samplers} compara ambas distribuciones en el plano $(m, T)$.
 
 % --- FIGURA: sampler uniforme vs focused -------------------------------------
 \begin{figure}[ht]
@@ -739,14 +794,17 @@ La comparación de métodos de muestreo se concentra únicamente en el experimen
 \label{fig:samplers}
 \end{figure}
 
-La partición de datos tiene tres niveles. El entrenamiento usa la distribución propia de cada surrogate. La validación usa una muestra independiente uniforme de cincuenta mil puntos por familia de modelo y sirve para monitorizar convergencia y seleccionar el checkpoint. La regla de selección es siempre el menor $\text{MAE}(C/K)$ en validación, incluso cuando la pérdida de entrenamiento incluye Delta. Mantener la regla fija es importante para que las comparaciones sean limpias: si el surrogate entrenado con DML se seleccionase con una métrica combinada de precio y Delta, no sabríamos si la mejora viene de la pérdida diferencial o de haber escogido otro punto de la trayectoria de entrenamiento.
+La partición de datos tiene tres niveles. El entrenamiento usa la distribución propia de cada surrogate. La validación usa una muestra independiente uniforme de dos millones y medio de puntos por familia de modelo y sirve para monitorizar convergencia y seleccionar el checkpoint. La regla de selección es siempre el menor $\text{MAE}(C/K)$ en validación, incluso cuando la pérdida de entrenamiento incluye Delta. Mantener la regla fija es importante para que las comparaciones sean limpias. Si el surrogate entrenado con DML se seleccionase con una métrica combinada de precio y Delta, no sabríamos si la mejora viene de la pérdida diferencial o de haber escogido otro punto de la trayectoria de entrenamiento.
 
-El test final es independiente y balanceado por bins, y se comparte por todos los surrogates de una misma familia. Cada uno de los veinticinco bins tiene cinco mil puntos, para un total de ciento veinticinco mil observaciones. Esta decisión es especialmente importante en E3: si evaluásemos H-5 en una muestra con la misma concentración con la que entrena, confundiríamos precisión local con mejora global. El test balanceado permite ver exactamente dónde gana y dónde pierde el sampler enfocado.
+Por último, dentro de este apartdo metodológico es importante mencionar la técncia de evaluación por bins. Esta técncia es crucial porque el error medio global no es suficientemente representativo, una red puede tener buen MAE agregado y, aun así, fallar sistemáticamente en opciones ATM de vencimiento corto o en regiones OTM donde la Vega es baja. Por eso usamos una partición $5 \times 5$ por moneyness y vencimiento, representada en la \autoref{fig:bins}. Formalmente, los intervalos de moneyness $\{M_i\}_{i=1}^{5}$ y de vencimiento $\{T_j\}_{j=1}^{5}$ definen veinticinco bins $B_{ij} = M_i \times T_j$, y la métrica de la ecuación~\eqref{eq:mae} se evalúa restringida a cada uno,
+\begin{equation}
+\text{MAE}_g(B_{ij}) = \frac{1}{|S \cap B_{ij}|} \sum_{x \in S \cap B_{ij}} \bigl| \hat{g}(x) - g(x) \bigr|.
+\label{eq:mae-bin}
+\end{equation}
 
-La evaluación por bins es obligatoria porque los errores medios globales son insuficientes. Una red puede tener buen MAE agregado y, aun así, fallar sistemáticamente en opciones ATM de vencimiento corto o en regiones OTM donde la Vega es baja. Por eso usamos una partición $5 \times 5$ por moneyness y vencimiento, representada en la \autoref{fig:bins}. Las métricas se reportan en un dominio interior que recorta un cinco por ciento de cada dimensión del hipercubo, para que los errores de frontera no dominen el promedio global.
 
 % --- FIGURA: bins 5x5 -------------------------------------------------------
-\begin{figure}[ht]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[x=1.5cm, y=1.05cm, font=\scriptsize]
   % grid bins 5x5
@@ -788,15 +846,20 @@ La evaluación por bins es obligatoria porque los errores medios globales son in
     {bins críticos de E3 \\(ATM \& vencimiento corto, en azul intenso)};
   \draw[paperblue, thick] (5.35, 2.5) -- (4.95, 2.5);
 \end{tikzpicture}
-\caption{Partición $5 \times 5$ del dominio en bins de moneyness y vencimiento. Los bins ATM combinados con weekly, short y medium-short (sombreados en azul intenso) son los críticos para E3 por su mayor curvatura.}
+\caption{Partición $5 \times 5$ del dominio en bins de moneyness y vencimiento. Los bins ATM combinados con weekly, short y medium-short (sombreados en amarillo intenso) son los bins donde se ha con centrado el muestreo en el experimento 3.}
 \label{fig:bins}
 \end{figure}
+
+\paragraph{Volumen de datos.}
+Los tamaños de entrenamiento y validación de la \autoref{tab:surrogates} corresponden al formato final del proyecto y son consecuencia de una decisión de escalado tomada durante el desarrollo. El diseño inicial era un orden de magnitud menor (200k puntos para Black-Scholes, 500k para Heston, 100k para las variantes small y 50k de validación). Sobre ese diseño todos los surrogates se estancaban en un $\text{MAE}(C/K)$ de validación del orden de $10^{-2}$. Tras realizar este primer proceso de generación del dataset y entrenamiento de las redes, pudimos sacar métricas de rendimiento de nuestro hardware disponible (CPU Intel i9-14900K, 64\,GB de RAM y GPU NVIDIA RTX 4060), las métricas obtenidas nos permitieron plantear un escalado del dataset de 50 veces el tamaño incial. Manteniendo fijos arquitectura, optimizador, pérdida, número de épocas y semillas, se redujo el $\text{MAE}(C/K)$ de validación entre un 37\,\% y un 91\,\% en los once surrogates, hasta el orden de $10^{-3}$. La generación de los datasets costó alrededor de ocho horas de cómputo y reentrenar los once surrogates algo más de una hora.
+
+\newpage
 
 % =============================================================================
 \section{Experimentos}\label{sec:experimentos}
 % =============================================================================
 
-Cinco experimentos comparativos sostienen el trabajo, uno por cada dimensión del problema que aislamos para estudiarla. Cada experimento responde a una pregunta única, varía una sola dimensión y mantiene todo lo demás fijo. Esta rigidez es la que permite atribuir cualquier diferencia observada a la dimensión que estamos variando y no a otras variables que se nos hayan colado por accidente: si se cambia activación no se cambia dataset; si se cambia sampler no se cambia arquitectura; si se cambia pérdida se conservan tamaño, muestra y protocolo de entrenamiento. Las semillas de generación y entrenamiento quedan fijadas por configuración y registradas para asegurar reproducibilidad, no elegidas después de observar resultados. Para los experimentos con clasificación operativa, los umbrales positivo fuerte/débil/negativo se fijan antes de ver los datos para evitar interpretaciones oportunistas al redactar conclusiones.
+El trabajo se estructura a través de 5 experimentos, cada uno responde a una pregunta distinta. Este diseño nos permite hacer una atribución limpia de los cambios observados, si se cambia activación no se cambia dataset, si se cambia sampler no se cambia arquitectura, si se cambia pérdida se conservan tamaño, muestra y parámetros de entrenamiento. Las semillas de generación y entrenamiento quedan fijadas por configuración y registradas para asegurar reproducibilidad.
 
 \newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{#1}}
 \begin{table}[ht]
@@ -814,32 +877,15 @@ ID & Pregunta & Lo que varía & Surrogates & Resultado esperado \\
 \textbf{E5} & ¿Entrenar con Delta diferencial mejora la eficiencia muestral? & Targets de entrenamiento & H-3-small, H-6-small, H-3 & H-6-small con mejor Delta y precio comparable a H-3-small. \\
 \bottomrule
 \end{tabular}
-\caption{Los cinco experimentos del trabajo. Cada uno responde a una pregunta única, varía una sola dimensión y mantiene todo lo demás fijo.}
+\caption{Los cinco experimentos del trabajo. Cada uno responde a una pregunta única, se altera una única variable y se mantiene todo lo demás fijo.}
 \label{tab:experimentos}
 \end{table}
 
-\begin{table}[ht]
-\centering
-\small
-\renewcommand{\arraystretch}{1.2}
-\begin{tabular}{R{0.5cm} R{5.2cm} R{7.5cm}}
-\toprule
-ID & Métrica primaria & Controles y diagnóstico \\
-\midrule
-E1 & Discrepancia $\text{MAE}(C/K)$ vs $\text{MAE}_{\text{IV}}$ por bin & Sin umbral; Vega/proxy, percentiles altos y fallos de IV \\
-E2 & $\text{MAE}_\Delta$ por bin & Sin umbral; activaciones suaves vs ReLU y precio como control \\
-E3 & $\text{MAE}_{\text{IV}}$ en bins ATM con weekly, short, medium-short & Positivo fuerte si mejora $\geq 10\%$ y global empeora $\leq 10\%$; precio como control \\
-E4 & $\text{speedup} = t_{\text{solver}} / t_{\text{surrogate}}$ por tamaño de lote & Lotes $10^2$--$10^5$, 3 warmups + 10 repeticiones, mediana, CPU/GPU separado \\
-E5 & Mejora de $\text{MAE}_\Delta$ de H-6-small vs H-3-small & Positivo fuerte si $\Delta$ mejora $\geq 20\%$ y precio empeora $\leq 10\%$; distancia frente a H-3 \\
-\bottomrule
-\end{tabular}
-\caption{Métrica primaria y controles para cada experimento.}
-\label{tab:metricas}
-\end{table}
+El experimento 1 es observacional y no requiere entrenar redes adicionales. La idea detrás es sencilla, los surrogates se entrenan con el precio normalizado por moneyness como target, sin embargo, en el día a día de la industria lo habitual es hablar en términos de volatilidad implícita, por ende es muy valioso estudiar cómo se comportan los errores de estimación al invertir las IVs.
 
-E1 es observacional. No requiere entrenar nada nuevo, simplemente recalcula métricas sobre un surrogate que ya está entrenado para otros experimentos. La razón por la que merece llamarse experimento aparte es que la pregunta que responde es metodológica: nos dice si dos surrogates con MAE de precio aparentemente similares pueden tener errores muy distintos en la métrica que de verdad importa en el mercado, que es la volatilidad implícita.
+El experimento 2 pregunta qué función de activación produce la mejor Delta, esta pregunta tiene el objetivo de ahondar en una idea ya introducida por el paper de DeepSurrogates \cite{chen2025} donde los autores proponen la función Swish como la mejor posicionada para las arquitecturas de los surrogates financieros. Este análisis es muy relevante, ya que no entrenamos la red para predecir la Delta, sino que la obtenemos derivando la propia red por autograd. Como la salida es una composición de capas lineales y activaciones, la suavidad de la activación gobierna directamente la suavidad de esa derivada. En la \autoref{fig:activations} se aprecia que las cuatro activaciones aproximan el precio con perfiles parecidos, pero solo ReLU tiene una derivada discontinua en cero. Esa discontinuidad se hereda en el gradiente y ensucia la Delta aprendida, mientras que Swish, Softplus y tanh, suaves en todo el dominio, producen derivadas estables. El matiz que da sentido al experimento es que el error en precio puede ser indistinguible entre activaciones, porque todas aproximan bien el valor, y la diferencia solo aflora al mirar la derivada, que es justo la magnitud que importa para cubrir y gestionar riesgo. Por eso la métrica primaria de E2 es el error de Delta y el precio queda como control.
 
-E2 es el experimento más cargado en surrogates porque la activación es la única decisión arquitectónica que afecta directamente la calidad de las derivadas. La intuición se ve en la \autoref{fig:activations}: ReLU, Softplus, Swish y tanh producen perfiles de salida parecidos, pero solo ReLU tiene una derivada discontinua en cero, mientras que las otras tres son suaves en todo el dominio. Cuando la Delta del surrogate se obtiene por autograd, esa discontinuidad de la activación se propaga al gradiente y degrada la calidad de la Delta aprendida, aunque el error en precio sea comparable. Entrenar las cuatro activaciones sobre Black-Scholes nos sirve como control en un entorno donde conocemos la solución exacta y las Deltas analíticas, y entrenarlas sobre Heston confirma o desmiente el patrón en el caso real.
+\newpage
 
 % --- FIGURA: activaciones y sus derivadas -----------------------------------
 \begin{figure}[ht]
@@ -884,9 +930,9 @@ E2 es el experimento más cargado en surrogates porque la activación es la úni
   legend style={draw=papergrey!30, fill=white, font=\scriptsize, at={(0.98,0.02)}, anchor=south east, row sep=-2pt}
 ]
   \addplot[domain=-3:-0.001, samples=2, paperred, thick] {0};
-  \addplot[domain=0.001:3, samples=2, paperred, thick] {1};
-  \addplot[only marks, mark=o, mark size=1.4pt, paperred] coordinates {(0,0) (0,1)};
   \addlegendentry{ReLU'}
+  \addplot[domain=0.001:3, samples=2, paperred, thick, forget plot] {1};
+  \addplot[only marks, mark=o, mark size=1.4pt, paperred, forget plot] coordinates {(0,0) (0,1)};
   \addplot[domain=-3:3, samples=120, paperorange, thick] {1/(1+exp(-x))};
   \addlegendentry{Softplus'}
   \addplot[domain=-3:3, samples=120, papergreen, thick]
@@ -902,13 +948,13 @@ E2 es el experimento más cargado en surrogates porque la activación es la úni
 \label{fig:activations}
 \end{figure}
 
-E3 ataca una idea clásica de métodos numéricos transferida al dominio de los surrogates: concentrar el esfuerzo computacional en las regiones donde la función es más difícil de aproximar. La comparación es limpia porque H-3 y H-5 difieren solo en la distribución de muestreo: misma arquitectura, mismo número total de puntos, misma pérdida y mismo tamaño total del dataset.
+El experimento 3 ataca una idea recurrente en métodos numéricos transferida al dominio de los surrogates, concentrar el esfuerzo computacional en las regiones donde la función es más difícil de aproximar. La comparación es limpia porque H-3 y H-5 difieren solo en la distribución de muestreo.
 
-E4 es de medición, no de comparación. Cronometra evaluaciones de H-3 contra el solver original de Heston en lotes de tamaño creciente. Reportar el speedup como función del tamaño de lote es más honesto que dar un único número que dependería arbitrariamente del lote elegido.
+El experimento 4 es de medición, el objetivo es cuantificar la mejora de rendimiento de los surrogates frente a los solvers. Para ello, se cronometran evaluaciones de H-3 contra el solver original de Heston en lotes de tamaño creciente. Reportar la mejora de rendimiento como función del tamaño de lote es más representativo que dar un único número que dependería arbitrariamente del tamaño de lote elegido.
 
-E5 prueba la hipótesis central del paper de Huge y Savine en nuestro setting de forma acotada: si además de precios generamos Delta verdadera, ¿puede el surrogate aprender mejor la forma local de la función de pricing con menos datos? Delta es la Greek más limpia para este primer experimento porque, usando $y = C/K$ y $m = S/K$, se cumple $\Delta = \partial y / \partial m$.
+Por último, el experimento 5 prueba la hipótesis central del paper de Huge y Savine aplicada a nuestro dominio. Si además de precios generamos la Delta verdadera, ¿puede el surrogate aprender mejor la forma local de la función de pricing con menos datos? La Delta es el target diferencial natural de este experimento. Con $y = C/K$ y $m = S/K$ se cumple $\Delta = \partial y / \partial m$, de modo que es la derivada de la salida respecto a una sola entrada, de primer orden y sin más reescalado que el de la normalización. Además, disponemos de su valor verdadero de forma analítica ($N(d_1)$ en Black-Scholes y $P_1$ en Heston), lo que da un objetivo fiable contra el que entrenar.
 
-Once surrogates sostienen los cinco experimentos: cada uno necesita un conjunto mínimo de surrogates entrenados para sostener su comparación y muchos se solapan. H-3, el surrogate de Heston con configuración baseline, aparece como referencia en los cinco experimentos. Esa centralidad evita que el coste computacional total se dispare y justifica que dediquemos especial cuidado a su entrenamiento.
+Para llevar a cabo los cinco experimentos se han entrenado once surrogates, recogidos en la \autoref{tab:surrogates}. La nomenclatura distingue la familia de modelo, BS para Black-Scholes y H para Heston, y el sufijo small marca las variantes de muestra reducida que usa E5. H-3 en particular es la referencia que atraviesa los cinco experimentos, de modo que las comparaciones parten siempre del mismo punto y solo cambia la variable que cada experimento aísla.
 
 \begin{table}[ht]
 \centering
@@ -918,81 +964,289 @@ Once surrogates sostienen los cinco experimentos: cada uno necesita un conjunto 
 \toprule
 ID & Modelo & Activación & Pérdida & Dataset & Experimentos \\
 \midrule
-BS-1 & Black-Scholes & ReLU      & $L_1(\text{precio})$ & 200k uniforme & E2 \\
-BS-2 & Black-Scholes & Softplus  & $L_1(\text{precio})$ & 200k uniforme & E2 \\
-\textbf{BS-3} & \textbf{Black-Scholes} & \textbf{Swish} & $\boldsymbol{L_1(\text{precio})}$ & \textbf{200k uniforme} & \textbf{E1, E2} \\
-BS-4 & Black-Scholes & tanh      & $L_1(\text{precio})$ & 200k uniforme & E2 \\
-H-1  & Heston        & ReLU      & $L_1(\text{precio})$ & 500k uniforme & E2 \\
-H-2  & Heston        & Softplus  & $L_1(\text{precio})$ & 500k uniforme & E2 \\
-\textbf{H-3} & \textbf{Heston} & \textbf{Swish} & $\boldsymbol{L_1(\text{precio})}$ & \textbf{500k uniforme} & \textbf{E1--E5} \\
-H-4  & Heston        & tanh      & $L_1(\text{precio})$ & 500k uniforme & E2 \\
-H-5  & Heston        & Swish     & $L_1(\text{precio})$ & 500k \textbf{enfocado} & E3 \\
-H-3-small & Heston   & Swish     & $L_1(\text{precio})$ & 100k uniforme & E5 \\
-H-6-small & Heston   & Swish     & $L_1(\text{precio}) + L_1(\Delta)$ & 100k uniforme + $\Delta$ & E5 \\
+BS-1 & Black-Scholes & ReLU      & $L_1(\text{precio})$ & 10M uniforme & E2 \\
+BS-2 & Black-Scholes & Softplus  & $L_1(\text{precio})$ & 10M uniforme & E2 \\
+\textbf{BS-3} & \textbf{Black-Scholes} & \textbf{Swish} & $\boldsymbol{L_1(\text{precio})}$ & \textbf{10M uniforme} & \textbf{E1, E2} \\
+BS-4 & Black-Scholes & tanh      & $L_1(\text{precio})$ & 10M uniforme & E2 \\
+H-1  & Heston        & ReLU      & $L_1(\text{precio})$ & 25M uniforme & E2 \\
+H-2  & Heston        & Softplus  & $L_1(\text{precio})$ & 25M uniforme & E2 \\
+\textbf{H-3} & \textbf{Heston} & \textbf{Swish} & $\boldsymbol{L_1(\text{precio})}$ & \textbf{25M uniforme} & \textbf{E1--E5} \\
+H-4  & Heston        & tanh      & $L_1(\text{precio})$ & 25M uniforme & E2 \\
+H-5  & Heston        & Swish     & $L_1(\text{precio})$ & 25M \textbf{enfocado} & E3 \\
+H-3-small & Heston   & Swish     & $L_1(\text{precio})$ & 5M uniforme & E5 \\
+H-6-small & Heston   & Swish     & $L_1(\text{precio}) + L_1(\Delta)$ & 5M uniforme + $\Delta$ & E5 \\
 \bottomrule
 \end{tabular}
 \caption{Los once surrogates del trabajo. Todos los comparados dentro de un mismo experimento comparten arquitectura, optimizador, hiperparámetros y protocolo de evaluación; las semillas quedan fijadas por configuración para garantizar reproducibilidad.}
 \label{tab:surrogates}
 \end{table}
 
-En E5 sí varía deliberadamente el tamaño del dataset porque la pregunta no es solo si DML mejora las Greeks, sino si permite alcanzar precisión comparable con menos muestras. Esa es la única excepción a la regla de una sola dimensión por experimento, y se gestiona reportando explícitamente la distancia de H-6-small frente a H-3 además de la mejora sobre H-3-small.
+ 
+
+
+\newpage
 
 % =============================================================================
 \section{Resultados}\label{sec:resultados}
 % =============================================================================
 
-Cada subsección reporta uno de los cinco experimentos descritos en la \autoref{sec:experimentos}. La estructura es común a todos: se recuerda brevemente la configuración, se presentan las métricas observadas mediante tablas y figuras por bin, y se discute la implicación a la luz de la hipótesis previa. En los experimentos con clasificación operativa (E3 y E5) se aplica el criterio fuerte/débil/negativo fijado antes de ver los datos. En el resto el resultado se reporta en términos de patrones por bin y de robustez de los hallazgos.
+Esta sección presenta los resultados de los cinco experimentos, en el mismo orden en que se plantearon en la \autoref{sec:experimentos}. Cada subsección retoma la pregunta del experimento correspondiente y presenta las métricas observadas a través de gráficos y tablas.
 
 \subsection{E1 --- Precio frente a volatilidad implícita}\label{sec:res-e1}
 
-E1 es observacional. Se recalculan, sobre los surrogates ya entrenados BS-3 y H-3, las tres métricas básicas ($\text{MAE}(C/K)$, $\text{MAE}_{\text{IV}}$ y $\text{MAE}_\Delta$) por bin del test balanceado. La pregunta es si dos surrogates con error de precio aparentemente similar pueden tener errores de volatilidad implícita muy distintos en regiones concretas del dominio, y por tanto si la métrica elegida para la validación importa de forma operativa.
+En este experimento se utilizan BS-3 y H-3 y se calculan los errores por bin en dos escalas, el precio normalizado $C/K$ y la volatilidad implícita. Comparar ambas responde a la pregunta del experimento, si un error de precio pequeño garantiza también un error de volatilidad implícita pequeño.
 
-% TODO: tabla por bin con MAE(C/K), MAE_IV, Vega/proxy, percentiles y tasa de fallos del inverter.
-% TODO: heatmaps 5x5 de MAE(C/K) y MAE_IV.
-% TODO: párrafo final con conclusión metodológica.
+La \autoref{fig:e1-raw} responde a esa pregunta mostrando los errores absolutos medios por bin de las dos métricas, y el contraste entre ellas es el resultado central del experimento. El error de precio $\text{MAE}(C/K)$ es casi uniforme sobre la rejilla, alcanza su máximo en la columna at-the-money de vencimiento corto y su mínimo en las alas, pero todos los bins comparten el mismo orden de magnitud, de modo que un surrogate juzgado solo por el precio parecería homogéneamente bueno en todo el dominio. El error de volatilidad implícita $\text{MAE}_{\text{IV}}$ se comporta de forma opuesta, es despreciable en el interior y a vencimientos largos, pero crece en las opciones muy fuera y muy dentro del dinero de vencimiento semanal y corto. En consecuencia, las regiones donde la red aproxima mejor el precio son precisamente donde peor recupera la volatilidad implícita, y este patrón se repite sin cambios en Black-Scholes y en Heston.
+
+% --- FIGURA E1: heatmaps crudos de MAE precio e IV (BS-3 y H-3) -------------
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.49\textwidth]{assets/e1_bs3_price.png}\hfill
+\includegraphics[width=0.49\textwidth]{assets/e1_bs3_iv.png}\\[6pt]
+\includegraphics[width=0.49\textwidth]{assets/e1_h3_price.png}\hfill
+\includegraphics[width=0.49\textwidth]{assets/e1_h3_iv.png}
+\caption{Errores absolutos medios por bin sobre el test balanceado. Fila superior: BS-3; fila inferior: H-3. Columna izquierda: $\text{MAE}(C/K)$ (error de precio); columna derecha: $\text{MAE}_{\text{IV}}$ (error de volatilidad implícita), esta con escala de color logarítmica porque cruza tres órdenes de magnitud. El error de precio es casi uniforme, con su máximo en ATM de vencimiento corto; el error de IV se concentra en las alas de vencimiento corto. Los dos patrones están anticorrelacionados y se repiten en ambos modelos.}
+\label{fig:e1-raw}
+\end{figure}
+
+El error se amplifica de forma tan desigual porque pasar de un error de precio a un error de volatilidad implícita no cuesta lo mismo en todo el dominio, depende de cuánto responda el precio a la volatilidad en cada punto. En las regiones donde el precio es muy sensible a la volatilidad, la inversión a IV está bien planteada y un error de precio se traduce en un error de IV parecido. Donde el precio apenas depende de la volatilidad, la inversión está mal condicionada y un error de precio minúsculo se convierte en un error de IV enorme. Esa sensibilidad del precio a la volatilidad es la Vega, de modo que la hipótesis es que la amplificación del error debe crecer justo donde la Vega se desploma.
+
+Para contrastar este análisis con una única magnitud comparable entre Black-Scholes y Heston, se ha introducido una Vega proxy, que se define como la Vega de Black-Scholes evaluada en la volatilidad implícita del precio objetivo. Como la inversión a IV se hace siempre contra Black-Scholes, esa proxy es la pendiente local que gobierna la conversión de precio a IV. En Black-Scholes coincide con la Vega verdadera y en Heston, que no tiene una Vega nativa, actúa como aproximación comparable. La \autoref{tab:e1} cuantifica el contraste sobre H-3 en una selección de bins que cubre todo el espectro de la rejilla, y añade la Vega proxy media del bin y la tasa de fallos de inversión de IV. La razón $\text{MAE}_{\text{IV}}/\text{MAE}(C/K)$ pasa de valores de orden unidad en el interior a más de mil en las alas de vencimiento corto, y esa amplificación acompaña punto por punto al colapso de la Vega proxy y al aumento de los fallos, tal como anticipa la hipótesis.
+
+\begin{table}[ht]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{l r r r r r}
+\toprule
+Bin (H-3) & $\text{MAE}(C/K)$ & $\text{MAE}_{\text{IV}}$ & razón & Vega proxy & fallo IV \\
+\midrule
+\multicolumn{6}{l}{Alas y vencimiento corto (Vega baja)} \\
+deep\_otm\_weekly        & $1{,}1\times 10^{-3}$ & $1{,}57$               & $1444$ & $7{,}3\times 10^{-5}$ & $41{,}0\%$ \\
+deep\_otm\_short         & $6{,}8\times 10^{-4}$ & $7{,}8\times 10^{-1}$ & $1136$ & $8{,}8\times 10^{-4}$ & $35{,}6\%$ \\
+deep\_otm\_medium\_short & $4{,}1\times 10^{-4}$ & $1{,}9\times 10^{-1}$ & $465$  & $9{,}8\times 10^{-3}$ & $26{,}6\%$ \\
+deep\_itm\_weekly        & $1{,}7\times 10^{-3}$ & $5{,}8\times 10^{-1}$ & $345$  & $1{,}4\times 10^{-3}$ & $55{,}8\%$ \\
+\midrule
+\multicolumn{6}{l}{Interior y vencimiento largo (Vega alta)} \\
+atm\_long                & $9{,}6\times 10^{-4}$ & $2{,}2\times 10^{-3}$ & $2{,}3$ & $4{,}3\times 10^{-1}$ & $0{,}08\%$ \\
+atm\_medium              & $7{,}7\times 10^{-4}$ & $2{,}8\times 10^{-3}$ & $3{,}7$ & $2{,}9\times 10^{-1}$ & $0{,}06\%$ \\
+otm\_medium              & $5{,}9\times 10^{-4}$ & $4{,}1\times 10^{-3}$ & $6{,}9$ & $2{,}0\times 10^{-1}$ & $2{,}8\%$  \\
+\bottomrule
+\end{tabular}
+\caption{E1 sobre H-3: bins seleccionados ordenados por razón $\text{MAE}_{\text{IV}}/\text{MAE}(C/K)$. El error de precio es casi constante en todo el dominio, pero el error de IV se amplifica hasta tres órdenes de magnitud en las regiones de Vega baja, donde además fracasa con frecuencia la inversión a volatilidad implícita.}
+\label{tab:e1}
+\end{table}
+
+Formalmente, como el precio es monótono en la volatilidad con derivada $\partial C / \partial \sigma = \mathcal{V}$, conocida como Vega, un error de precio $\delta C$ se traduce a primer orden en un error de volatilidad implícita
+\begin{equation}
+\delta \sigma \approx \frac{\delta C}{\mathcal{V}}.
+\label{eq:iv-vega}
+\end{equation}
+La amplificación es, por tanto, inversamente proporcional a la Vega del bin, máxima en las opciones muy fuera del dinero o de vencimiento muy corto y de orden unidad en las at-the-money de vencimiento largo. La \autoref{fig:e1-scatter} hace visible esta relación reuniendo en un único plano el error de precio, el error de IV y la Vega de cada bin.
+
+% --- FIGURA E1: scatter precio vs IV por bin --------------------------------
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\textwidth]{assets/e1_scatter.png}
+\caption{Error de IV frente a error de precio por bin. Cada marcador es uno de los 25 bins del test balanceado, para H-3 (círculos) y BS-3 (triángulos). El eje horizontal es el $\text{MAE}(C/K)$ y el vertical el $\text{MAE}_{\text{IV}}$, ambos en escala logarítmica. El color codifica la Vega proxy media del bin (barra lateral): tonos oscuros son Vega baja, tonos dorados Vega alta. Las diagonales discontinuas son rectas de razón constante $\text{MAE}_{\text{IV}}/\text{MAE}(C/K)$: un punto sobre la línea $\times 100$ tiene un error de IV cien veces mayor que su error de precio. Los dos bins anotados son los más extremos de cada surrogate.}
+\label{fig:e1-scatter}
+\end{figure}
+
+Cada punto del plano es un bin y su altura relativa a la abscisa mide la amplificación del error, a un mismo error de precio los bins se reparten sobre diagonales de razón muy distintas, desde la identidad hasta más de mil, lo que confirma que el error de precio no determina el error de IV. El color ordena la dispersión, porque los puntos que ascienden hacia las diagonales altas son sistemáticamente los de Vega baja.
+
+La conclusión de E1 es principalmente metodológica. Un $\text{MAE}(C/K)$ bajo no implica un $\text{MAE}_{\text{IV}}$ bajo, porque en las regiones de Vega baja, que son las operativamente delicadas, dos surrogates con error de precio indistinguible pueden diferir por varios órdenes de magnitud en la IV. Esas mismas regiones acumulan un segundo problema, porque ahí la inversión a volatilidad implícita no solo amplifica el error sino que con frecuencia ni siquiera converge, con tasas de fallo que de media por bin alcanzan el $24{,}1\%$ en BS-3 y el $14{,}5\%$ en H-3. Son, además, las opciones más ilíquidas, donde el propio mercado cotiza la volatilidad implícita con menos fiabilidad, de modo que el surrogate falla justo donde el dato de referencia también es más frágil.
+
+\newpage
 
 \subsection{E2 --- Activaciones y calidad de Delta}\label{sec:res-e2}
 
-E2 compara las cuatro activaciones (ReLU, Softplus, Swish y tanh) sobre Black-Scholes (BS-1..4) y sobre Heston (H-1..4), manteniendo arquitectura, optimizador, dataset y protocolo de evaluación fijos. Las semillas de entrenamiento están fijadas por configuración y registradas en los checkpoints, por lo que el experimento es reproducible aunque no use una semilla común para todas las activaciones. La métrica primaria es $\text{MAE}_\Delta$ por bin; $\text{MAE}(C/K)$ se reporta como control para verificar que las activaciones suaves no degradan el nivel del precio. La hipótesis es que la falta de suavidad de ReLU se propaga a la Delta calculada por autograd, generando errores sustancialmente mayores aunque el precio sea comparable.
+Este segundo experimento compara las cuatro activaciones más comunes (ReLU, Softplus, Swish y tanh) sobre Black-Scholes y sobre Heston, manteniendo arquitectura, optimizador y dataset fijos. La métrica primaria es $\text{MAE}_\Delta$ por bin; $\text{MAE}(C/K)$ se reporta como control para verificar que las activaciones suaves no degradan el nivel del precio. La hipótesis es que la falta de suavidad de ReLU se propaga a la Delta calculada por autograd, generando errores sustancialmente mayores aunque el precio sea comparable.
 
-% TODO: tabla MAE_Delta por activación con percentiles 50/95/99 por bin.
-% TODO: tabla complementaria MAE(C/K) por activación.
-% TODO: figura con histogramas o boxplots de error de Delta agrupados por activación.
-% TODO: discusión sobre la robustez del patrón ReLU vs activaciones suaves entre BS y Heston.
+La pregunta tras este experimento tiene dos caras que conviene mirar simultáneamente, porque una determinada función de activación solo es preferible si mejora la Delta sin renunciar a precisión en precio, una Delta más limpia obtenida a costa de un precio peor no tendría ningún valor. Por eso, la \autoref{fig:e2-tradeoff} sitúa cada activación en el plano cuyos ejes son el error de precio y el error de Delta, promediados sobre los 25 bins, donde la esquina inferior izquierda corresponde a poco error en ambas métricas y un desplazamiento hacia la derecha o hacia arriba señala el coste pagado en una de ellas.
+
+% --- FIGURA E2: trade-off precio vs Delta ----------------------------------
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{assets/e2_tradeoff.png}
+\caption{Compromiso entre error de precio y error de Delta por activación, para Black-Scholes (izquierda) y Heston (derecha). Cada punto es una activación, promediando el error sobre los 25 bins del test balanceado; el eje horizontal es el $\text{MAE}(C/K)$ y el vertical el $\text{MAE}_\Delta$. Abajo a la izquierda es mejor en ambas métricas. Los colores coinciden con los de la \autoref{fig:activations}. Swish (verde) ocupa la esquina inferior izquierda en las dos familias.}
+\label{fig:e2-tradeoff}
+\end{figure}
+
+La lectura del plano es directa. Swish ocupa la esquina inferior izquierda en las dos familias, es decir, consigue a la vez el menor error de Delta y un error de precio igual o inferior al del resto, de modo que su ventaja en la derivada no se logra a costa del precio. ReLU logra un precio muy preciso pero tal y como señala el paper de DeepSurrogates \cite{chen2025}, una muy mala Delta, lo que concuerda con su falta de suavidad. La derivada de Relu es discontinua en cero y esa discontinuidad se propaga a la Delta que se obtiene por autograd. Softplus tiene el mayor error de precio sin mejorar la Delta y tanh queda en una posición intermedia en Black-Scholes pero da la peor Delta en Heston.
+
+La \autoref{tab:e2} recoge los números exactos, incluyendo el percentil 95 del peor bin como diagnóstico de cola.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{l l r r r}
+\toprule
+Surrogate & Activación & $\text{MAE}_\Delta$ media & $\text{MAE}_\Delta$ p95 (peor bin) & $\text{MAE}(C/K)$ media \\
+\midrule
+\multicolumn{5}{l}{Black-Scholes} \\
+BS-3 & Swish    & $1{,}78\times 10^{-2}$ & $1{,}87\times 10^{-1}$ & $1{,}80\times 10^{-3}$ \\
+BS-2 & Softplus & $2{,}32\times 10^{-2}$ & $2{,}11\times 10^{-1}$ & $4{,}27\times 10^{-3}$ \\
+BS-4 & tanh     & $2{,}59\times 10^{-2}$ & $2{,}52\times 10^{-1}$ & $2{,}78\times 10^{-3}$ \\
+BS-1 & ReLU     & $2{,}69\times 10^{-2}$ & $1{,}57\times 10^{-1}$ & $1{,}97\times 10^{-3}$ \\
+\midrule
+\multicolumn{5}{l}{Heston} \\
+H-3 & Swish    & $1{,}11\times 10^{-2}$ & $1{,}76\times 10^{-1}$ & $1{,}29\times 10^{-3}$ \\
+H-2 & Softplus & $1{,}58\times 10^{-2}$ & $1{,}82\times 10^{-1}$ & $2{,}63\times 10^{-3}$ \\
+H-1 & ReLU     & $1{,}64\times 10^{-2}$ & $1{,}22\times 10^{-1}$ & $1{,}27\times 10^{-3}$ \\
+H-4 & tanh     & $1{,}72\times 10^{-2}$ & $2{,}07\times 10^{-1}$ & $1{,}91\times 10^{-3}$ \\
+\bottomrule
+\end{tabular}
+\caption{E2: error medio de Delta y de precio por activación, agregados sobre los 25 bins del test balanceado, más el percentil 95 del peor bin en Delta. Swish minimiza $\text{MAE}_\Delta$ en ambas familias. El control de precio se mantiene en el mismo orden de magnitud para todas las activaciones.}
+\label{tab:e2}
+\end{table}
+
+El error de Delta se concentra en los mismos bins para todas las activaciones, los at-the-money de vencimiento corto, donde la curvatura de la superficie es mayor, de manera que las activaciones difieren en el nivel del error y no en su localización. Un matiz de cola evita sobreinterpretar el resultado, porque ReLU, pese a su peor o casi peor Delta media, tiene el percentil 95 del peor bin más bajo de las cuatro, así que su error es uniformemente mediocre en lugar de catastrófico en regiones concretas. En definitiva, la conclusión de E2 es que, entre las cuatro, Swish es la única elección que mejora las derivadas sin coste apreciable en precio, en línea con la recomendación de Chen et al.
 
 \subsection{E3 --- Muestreo uniforme frente a enfocado}\label{sec:res-e3}
 
-E3 contrasta H-3 (muestreo uniforme) y H-5 (muestreo enfocado en $m \in [0.7, 1.3]$ y vencimientos cortos) evaluados sobre el mismo test balanceado, manteniendo todo lo demás fijo. La métrica primaria es $\text{MAE}_{\text{IV}}$ en los bins ATM combinados con weekly, short y medium-short. Se aplica la clasificación operativa fijada en la \autoref{tab:metricas}: positivo fuerte si la mejora local supera el 10\,\% sin que el error global empeore más del 10\,\%; positivo débil si la mejora es menor o el deterioro global es moderado; negativo si no mejora los bins críticos o el coste global es excesivo.
+E3 contrasta H-3 (muestreo uniforme) y H-5 (muestreo enfocado en $m \in [0.7, 1.3]$ y vencimientos cortos) evaluados sobre el mismo test balanceado, manteniendo todo lo demás fijo. La métrica primaria es $\text{MAE}_{\text{IV}}$ en los bins ATM combinados con weekly, short y medium-short, y como controles reportamos el $\text{MAE}_{\text{IV}}$ global y el $\text{MAE}(C/K)$. El interés está en cuánto reduce el muestreo enfocado el error en esos bins críticos y a qué coste en el resto del dominio.
 
-% TODO: tabla H-3 vs H-5 con MAE_IV y MAE(C/K) por bin, destacando los bins críticos.
-% TODO: figura heatmap diferencia H-5 - H-3 por bin.
-% TODO: clasificación final del resultado.
+Como H-3 y H-5 comparten arquitectura, pérdida, tamaño de dataset y test, y difieren únicamente en la distribución de muestreo de la \autoref{fig:samplers}, cualquier diferencia en el error es atribuible al muestreo. La \autoref{fig:e3-diff} lo resume mostrando, bin a bin, la mejora relativa al pasar del muestreo uniforme al enfocado en dos métricas: la volatilidad implícita, que es la métrica primaria del experimento, y el precio, que actúa como control porque no pasa por la inversión a IV y, por tanto, no hereda la amplificación por Vega descrita en E1 mediante la ecuación~\eqref{eq:iv-vega}. Para una métrica $g$ y un bin $B$, el mapa de color representa la mejora relativa
+\begin{equation}
+\rho_g(B) = \frac{\text{MAE}_g^{\text{H-3}}(B) - \text{MAE}_g^{\text{H-5}}(B)}{\text{MAE}_g^{\text{H-3}}(B)},
+\label{eq:e3-rel}
+\end{equation}
+positiva cuando el muestreo enfocado reduce el error en ese bin y negativa cuando lo aumenta.
+
+% --- FIGURA E3: heatmaps de mejora relativa (IV y precio) ------------------
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.49\textwidth]{assets/e3_diff_iv.png}\hfill
+\includegraphics[width=0.49\textwidth]{assets/e3_diff_price.png}
+\caption{Mejora relativa de H-5 (enfocado) respecto a H-3 (uniforme) por bin, en volatilidad implícita (izquierda) y en precio (derecha), calculada para cada métrica como $(\text{MAE}^{\text{H-3}} - \text{MAE}^{\text{H-5}})/\text{MAE}^{\text{H-3}}$. Los tonos verdes indican que el muestreo enfocado reduce el error y los rojos que lo aumenta. El panel de precio sirve de control porque no está afectado por la amplificación de Vega que introduce la inversión a volatilidad implícita.}
+\label{fig:e3-diff}
+\end{figure}
+
+Las dos métricas coinciden en lo esencial. La ganancia del muestreo enfocado se concentra en at-the-money y vencimientos cortos, donde el sampler de la \autoref{fig:samplers} traslada la mitad de su masa, con mejoras de hasta el 86\,\% tanto en IV como en precio, y el coste se localiza en las alas fuera del dinero de vencimiento medio y largo, que el sampler desatiende. La comparación entre paneles aísla además el efecto de la Vega: en el rincón deep OTM de vencimiento largo el deterioro aparente en IV alcanza el 85\,\%, pero en precio se queda en el 57\,\%, porque la Vega baja amplifica el error de inversión, de modo que el muestreo enfocado empeora ahí la aproximación pero la métrica de IV lo exagera. En conjunto, H-5 mejora en 19 de los 25 bins en IV y en 16 en precio, con el deterioro confinado en ambos casos a las mismas alas de baja liquidez.
+
+La \autoref{tab:e3} cuantifica la métrica primaria, que es el $\text{MAE}_{\text{IV}}$ medio en los tres bins críticos at-the-money, y los controles globales. La mejora en los bins críticos es del 79,7\,\%, una reducción muy sustancial del error. El error global tampoco empeora; al contrario, el muestreo enfocado lo reduce con cualquier estadístico de agregación. Conviene aquí una cautela: la media sobre bins está dominada por unas pocas colas de error elevado, las alas de Vega baja donde además la inversión a IV es poco fiable, de modo que por sí sola no es un buen resumen de la calidad global. Por eso la tabla acompaña la media de la mediana y el percentil 75, más robustos a esas colas. En IV la media mejora un 21,2\,\% y la mediana un 32,2\,\%; que la mejora en mediana supere a la mejora en media indica que la ganancia no procede de unos pocos bins extremos, sino que el bin típico también mejora. El control de precio, ajeno a la amplificación de Vega, mejora de forma análoga y estable entre estadísticos (media 29,1\,\%, mediana 26,8\,\%, p75 34,6\,\%). El único coste medible es un ligero aumento de la tasa de fallos de inversión de IV, del 14,5\,\% al 17,2\,\% por bin, de nuevo concentrado en las alas.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{l r r r}
+\toprule
+Métrica & H-3 (uniforme) & H-5 (enfocado) & mejora \\
+\midrule
+$\text{MAE}_{\text{IV}}$, atm\_weekly       & $8{,}37\times 10^{-2}$ & $1{,}20\times 10^{-2}$ & $+85{,}7\%$ \\
+$\text{MAE}_{\text{IV}}$, atm\_short        & $2{,}30\times 10^{-2}$ & $7{,}44\times 10^{-3}$ & $+67{,}7\%$ \\
+$\text{MAE}_{\text{IV}}$, atm\_medium\_short & $8{,}17\times 10^{-3}$ & $3{,}91\times 10^{-3}$ & $+52{,}2\%$ \\
+\textbf{media bins críticos}                & $3{,}83\times 10^{-2}$ & $7{,}78\times 10^{-3}$ & $\mathbf{+79{,}7\%}$ \\
+\midrule
+$\text{MAE}_{\text{IV}}$ global, media      & $1{,}65\times 10^{-1}$ & $1{,}30\times 10^{-1}$ & $+21{,}2\%$ \\
+$\text{MAE}_{\text{IV}}$ global, mediana    & $2{,}30\times 10^{-2}$ & $1{,}56\times 10^{-2}$ & $+32{,}2\%$ \\
+$\text{MAE}_{\text{IV}}$ global, p75        & $9{,}11\times 10^{-2}$ & $6{,}08\times 10^{-2}$ & $+33{,}2\%$ \\
+\midrule
+$\text{MAE}(C/K)$ global, media             & $1{,}29\times 10^{-3}$ & $9{,}11\times 10^{-4}$ & $+29{,}1\%$ \\
+$\text{MAE}(C/K)$ global, mediana           & $1{,}08\times 10^{-3}$ & $7{,}93\times 10^{-4}$ & $+26{,}8\%$ \\
+$\text{MAE}(C/K)$ global, p75               & $1{,}61\times 10^{-3}$ & $1{,}05\times 10^{-3}$ & $+34{,}6\%$ \\
+\bottomrule
+\end{tabular}
+\caption{E3: métrica primaria (mejora del $\text{MAE}_{\text{IV}}$ en los bins críticos at-the-money) y controles globales agregados sobre los 25 bins con tres estadísticos —media, mediana y percentil 75—, sobre el mismo test balanceado. La media es sensible a las colas de error elevado, por lo que se acompaña de mediana y p75, más robustos. La columna de mejora expresa la reducción relativa del error de H-5 frente a H-3; un valor positivo indica que el muestreo enfocado reduce el error.}
+\label{tab:e3}
+\end{table}
+
+En conjunto, el muestreo enfocado reduce de forma marcada el error en las regiones de mayor curvatura sin sacrificar la cobertura global, que de hecho también mejora. La interpretación práctica es que concentrar el esfuerzo de muestreo donde la función de pricing es más difícil de aproximar es una palanca eficaz para mejorar la calidad del surrogate en las opciones operativamente más relevantes, a cambio de un deterioro acotado y predecible en las alas de menor interés.
 
 \subsection{E4 --- Eficiencia computacional}\label{sec:res-e4}
 
-E4 cronometra la evaluación de H-3 frente al solver semi-cerrado de Heston para lotes de $10^2$, $10^3$, $10^4$ y $10^5$ opciones. El protocolo es de tres warmups no medidos y diez repeticiones medidas por tamaño de lote. Se reporta la mediana y el rango intercuartílico $p25/p75$ del tiempo, así como el speedup relativo. CPU y GPU se reportan por separado para no mezclar mejora algorítmica con diferencia de hardware. El surrogate se evalúa siempre con \texttt{model.eval()} y \texttt{torch.no\_grad()}.
+E4 cronometra la evaluación de H-3 frente al solver semi-cerrado de Heston para lotes de $10^2$, $10^3$, $10^4$ y $10^5$ opciones. El protocolo es de tres warmups no medidos y diez repeticiones medidas por tamaño de lote. Se reporta la mediana y el rango intercuartílico $p25/p75$ del tiempo, así como el speedup relativo, definido para cada tamaño de lote $B$ como
+\begin{equation}
+s(B) = \frac{t_{\text{solver}}(B)}{t_{\text{surrogate}}(B)},
+\label{eq:speedup}
+\end{equation}
+donde $t(B)$ es la mediana de los diez tiempos medidos para ese lote. CPU y GPU se reportan por separado para no mezclar mejora algorítmica con diferencia de hardware. El surrogate se evalúa siempre con \texttt{model.eval()} y \texttt{torch.no\_grad()}.
 
-% TODO: tabla con tiempos medianos del solver y del surrogate por tamaño de lote.
-% TODO: curva log-log de tiempo vs tamaño de lote y curva de speedup correspondiente.
-% TODO: discusión sobre el régimen en que la mejora se hace significativa.
+La \autoref{fig:e4-timing} muestra, a la izquierda, el tiempo mediano de evaluación frente al tamaño de lote en escala doblemente logarítmica, y a la derecha el speedup correspondiente. El solver de Heston escala de forma aproximadamente lineal con el número de opciones, porque valora punto a punto mediante cuadratura adaptativa, mientras que el surrogate procesa el lote completo como una única operación matricial, de modo que su coste por opción disminuye al crecer el lote y amortiza el coste fijo de lanzamiento y de transferencia de datos. Esa diferencia de comportamiento es la que hace que el speedup no sea un número único, sino una función creciente del tamaño de lote.
+
+% --- FIGURA E4: tiempo y speedup vs lote -----------------------------------
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{assets/e4_timing.png}
+\caption{Eficiencia de H-3 frente al solver semi-cerrado de Heston. Izquierda: tiempo mediano de evaluación por tamaño de lote (banda sombreada $p25$--$p75$). Derecha: speedup $t_{\text{solver}}/t_{\text{surrogate}}$. Mediciones en CPU Intel i9-14900K, con el solver paralelizado en 22 procesos, y GPU NVIDIA RTX 4060; tres ejecuciones de warmup y diez repeticiones medidas por celda, incluyendo la conversión de datos y la transferencia al dispositivo.}
+\label{fig:e4-timing}
+\end{figure}
+
+La \autoref{tab:e4} recoge las medianas y los speedups por tamaño de lote. El surrogate es entre dos y cuatro órdenes de magnitud más rápido que el solver, y la ventaja crece con el lote: en CPU pasa de un factor 66 con cien opciones a 748 con cien mil, y en GPU de 175 a 6434. La GPU se beneficia más del paralelismo masivo, sobre todo en lotes grandes, mientras que en lotes pequeños su ventaja se reduce porque domina el coste fijo de lanzamiento de núcleos y del intérprete. En términos de throughput, el surrogate en GPU evalúa del orden de doce millones de opciones por segundo a lote $10^5$, frente a las cerca de dos mil por segundo del solver repartido en veintidós núcleos.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{r r r r r r}
+\toprule
+Lote & Solver (s) & Surrogate CPU (s) & Surrogate GPU (s) & Speedup CPU & Speedup GPU \\
+\midrule
+$10^2$ & $7{,}60\times 10^{-2}$ & $1{,}16\times 10^{-3}$ & $4{,}35\times 10^{-4}$ & $\times 66$   & $\times 175$  \\
+$10^3$ & $2{,}76\times 10^{-1}$ & $3{,}27\times 10^{-3}$ & $3{,}76\times 10^{-4}$ & $\times 85$   & $\times 735$  \\
+$10^4$ & $2{,}37$               & $6{,}74\times 10^{-3}$ & $3{,}97\times 10^{-3}$ & $\times 353$  & $\times 599$  \\
+$10^5$ & $5{,}16\times 10^{1}$  & $6{,}89\times 10^{-2}$ & $8{,}02\times 10^{-3}$ & $\times 748$  & $\times 6434$ \\
+\bottomrule
+\end{tabular}
+\caption{E4: tiempo mediano de evaluación del solver y del surrogate (CPU y GPU) y speedup por tamaño de lote, sobre diez repeticiones medidas. El solver se mide una sola vez por lote porque no depende del dispositivo del surrogate.}
+\label{tab:e4}
+\end{table}
+
+E4 es de medición y no lleva clasificación fuerte/débil. Su lectura práctica es que la ventaja del surrogate solo se materializa por completo en el régimen de lotes grandes, que es precisamente el de los casos de uso que motivan el enfoque: la calibración diaria, el cálculo masivo de Greeks o la simulación de escenarios requieren del orden de $10^4$ a $10^5$ evaluaciones, donde el surrogate en GPU reduce el tiempo de decenas de segundos a milisegundos. Para evaluaciones aisladas o lotes pequeños la mejora existe pero es mucho menor, y el coste de entrenar el surrogate no quedaría amortizado.
 
 \subsection{E5 --- Differential ML con Delta}\label{sec:res-e5}
 
-E5 compara H-3-small (100k muestras, pérdida en precio) frente a H-6-small (100k muestras, pérdida $L_1(C/K) + L_1(\Delta)$ con pesos 1:1), y usa H-3 (500k muestras, pérdida en precio) como referencia de muestra grande. La métrica primaria es la mejora de $\text{MAE}_\Delta$ de H-6-small sobre H-3-small. Se aplica la clasificación operativa: positivo fuerte si $\text{MAE}_\Delta$ mejora al menos un 20\,\% y $\text{MAE}(C/K)$ no empeora más de un 10\,\%; positivo débil si la mejora de Delta es menor manteniendo el margen en precio; negativo en otro caso. Adicionalmente se reporta la distancia de H-6-small frente a H-3 para juzgar la eficiencia muestral.
+E5 compara H-3-small y H-6-small, ambos entrenados sobre las mismas 5M de muestras y con la misma semilla, y usa H-3 (25M muestras) como referencia de muestra grande. Los surrogates de precio minimizan únicamente el error de precio, mientras que el surrogate diferencial añade un término sobre la Delta obtenida por autograd:
+\begin{align}
+L_{\text{precio}}(\theta) &= \frac{1}{N}\sum_{i=1}^{N} \bigl| \hat{y}_\theta(x_i) - y_i \bigr|, \label{eq:loss-precio}\\
+L_{\text{dif}}(\theta) &= \frac{1}{N}\sum_{i=1}^{N} \bigl| \hat{y}_\theta(x_i) - y_i \bigr| + \frac{1}{N}\sum_{i=1}^{N} \bigl| \hat{\Delta}_\theta(x_i) - \Delta_i \bigr|, \label{eq:loss-dif}
+\end{align}
+donde $\hat{\Delta}_\theta$ es la Delta del surrogate calculada por autograd y los dos términos llevan peso unidad. H-3-small y H-3 usan $L_{\text{precio}}$ y H-6-small usa $L_{\text{dif}}$, de modo que la única diferencia entre H-3-small y H-6-small es ese segundo término. La métrica primaria es la mejora de $\text{MAE}_\Delta$ de H-6-small sobre H-3-small, con $\text{MAE}(C/K)$ como control para comprobar que la ganancia en la derivada no se paga en precio. Adicionalmente se reporta la distancia de H-6-small frente a H-3 para juzgar la eficiencia muestral.
 
-% TODO: tabla con MAE(C/K) y MAE_Delta para H-3-small, H-6-small y H-3 por bin.
-% TODO: figura de comparación de Deltas en cortes representativos del dominio.
-% TODO: clasificación final y discusión sobre eficiencia muestral.
+La \autoref{fig:e5-tradeoff} sitúa los tres surrogates en el plano de error de precio frente a error de Delta, el mismo de E2, promediando sobre los bins. La comparación primaria es entre los dos surrogates de 5M, que comparten dataset y semilla y solo difieren en la pérdida. H-6-small, entrenado con el término diferencial, se sitúa claramente por debajo y a la izquierda de H-3-small: mejora la Delta y, lejos de pagarlo en precio, también lo reduce. La segunda lectura es la de eficiencia muestral: H-6-small queda por debajo de H-3 en el eje de Delta pese a haberse entrenado con cinco veces menos datos, aunque a su derecha en precio, donde el mayor volumen de H-3 conserva la ventaja.
+
+% --- FIGURA E5: trade-off precio vs Delta ----------------------------------
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\textwidth]{assets/e5_tradeoff.png}
+\caption{Compromiso entre error de precio y error de Delta de los tres surrogates de E5, promediado sobre los 25 bins del test balanceado. Abajo a la izquierda es mejor en ambas métricas. H-3-small y H-6-small comparten datos (5M) y semilla y difieren solo en la pérdida; H-3 es el baseline de muestra grande (25M). El surrogate diferencial H-6-small domina a su par de precio y mejora la Delta del baseline grande con cinco veces menos datos.}
+\label{fig:e5-tradeoff}
+\end{figure}
+
+La \autoref{tab:e5} recoge las cifras agregadas.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{l l l r r}
+\toprule
+Surrogate & Pérdida & Datos & $\text{MAE}_\Delta$ & $\text{MAE}(C/K)$ \\
+\midrule
+H-3-small & $L_1(\text{precio})$ & 5M & $1{,}74\times 10^{-2}$ & $2{,}54\times 10^{-3}$ \\
+\textbf{H-6-small} & $\boldsymbol{L_1(\text{precio}) + L_1(\Delta)}$ & \textbf{5M} & $\mathbf{7{,}14\times 10^{-3}}$ & $\mathbf{1{,}51\times 10^{-3}}$ \\
+H-3 & $L_1(\text{precio})$ & 25M & $1{,}11\times 10^{-2}$ & $1{,}28\times 10^{-3}$ \\
+\bottomrule
+\end{tabular}
+\caption{E5: error medio de Delta y de precio de los tres surrogates, agregados sobre los 25 bins. H-3-small y H-6-small comparten todo salvo la pérdida; H-6-small añade el término $L_1(\Delta)$. H-3 actúa como referencia de muestra grande, entrenado solo en precio sobre cinco veces más datos.}
+\label{tab:e5}
+\end{table}
+
+En cifras, el término diferencial reduce el error de Delta de H-6-small frente a H-3-small en un 58,9\,\%, una mejora muy grande, y el error de precio no solo no empeora sino que mejora un 40,6\,\%. La mejora es además homogénea: H-6-small supera a H-3-small en Delta en los 25 bins. Frente al baseline grande H-3, H-6-small reduce el error de Delta un 35,8\,\% usando cinco veces menos datos, ganando en 24 de los 25 bins con la única excepción de deep ITM de vencimiento medio, mientras que en precio H-3 conserva una ventaja del 17,5\,\% que confirma que el mayor volumen de datos sigue ayudando al nivel de la función. La lectura conjunta reproduce en nuestro entorno el resultado central de Huge y Savine~\cite{huge2020}: añadir la derivada verdadera al objetivo de entrenamiento enseña a la red la forma local de la función de pricing, lo que se traduce en mejores Greeks y en una eficiencia muestral tangible, ya que un surrogate diferencial entrenado con 5M de muestras supera en Delta a uno de precio entrenado con 25M.
 
 % =============================================================================
 \section{Discusión y trabajo futuro}\label{sec:discusion}
 % =============================================================================
 
-El alcance del proyecto está deliberadamente acotado. No intentamos calibrar a datos reales de mercado, ni estudiar opciones exóticas, ni construir un surrogate industrial a escala de Chen et al. El objetivo es demostrar, en un entorno controlado y reproducible, cuándo una red puede aproximar un solver de pricing con precisión, rapidez y derivadas útiles. La contribución está en la comparación ordenada de métricas, activaciones, muestreo, eficiencia y aprendizaje diferencial, no en maximizar complejidad del modelo a cualquier coste.
+Los cinco experimentos, leídos en conjunto, dejan una idea clara de cuándo y cómo una red puede sustituir a un solver de pricing. Lo primero que muestran es que la forma de medir el error no es neutral: una red que parece muy buena cuando se la juzga por el precio puede ser inservible en volatilidad implícita justo en las opciones más delicadas, las muy fuera del dinero y de vencimiento corto. Lo segundo es que decisiones que parecen menores tienen un efecto grande sobre la calidad de las derivadas: la función de activación de la red determina si las Greeks que se obtienen de ella son fiables o ruidosas, y las activaciones suaves como Swish son claramente preferibles. Lo tercero es que concentrar el esfuerzo de muestreo en las zonas donde la superficie de precios es más difícil mejora precisamente las regiones que más importan en el día a día del mercado. A todo ello se añade que el surrogate, una vez entrenado, evalúa muchísimo más rápido que el solver cuando hay que valorar muchas opciones a la vez, y que entrenar también con la derivada verdadera, y no solo con el precio, produce mejores Greeks con bastante menos datos.
 
-Quedan abiertas varias extensiones naturales que merecen mención. Extender el conjunto de Greeks incorporadas a la pérdida diferencial (Vega, Gamma, Theta, Rho) permitiría medir hasta qué punto el differential machine learning escala más allá del caso unidimensional que estudiamos en E5, aunque introduce dificultades numéricas adicionales porque algunas de esas derivadas son sensibles a la inestabilidad del solver de Heston en zonas extremas. Pasar de opciones europeas a opciones americanas o exóticas pondría a prueba la generalización del enfoque a payoffs con derecho de ejercicio anticipado y conectaría nuestro trabajo con la línea de Becker, Cheridito y Jentzen. Aplicar el surrogate dentro de un procedimiento de calibración a datos reales --- en línea con el segundo nivel de validación de Chen et al.--- mediría el coste económico del error de aproximación de la red. Por último, escalar la arquitectura o el tamaño del dataset permitiría explorar si la reducción de error es lineal o se satura, una pregunta especialmente relevante en la fase actual del proyecto.
+Estos resultados apuntan a usos concretos en la industria. El surrogate no tiene sentido para valorar una opción suelta, donde el solver original ya es rápido, sino para las tareas que exigen millones de evaluaciones: la calibración diaria de un modelo a los precios de mercado, el cálculo de riesgo y de Greeks sobre carteras grandes, o la simulación masiva de escenarios. En todas ellas la red, entrenada una sola vez de forma offline, reemplaza a un cálculo lento y convierte minutos en milisegundos, con la ventaja añadida de que sus sensibilidades se obtienen casi gratis al derivar la propia red, que es justo lo que necesitan la cobertura y la gestión de riesgo.
 
-La estructura del trabajo está diseñada para que los resultados experimentales se incorporen de forma incremental a las subsecciones de la \autoref{sec:resultados} sin afectar al cuerpo metodológico, que permanece cerrado. Cada experimento se redacta a medida que sus entrenamientos y métricas correspondientes están disponibles.
+Conviene ser honestos sobre el alcance. Las conclusiones de este trabajo son comparativas más que definitivas: indican qué decisiones de diseño hacen mejor a un surrogate, no que el surrogate obtenido tenga ya la precisión que exigiría un entorno de producción. Tampoco hemos calibrado contra datos reales de mercado ni hemos salido de las opciones europeas más sencillas, de modo que medimos lo bien que la red imita al solver, no su valor económico final. Estas son limitaciones deliberadas de un estudio controlado, y son también las que marcan por dónde seguir.
+
+Las líneas de investigación que se abren tienen, además, un interés práctico evidente. Ampliar el entrenamiento diferencial al resto de las Greeks convertiría al surrogate en un motor de riesgo completo, no solo en un aproximador de precios. Extenderlo a opciones americanas y exóticas lo llevaría justo a los productos donde valorar es genuinamente caro y donde, por tanto, una red rápida aporta más. Probarlo dentro de un proceso de calibración real mediría su utilidad en términos de negocio. Y escalar de forma ordenada el tamaño de la red y de los datos diría hasta dónde puede llegar la precisión, que es el paso necesario para pasar de un estudio controlado a una herramienta de uso industrial.
 
 % =============================================================================
 \begin{thebibliography}{99}
