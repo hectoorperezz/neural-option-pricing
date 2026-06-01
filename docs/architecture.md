@@ -16,7 +16,7 @@ Tres principios guían la arquitectura actual. El primero es separar código reu
 
 El segundo principio es usar orientación a objetos solo donde aporta polimorfismo real. Solvers, samplers, pérdidas y experimentos tienen interfaces comunes porque se intercambian entre configuraciones. Donde el código es puramente algorítmico, usamos funciones libres.
 
-El tercer principio es reproducibilidad por comando y metadatos. Los datasets `.npz` se acompañan de un `.json` con dominio, semillas y contadores. Cada entrenamiento escribe `config.json`, `history.csv`, `history.json` y `checkpoint.pt`. No dependemos todavía de YAMLs versionados por surrogate; la orquestación completa está en `scripts/train_all_parallel.py` y en los `config.json` que produce `scripts/train_surrogate.py`.
+El tercer principio es reproducibilidad por comando y metadatos. Los datasets `.npz` se acompañan de un `.json` con dominio, semillas y contadores. Cada entrenamiento escribe `config.json`, `history.csv`, `history.json` y `checkpoint.pt`. No dependemos todavía de YAMLs versionados por surrogate; la orquestación completa está en `scripts/train/train_all_parallel.py` y en los `config.json` que produce `scripts/train/train_surrogate.py`.
 
 ## Estructura del repositorio
 
@@ -35,7 +35,10 @@ proyecto-final-metodos-numericos/
 │   ├── experiments/               Lógica de E1-E5
 │   └── utils/                     Semillas, carga de artefactos y helpers comunes
 ├── scripts/                       Puntos de entrada ejecutables
-│   └── workflows/                 Orquestadores shell/batch de generación
+│   ├── data/                      Generación de datasets (.py, .sh, .bat)
+│   ├── train/                     Entrenamiento de surrogates
+│   ├── experiments/               Runners de E1-E5 y evaluación
+│   └── figures/                   Figuras del paper y estilo común
 ├── data/                          Datasets generados, no versionados
 ├── results/                       Métricas, figuras, checkpoints y logs
 ├── tests/                         Suite pytest
@@ -68,7 +71,7 @@ La regla práctica es simple: si una función se reutiliza o merece tests unitar
 
 `src/training/losses.py` define `PriceLoss` y `DifferentialLoss`. La primera optimiza `MAE(C/K)`. La segunda suma `MAE(C/K) + MAE(Delta)` con pesos 1:1 para E5. `Trainer` ejecuta el bucle de entrenamiento, evalúa `MAE(C/K)` en validación al final de cada época y conserva el estado con mejor validación.
 
-El punto de entrada real es `scripts/train_surrogate.py`. Recibe rutas de train/validation, activación, pérdida, batch size, learning rate, semilla y dispositivo. Para lanzar los once surrogates de forma reproducible existe `scripts/train_all_parallel.py`, que contiene la tabla `SURROGATES` con identificadores, datasets, seeds y pérdidas.
+El punto de entrada real es `scripts/train/train_surrogate.py`. Recibe rutas de train/validation, activación, pérdida, batch size, learning rate, semilla y dispositivo. Para lanzar los once surrogates de forma reproducible existe `scripts/train/train_all_parallel.py`, que contiene la tabla `SURROGATES` con identificadores, datasets, seeds y pérdidas.
 
 ### Evaluation
 
@@ -87,7 +90,7 @@ La inversión IV se ejecuta solo cuando el experimento la necesita. E1 y E3 la u
 La generación de datos se hace con un único script:
 
 ```bash
-python scripts/generate_dataset.py \
+python scripts/data/generate_dataset.py \
   --family heston \
   --sampler balanced \
   --samples-per-bin 5000 \
@@ -95,12 +98,12 @@ python scripts/generate_dataset.py \
   --output data/heston_test_125k_balanced_delta.npz
 ```
 
-El workflow baseline está en `scripts/workflows/generate_all_datasets.sh` y su equivalente `.bat`. Crea train, validation y test para Black-Scholes y Heston con las semillas fijadas en la metodología.
+El workflow baseline está en `scripts/data/generate_all_datasets.sh` y su equivalente `.bat`. Crea train, validation y test para Black-Scholes y Heston con las semillas fijadas en la metodología.
 
 El entrenamiento individual se lanza así:
 
 ```bash
-python scripts/train_surrogate.py \
+python scripts/train/train_surrogate.py \
   --train data/heston_train_500k_uniform.npz \
   --validation data/heston_validation_50k_uniform.npz \
   --experiment-id H-3 \
@@ -113,7 +116,7 @@ python scripts/train_surrogate.py \
   --seed 203
 ```
 
-Los experimentos finales se ejecutan con los scripts `scripts/run_experiment_e*.py`, que escriben CSV en `results/metrics/` y figuras en `results/figures/`.
+Los experimentos finales se ejecutan con los scripts `scripts/experiments/run_experiment_e*.py`, que escriben CSV en `results/metrics/` y figuras en `results/figures/`.
 
 ## Estrategia de testing
 

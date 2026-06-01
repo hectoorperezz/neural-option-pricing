@@ -7,7 +7,7 @@ CUDA, y escribe el CSV por ``(device, batch_size)`` junto con la figura de
 
 Uso típico::
 
-    python scripts/run_experiment_e4.py \\
+    python scripts/experiments/run_experiment_e4.py \\
         --checkpoint  results/checkpoints/H-3 \\
         --test        data/heston_test_125k_balanced_delta.npz \\
         --output      results/metrics/e4_table.csv \\
@@ -27,7 +27,7 @@ from typing import Any
 
 import torch
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 

@@ -18,7 +18,7 @@ from matplotlib.ticker import MaxNLocator
 
 from paper_style import apply_paper_style, PALETTE
 
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parent.parent.parent
 CSV = REPO / "results" / "metrics" / "e5_table.csv"
 OUT = REPO / "docs" / "latex" / "assets" / "e5_tradeoff.png"
 

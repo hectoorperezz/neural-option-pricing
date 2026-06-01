@@ -10,7 +10,7 @@ por bin junto con los heatmaps exigidos en la metodología::
 
 Uso típico con ambas familias::
 
-    python scripts/run_experiment_e1.py \\
+    python scripts/experiments/run_experiment_e1.py \\
         --bs-checkpoint     results/checkpoints/BS-3 \\
         --bs-test           data/bs_test_125k_balanced_delta.npz \\
         --heston-checkpoint results/checkpoints/H-3 \\
@@ -31,7 +31,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 

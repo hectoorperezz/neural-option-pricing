@@ -23,7 +23,7 @@ from paper_style import (
     MONEYNESS_LABELS, MATURITY_LABELS,
 )
 
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parent.parent.parent
 CSV = REPO / "results" / "metrics" / "e3_table.csv"
 
 parser = argparse.ArgumentParser(description=__doc__)

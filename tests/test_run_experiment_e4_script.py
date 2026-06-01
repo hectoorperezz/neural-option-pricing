@@ -1,4 +1,4 @@
-"""Test extremo a extremo de ``scripts/run_experiment_e4.py``.
+"""Test extremo a extremo de ``scripts/experiments/run_experiment_e4.py``.
 
 Construye un checkpoint sintético y reduce el protocolo (lotes y
 repeticiones) para que el script termine en segundos. Comprueba el
@@ -108,8 +108,8 @@ def _write_heston_test_npz(path: Path, n_samples: int = 120) -> None:
 
 
 def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
-    monkeypatch.setattr(sys, "argv", ["scripts/run_experiment_e4.py", *args])
-    runpy.run_path("scripts/run_experiment_e4.py", run_name="__main__")
+    monkeypatch.setattr(sys, "argv", ["scripts/experiments/run_experiment_e4.py", *args])
+    runpy.run_path("scripts/experiments/run_experiment_e4.py", run_name="__main__")
 
 
 def test_script_writes_csv_and_plot(

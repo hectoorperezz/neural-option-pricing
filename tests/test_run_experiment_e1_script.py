@@ -1,4 +1,4 @@
-"""Test extremo a extremo de ``scripts/run_experiment_e1.py``.
+"""Test extremo a extremo de ``scripts/experiments/run_experiment_e1.py``.
 
 Genera checkpoint y test sintéticos para BS y/o Heston y verifica que
 el script escribe el CSV largo de E1 con las columnas pre-registradas.
@@ -95,8 +95,8 @@ def _write_bs_test_npz(path: Path, n_samples: int = 60) -> None:
 
 
 def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
-    monkeypatch.setattr(sys, "argv", ["scripts/run_experiment_e1.py", *args])
-    runpy.run_path("scripts/run_experiment_e1.py", run_name="__main__")
+    monkeypatch.setattr(sys, "argv", ["scripts/experiments/run_experiment_e1.py", *args])
+    runpy.run_path("scripts/experiments/run_experiment_e1.py", run_name="__main__")
 
 
 def test_script_writes_csv_and_heatmaps_for_bs_only(

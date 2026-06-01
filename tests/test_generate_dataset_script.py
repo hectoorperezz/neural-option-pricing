@@ -1,4 +1,4 @@
-"""Test extremo a extremo de ``scripts/generate_dataset.py``.
+"""Test extremo a extremo de ``scripts/data/generate_dataset.py``.
 
 Invoca el script como subproceso y verifica que escribe ``.npz`` +
 ``.json`` de metadata con los campos esperados.
@@ -18,7 +18,7 @@ def test_generate_dataset_script_writes_npz_and_metadata(tmp_path) -> None:
     subprocess.run(
         [
             sys.executable,
-            "scripts/generate_dataset.py",
+            "scripts/data/generate_dataset.py",
             "--family",
             "black_scholes",
             "--sampler",

@@ -7,7 +7,7 @@ con heatmaps de precio e IV.
 
 Uso típico::
 
-    python scripts/run_experiment_e3.py \\
+    python scripts/experiments/run_experiment_e3.py \\
         --uniform-checkpoint results/checkpoints/H-3 \\
         --focused-checkpoint results/checkpoints/H-5 \\
         --test               data/heston_test_125k_balanced_delta.npz \\
@@ -28,7 +28,7 @@ from pathlib import Path
 
 import numpy as np
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 

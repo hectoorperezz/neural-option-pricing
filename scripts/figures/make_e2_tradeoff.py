@@ -18,7 +18,7 @@ from matplotlib.ticker import MaxNLocator
 
 from paper_style import ACT_COLOR, ACT_LABEL, PALETTE, apply_paper_style
 
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parent.parent.parent
 OUT = REPO / "docs" / "latex" / "assets" / "e2_tradeoff.png"
 
 apply_paper_style()

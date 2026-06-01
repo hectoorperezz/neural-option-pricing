@@ -1,4 +1,4 @@
-"""Test extremo a extremo de ``scripts/run_experiment_e2.py``.
+"""Test extremo a extremo de ``scripts/experiments/run_experiment_e2.py``.
 
 Monta cuatro checkpoints (uno por activación) y comprueba que el
 script genera ``e2_bs.csv``/``e2_heston.csv`` con la columna de
@@ -91,8 +91,8 @@ def _write_bs_test_npz(path: Path, n_samples: int = 60) -> None:
 
 
 def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
-    monkeypatch.setattr(sys, "argv", ["scripts/run_experiment_e2.py", *args])
-    runpy.run_path("scripts/run_experiment_e2.py", run_name="__main__")
+    monkeypatch.setattr(sys, "argv", ["scripts/experiments/run_experiment_e2.py", *args])
+    runpy.run_path("scripts/experiments/run_experiment_e2.py", run_name="__main__")
 
 
 def test_script_writes_csv_and_heatmaps_for_bs_family(

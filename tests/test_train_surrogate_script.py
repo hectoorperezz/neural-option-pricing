@@ -1,4 +1,4 @@
-"""Test extremo a extremo de ``scripts/train_surrogate.py``.
+"""Test extremo a extremo de ``scripts/train/train_surrogate.py``.
 
 Genera un ``.npz`` minúsculo de juguete, lanza el script con ``runpy``
 y comprueba que escribe ``checkpoint.pt``, ``config.json`` y los
@@ -31,8 +31,8 @@ def write_npz(path, n_samples: int = 32, include_delta: bool = True) -> None:
 
 
 def run_train_script(monkeypatch, args: list[str]) -> None:
-    monkeypatch.setattr(sys, "argv", ["scripts/train_surrogate.py", *args])
-    runpy.run_path("scripts/train_surrogate.py", run_name="__main__")
+    monkeypatch.setattr(sys, "argv", ["scripts/train/train_surrogate.py", *args])
+    runpy.run_path("scripts/train/train_surrogate.py", run_name="__main__")
 
 
 def test_train_surrogate_script_writes_checkpoint_and_history(tmp_path, monkeypatch) -> None:

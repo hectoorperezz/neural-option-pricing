@@ -9,7 +9,7 @@ viridis, fuente pequeña, rótulos en inglés), estos están pensados para
 reducirse a media columna en el paper sin perder legibilidad.
 
 Uso:
-    python scripts/make_paper_heatmaps.py \
+    python scripts/figures/make_paper_heatmaps.py \
         --csv results/metrics/e2_heston.csv \
         --column delta_mae_mean \
         --surrogate H-3 \

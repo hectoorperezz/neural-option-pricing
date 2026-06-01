@@ -1,4 +1,4 @@
-"""Test extremo a extremo de ``scripts/run_experiment_e5.py``.
+"""Test extremo a extremo de ``scripts/experiments/run_experiment_e5.py``.
 
 Monta los checkpoints H-3-small, H-6-small y H-3 (opcional) sobre un
 test Heston con Delta y comprueba que el script emite el CSV largo
@@ -123,8 +123,8 @@ def _write_test_npz_without_deltas(path: Path, n_samples: int = 60) -> None:
 
 
 def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
-    monkeypatch.setattr(sys, "argv", ["scripts/run_experiment_e5.py", *args])
-    runpy.run_path("scripts/run_experiment_e5.py", run_name="__main__")
+    monkeypatch.setattr(sys, "argv", ["scripts/experiments/run_experiment_e5.py", *args])
+    runpy.run_path("scripts/experiments/run_experiment_e5.py", run_name="__main__")
 
 
 def test_script_writes_csv_and_heatmaps_two_surrogates(

@@ -21,11 +21,11 @@ from datetime import datetime
 from pathlib import Path
 import subprocess
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATA = REPO_ROOT / "data"
 DEFAULT_RESULTS = REPO_ROOT / "results" / "checkpoints"
 DEFAULT_LOGS = REPO_ROOT / "results" / "logs"
-TRAIN_SCRIPT = REPO_ROOT / "scripts" / "train_surrogate.py"
+TRAIN_SCRIPT = REPO_ROOT / "scripts" / "train" / "train_surrogate.py"
 
 
 @dataclass(frozen=True)

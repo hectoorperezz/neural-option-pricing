@@ -10,7 +10,7 @@ esos CSVs y produce figuras más directas para paper y presentación:
 
 Uso típico::
 
-    python scripts/generate_summary_figures.py
+    python scripts/figures/generate_summary_figures.py
 """
 
 from __future__ import annotations

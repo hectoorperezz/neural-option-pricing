@@ -30,8 +30,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-EVALUATE_SURROGATE_SCRIPT = REPO_ROOT / "scripts" / "evaluate_surrogate.py"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+EVALUATE_SURROGATE_SCRIPT = REPO_ROOT / "scripts" / "experiments" / "evaluate_surrogate.py"
 
 DEFAULT_CHECKPOINTS_DIR = REPO_ROOT / "results" / "checkpoints"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "results" / "metrics"

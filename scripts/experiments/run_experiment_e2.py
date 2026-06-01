@@ -7,7 +7,7 @@ bin junto con heatmaps de precio y Delta.
 
 Uso típico con ambas familias::
 
-    python scripts/run_experiment_e2.py \\
+    python scripts/experiments/run_experiment_e2.py \\
         --bs-checkpoints   results/checkpoints/BS-1 results/checkpoints/BS-2 \\
                            results/checkpoints/BS-3 results/checkpoints/BS-4 \\
         --bs-test          data/bs_test_125k_balanced_delta.npz \\
@@ -29,7 +29,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 

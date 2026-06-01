@@ -7,7 +7,7 @@ Delta.
 
 Uso típico::
 
-    python scripts/run_experiment_e5.py \\
+    python scripts/experiments/run_experiment_e5.py \\
         --small-price-checkpoint results/checkpoints/H-3-small \\
         --small-dml-checkpoint   results/checkpoints/H-6-small \\
         --baseline-checkpoint    results/checkpoints/H-3 \\
@@ -29,7 +29,7 @@ from pathlib import Path
 
 import numpy as np
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 

@@ -1,4 +1,4 @@
-"""Test extremo a extremo de ``scripts/run_experiment_e3.py``.
+"""Test extremo a extremo de ``scripts/experiments/run_experiment_e3.py``.
 
 Monta los dos checkpoints (uniform/focused) sobre un test Heston de
 juguete y comprueba el CSV resultante junto con las etiquetas de
@@ -67,7 +67,7 @@ def _write_test_npz(path: Path, n_samples: int = 60) -> None:
     The Heston solver expects 8 raw inputs, but BinEvaluator only reads
     the first three columns (moneyness, maturity, rate). We pad the rest
     with plausible values so the file structure matches what
-    ``scripts/generate_dataset.py`` would produce for Heston.
+    ``scripts/data/generate_dataset.py`` would produce for Heston.
     """
     rng = np.random.default_rng(123)
     moneyness = rng.uniform(0.6, 1.6, size=n_samples)
@@ -106,8 +106,8 @@ def _write_test_npz(path: Path, n_samples: int = 60) -> None:
 
 
 def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
-    monkeypatch.setattr(sys, "argv", ["scripts/run_experiment_e3.py", *args])
-    runpy.run_path("scripts/run_experiment_e3.py", run_name="__main__")
+    monkeypatch.setattr(sys, "argv", ["scripts/experiments/run_experiment_e3.py", *args])
+    runpy.run_path("scripts/experiments/run_experiment_e3.py", run_name="__main__")
 
 
 def test_script_writes_csv_and_heatmaps(

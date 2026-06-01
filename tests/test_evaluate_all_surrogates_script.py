@@ -1,4 +1,4 @@
-"""Test extremo a extremo de ``scripts/evaluate_all_surrogates.py``.
+"""Test extremo a extremo de ``scripts/experiments/evaluate_all_surrogates.py``.
 
 Monta dos checkpoints sintéticos y comprueba que el orquestador
 genera ``<surrogate>_eval.csv`` por cada uno más el resumen
@@ -94,8 +94,8 @@ def _write_bs_test_npz(path: Path, n_samples: int = 32) -> None:
 
 
 def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
-    monkeypatch.setattr(sys, "argv", ["scripts/evaluate_all_surrogates.py", *args])
-    runpy.run_path("scripts/evaluate_all_surrogates.py", run_name="__main__")
+    monkeypatch.setattr(sys, "argv", ["scripts/experiments/evaluate_all_surrogates.py", *args])
+    runpy.run_path("scripts/experiments/evaluate_all_surrogates.py", run_name="__main__")
 
 
 def test_runs_all_checkpoints_and_writes_summary(
