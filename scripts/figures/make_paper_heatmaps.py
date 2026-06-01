@@ -14,7 +14,7 @@ Uso:
         --column delta_mae_mean \
         --surrogate H-3 \
         --metric-label "MAE$_\\Delta$" \
-        --out docs/latex/assets/e2_h3_delta.png
+        --out results/figures/e2_h3_delta.png
 """
 
 from __future__ import annotations

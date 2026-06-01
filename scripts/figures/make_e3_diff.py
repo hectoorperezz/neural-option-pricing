@@ -30,7 +30,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--column", default="iv_mae_mean")
 parser.add_argument("--metric-label", default="MAE$_{IV}$")
 parser.add_argument("--out", type=Path,
-                    default=REPO / "docs" / "latex" / "assets" / "e3_diff.png")
+                    default=REPO / "results" / "figures" / "e3_diff.png")
 args = parser.parse_args()
 COLUMN, METRIC_LABEL, OUT = args.column, args.metric_label, args.out
 

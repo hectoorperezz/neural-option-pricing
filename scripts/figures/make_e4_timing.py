@@ -18,7 +18,7 @@ from paper_style import apply_paper_style, PALETTE
 
 REPO = Path(__file__).resolve().parent.parent.parent
 CSV = REPO / "results" / "metrics" / "e4_table.csv"
-OUT = REPO / "docs" / "latex" / "assets" / "e4_timing.png"
+OUT = REPO / "results" / "figures" / "e4_timing.png"
 
 apply_paper_style()
 
