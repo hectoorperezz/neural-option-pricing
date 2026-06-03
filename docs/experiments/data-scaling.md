@@ -60,7 +60,7 @@ Todos los surrogates mejoraron entre un 37% y un 91% en `MAE(C/K)` de validació
 
 El surrogate H-5, que combina Swish con muestreo enfocado en zonas de alta curvatura, fue el primero en bajar de `1e-3` en `MAE(C/K)` global. H-3, el baseline central de los experimentos E1, E2, E4 y E5, se situó muy cerca, en `1.045e-03`. El criterio nominal de Fase 1 (`MAE_precio < 1e-4`) siguió sin cumplirse, pero la distancia se redujo en un orden de magnitud completo: pasamos de estar a un factor cien del objetivo a estar aproximadamente a un factor diez.
 
-Las curvas de entrenamiento mostraron además que varios surrogates seguían descendiendo al final de las cien épocas. En H-1 la pendiente de las últimas veinte épocas era de un 98% de reducción del `MAE(C/K)` entre el primer y el último valor del bloque, en H-5 de un 56%, en H-6-small de un 21%. Esto sugiere que ampliar el presupuesto de épocas o introducir un scheduler de learning rate podría obtener mejoras adicionales sin tocar arquitectura ni dataset, aunque esa modificación no forma parte del protocolo actual.
+Las curvas de entrenamiento mostraron además que varios surrogates seguían descendiendo al final de las cien épocas. En H-1 la pendiente de las últimas veinte épocas era de un 98% de reducción del `MAE(C/K)` entre el primer y el último valor del bloque, en H-5 de un 56%, en H-6-small de un 21%. Esto sugiere que ampliar el presupuesto de épocas o introducir un scheduler de learning rate podría obtener mejoras adicionales sin tocar arquitectura ni dataset. Esa intuición se acota después en E6 (`docs/experiments/e6.md`), que prueba precisamente la profundidad de la red y un scheduler de learning rate sobre el baseline H-3.
 
 ## Lectura por experimento
 

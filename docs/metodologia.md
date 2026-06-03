@@ -29,16 +29,17 @@ La separación entre generación, entrenamiento y evaluación evita contaminar c
 | **E3** | ¿El muestreo enfocado mejora regiones difíciles? | Distribución de muestreo | H-3, H-5 | `MAE_IV` en ATM weekly, short y medium-short |
 | **E4** | ¿Qué speedup ofrece el surrogate frente al solver? | Tamaño de lote y dispositivo | H-3 | `tiempo_solver / tiempo_surrogate` |
 | **E5** | ¿Entrenar con Delta mejora la eficiencia muestral? | Target de entrenamiento | H-3-small, H-6-small, H-3 | Mejora de `MAE_Delta` de H-6-small frente a H-3-small |
+| **E6** | ¿Ampliar la profundidad o añadir un scheduler de LR mejoran el baseline sin más datos? | Profundidad de red y scheduler de LR | H-3, H-7-shallow, H-8-deep, H-9-lr-schedule | `MAE(C/K)` medio por bin |
 
-E1 es diagnóstico y no entrena nada nuevo. E2 contrasta el efecto de la suavidad de la activación sobre las derivadas. E3 evalúa si conviene gastar más muestras cerca de ATM y vencimientos cortos. E4 mide utilidad práctica. E5 comprueba si añadir Delta como target diferencial mejora la forma local aprendida por la red.
+E1 es diagnóstico y no entrena nada nuevo. E2 contrasta el efecto de la suavidad de la activación sobre las derivadas. E3 evalúa si conviene gastar más muestras cerca de ATM y vencimientos cortos. E4 mide utilidad práctica. E5 comprueba si añadir Delta como target diferencial mejora la forma local aprendida por la red. E6, añadido al final para ampliar el estudio, prueba si dos palancas de arquitectura y optimización, mayor profundidad o un scheduler de learning rate, mejoran el baseline H-3 sin aumentar el volumen de datos.
 
-E3 se considera positivo fuerte si H-5 mejora al menos un 10% en los bins críticos y el `MAE_IV` global no empeora más de un 10%. E5 se considera positivo fuerte si H-6-small mejora Delta al menos un 20% frente a H-3-small y el precio no empeora más de un 10%. E1, E2 y E4 no necesitan veredicto fuerte/débil: son diagnósticos o mediciones.
+E3 se considera positivo fuerte si H-5 mejora al menos un 10% en los bins críticos y el `MAE_IV` global no empeora más de un 10%. E5 se considera positivo fuerte si H-6-small mejora Delta al menos un 20% frente a H-3-small y el precio no empeora más de un 10%. E1, E2, E4 y E6 no necesitan veredicto fuerte/débil: son diagnósticos, mediciones o lecturas observacionales que se ordenan por reducción frente al baseline.
 
 ## Surrogates y datos
 
 ---
 
-El diseño usa once surrogates. H-3 es el baseline central de Heston y aparece como referencia en E1, E2, E3, E4 y E5.
+El diseño usa catorce surrogates. H-3 es el baseline central de Heston y aparece como referencia en E1, E2, E3, E4, E5 y E6.
 
 | ID | Modelo | Activación | Pérdida | Rol |
 |---|---|---|---|---|
@@ -48,11 +49,14 @@ El diseño usa once surrogates. H-3 es el baseline central de Heston y aparece c
 | BS-4 | Black-Scholes | tanh | precio | E2 |
 | H-1 | Heston | ReLU | precio | E2 |
 | H-2 | Heston | Softplus | precio | E2 |
-| H-3 | Heston | Swish | precio | E1, E2, E3, E4, E5 baseline |
+| H-3 | Heston | Swish | precio | E1, E2, E3, E4, E5, E6 baseline |
 | H-4 | Heston | tanh | precio | E2 |
 | H-5 | Heston | Swish | precio | E3, sampler enfocado |
 | H-3-small | Heston | Swish | precio | E5, baseline pequeño |
 | H-6-small | Heston | Swish | precio + Delta | E5, aprendizaje diferencial |
+| H-7-shallow | Heston | Swish | precio | E6, red poco profunda (2×128) |
+| H-8-deep | Heston | Swish | precio | E6, red profunda (6×128) |
+| H-9-lr-schedule | Heston | Swish | precio | E6, scheduler ReduceLROnPlateau |
 
 El diseño inicial fijaba 200k muestras para Black-Scholes, 500k para Heston y 100k para las variantes small. Tras el diagnóstico de escalado documentado en `docs/experiments/data-scaling.md`, los checkpoints usados en los resultados finales se entrenan en régimen 50x:
 
@@ -201,7 +205,7 @@ La evaluación por bins es obligatoria porque el error global puede ocultar fall
 
 Cada bin incluye su extremo inferior y excluye su extremo superior, salvo el último bin de cada eje, que incluye también el extremo superior del dominio. Así, `m = 1.1` cae en ITM y `m = 2.0` cae en deep ITM.
 
-Cada test set tiene 5k opciones por bin, 25 bins y 125k puntos en total. Se reportan medias y percentiles altos por bin. En E1 y E3 se reportan también fallos de inversión IV; en E5 no se invoca IV porque la pregunta se centra en Delta y precio.
+Cada test set tiene 5k opciones por bin, 25 bins y 125k puntos en total. Se reportan medias y percentiles altos por bin. En E1 y E3 se reportan también fallos de inversión IV; en E5 y E6 no se invoca IV porque sus preguntas se centran en Delta y precio.
 
 ## Criterios de validez
 

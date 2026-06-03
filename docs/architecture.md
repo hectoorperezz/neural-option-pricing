@@ -6,7 +6,7 @@
 
 ---
 
-Este documento describe cómo está organizado el código que sostiene los experimentos E1-E5. Es complementario a `metodologia.md`: aquel fija qué se mide y bajo qué reglas; este explica dónde vive cada pieza, qué responsabilidades tiene y cómo se conectan los scripts con la librería interna.
+Este documento describe cómo está organizado el código que sostiene los experimentos E1-E6. Es complementario a `metodologia.md`: aquel fija qué se mide y bajo qué reglas; este explica dónde vive cada pieza, qué responsabilidades tiene y cómo se conectan los scripts con la librería interna.
 
 ## Principios de diseño
 
@@ -32,12 +32,12 @@ proyecto-final-metodos-numericos/
 │   ├── models/                    MLP y cálculo de Greeks del surrogate
 │   ├── training/                  Pérdidas y bucle de entrenamiento
 │   ├── evaluation/                Bins, métricas, reportes y timing
-│   ├── experiments/               Lógica de E1-E5
+│   ├── experiments/               Lógica de E1-E6
 │   └── utils/                     Semillas, carga de artefactos y helpers comunes
 ├── scripts/                       Puntos de entrada ejecutables
 │   ├── data/                      Generación de datasets (.py, .sh, .bat)
 │   ├── train/                     Entrenamiento de surrogates
-│   ├── experiments/               Runners de E1-E5 y evaluación
+│   ├── experiments/               Runners de E1-E6 y evaluación
 │   └── figures/                   Figuras del paper y estilo común
 ├── data/                          Datasets generados, no versionados
 ├── results/                       Métricas, figuras, checkpoints y logs
@@ -75,13 +75,13 @@ El punto de entrada real es `scripts/train/train_surrogate.py`. Recibe rutas de 
 
 ### Evaluation
 
-`src/evaluation/` encapsula el protocolo de medida. `BinPartition` define la rejilla `5 x 5` de moneyness y vencimiento. `BinEvaluator` calcula errores de precio, IV y Delta por bin. `Report` serializa tablas CSV y heatmaps. `TimingBenchmark` implementa E4 con warmups, repeticiones medidas, medianas, percentiles y speedup frente al solver.
+`src/evaluation/` encapsula el protocolo de medida. `BinPartition` define la rejilla `5 x 5` de moneyness y vencimiento. `BinEvaluator` calcula errores de precio, IV y Delta por bin. `Report` serializa tablas CSV. `TimingBenchmark` implementa E4 con warmups, repeticiones medidas, medianas, percentiles y speedup frente al solver.
 
-La inversión IV se ejecuta solo cuando el experimento la necesita. E1 y E3 la usan como métrica principal o diagnóstico; E5 no la invoca porque su pregunta se centra en Delta y precio.
+La inversión IV se ejecuta solo cuando el experimento la necesita. E1 y E3 la usan como métrica principal o diagnóstico; E5 y E6 no la invocan porque sus preguntas se centran en Delta y precio.
 
 ### Experiments
 
-`src/experiments/` contiene una clase por experimento: `PriceVsIVStudy`, `ActivationStudy`, `SamplingStudy`, `EfficiencyStudy` y `DMLStudy`. Cada clase recibe surrogates ya entrenados, evaluadores y datasets, ejecuta la comparación y devuelve una tabla interpretable. Los scripts `run_experiment_e1.py` a `run_experiment_e5.py` son envoltorios finos sobre esas clases.
+`src/experiments/` contiene una clase por experimento: `PriceVsIVStudy`, `ActivationStudy`, `SamplingStudy`, `EfficiencyStudy`, `DMLStudy` y `ArchitectureStudy` (E6). Cada clase recibe surrogates ya entrenados, evaluadores y datasets, ejecuta la comparación y devuelve una tabla interpretable. Los scripts `run_experiment_e1.py` a `run_experiment_e6.py` son envoltorios finos sobre esas clases.
 
 ## Flujo de ejecución
 
