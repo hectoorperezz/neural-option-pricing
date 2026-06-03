@@ -71,7 +71,7 @@ La regla práctica es simple: si una función se reutiliza o merece tests unitar
 
 `src/training/losses.py` define `PriceLoss` y `DifferentialLoss`. La primera optimiza `MAE(C/K)`. La segunda suma `MAE(C/K) + MAE(Delta)` con pesos 1:1 para E5. `Trainer` ejecuta el bucle de entrenamiento, evalúa `MAE(C/K)` en validación al final de cada época y conserva el estado con mejor validación.
 
-El punto de entrada real es `scripts/train/train_surrogate.py`. Recibe rutas de train/validation, activación, pérdida, batch size, learning rate, semilla y dispositivo. Para lanzar los once surrogates de forma reproducible existe `scripts/train/train_all_parallel.py`, que contiene la tabla `SURROGATES` con identificadores, datasets, seeds y pérdidas.
+El punto de entrada real es `scripts/train/train_surrogate.py`. Recibe rutas de train/validation, activación, pérdida, batch size, learning rate, semilla y dispositivo. Para lanzar los once surrogates pre-registrados de forma reproducible existe `scripts/train/train_all_parallel.py`, que contiene la tabla `SURROGATES` con identificadores, datasets, seeds y pérdidas. Las tres variantes de E6 (H-7-shallow, H-8-deep, H-9-lr-schedule) se entrenan aparte con `scripts/train/train_e6.bat`.
 
 ### Evaluation
 
