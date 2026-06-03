@@ -3,7 +3,7 @@
 Este script solo orquesta. Carga BS-1..4 y/o H-1..4, construye el
 ``BinEvaluator`` de cada familia, etiqueta cada checkpoint con su activación
 desde ``config.json``, ejecuta ``ActivationStudy`` y escribe el CSV largo por
-bin junto con heatmaps de precio y Delta.
+bin.
 
 Uso típico con ambas familias::
 
@@ -14,8 +14,7 @@ Uso típico con ambas familias::
         --heston-checkpoints results/checkpoints/H-1 results/checkpoints/H-2 \\
                              results/checkpoints/H-3 results/checkpoints/H-4 \\
         --heston-test      data/heston_test_125k_balanced_delta.npz \\
-        --output-dir       results/metrics \\
-        --figures-dir      results/figures/e2
+        --output-dir       results/metrics
 
 Se puede omitir una familia; basta con proporcionar checkpoints y test de la
 familia que se quiera evaluar.
@@ -43,8 +42,7 @@ def parse_args() -> argparse.Namespace:
     """Parser CLI; los ``help`` describen cada flag."""
     parser = argparse.ArgumentParser(
         description=(
-            "Ejecuta E2 sobre BS-1..4 y/o H-1..4 y escribe CSVs por bin "
-            "junto con heatmaps de precio y Delta."
+            "Ejecuta E2 sobre BS-1..4 y/o H-1..4 y escribe CSVs por bin."
         )
     )
     parser.add_argument(
@@ -68,12 +66,6 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         required=True,
         help="Directorio para los CSV por familia (e2_bs.csv, e2_heston.csv).",
-    )
-    parser.add_argument(
-        "--figures-dir",
-        type=Path,
-        default=None,
-        help="Directorio opcional para heatmaps PNG de precio y Delta.",
     )
     parser.add_argument("--device", default="auto")
     parser.add_argument("--batch-size", type=int, default=32768)
@@ -116,10 +108,8 @@ def _run_family(
     family_label: str,
     inputs: list[SurrogateInput],
     output_csv: Path,
-    figures_dir: Path | None,
-    figures_subdir_name: str,
 ) -> ExperimentResult:
-    """Corre ``ActivationStudy`` para una familia y persiste CSV + heatmaps."""
+    """Corre ``ActivationStudy`` para una familia y persiste el CSV por bin."""
     print(
         f"\n=== {family_label}: {len(inputs)} surrogates "
         f"({', '.join(item.surrogate_id for item in inputs)}) ==="
@@ -132,11 +122,6 @@ def _run_family(
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     result.to_csv(output_csv)
     print(f"CSV written: {output_csv}  (elapsed {elapsed:.2f}s)")
-
-    if figures_dir is not None:
-        subdir = figures_dir / figures_subdir_name
-        figures = result.to_heatmaps(subdir, metrics=("price", "delta"))
-        print(f"Heatmaps:    {len(figures)} PNGs in {subdir}")
 
     print(result.summary)
     return result
@@ -170,8 +155,6 @@ def main() -> None:
     print(f"E2 — Activations and Delta quality")
     print(f"device       : {device}")
     print(f"output_dir   : {args.output_dir}")
-    if args.figures_dir is not None:
-        print(f"figures_dir  : {args.figures_dir}")
 
     if bs_has_checkpoints:
         bs_inputs = _build_family_inputs(
@@ -185,8 +168,6 @@ def main() -> None:
             family_label="Black-Scholes",
             inputs=bs_inputs,
             output_csv=args.output_dir / "e2_bs.csv",
-            figures_dir=args.figures_dir,
-            figures_subdir_name="e2_bs",
         )
 
     if heston_has_checkpoints:
@@ -201,8 +182,6 @@ def main() -> None:
             family_label="Heston",
             inputs=heston_inputs,
             output_csv=args.output_dir / "e2_heston.csv",
-            figures_dir=args.figures_dir,
-            figures_subdir_name="e2_heston",
         )
 
 

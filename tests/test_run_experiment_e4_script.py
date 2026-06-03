@@ -2,7 +2,7 @@
 
 Construye un checkpoint sintético y reduce el protocolo (lotes y
 repeticiones) para que el script termine en segundos. Comprueba el
-CSV de timing y la generación del plot opcional.
+CSV de timing.
 """
 
 import csv
@@ -112,16 +112,15 @@ def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
     runpy.run_path("scripts/experiments/run_experiment_e4.py", run_name="__main__")
 
 
-def test_script_writes_csv_and_plot(
+def test_script_writes_csv(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """E4 con protocolo reducido produce CSV de timing y plot de ``speedup``."""
+    """E4 con protocolo reducido produce el CSV de timing."""
     ckpt = tmp_path / "ckpts" / "H-3"
     _write_heston_checkpoint(ckpt)
     test_path = tmp_path / "heston_test.npz"
     _write_heston_test_npz(test_path)
     output_csv = tmp_path / "metrics" / "e4_table.csv"
-    plot_path = tmp_path / "figures" / "speedup.png"
 
     _run_script(
         monkeypatch,
@@ -129,7 +128,6 @@ def test_script_writes_csv_and_plot(
             "--checkpoint", str(ckpt),
             "--test", str(test_path),
             "--output", str(output_csv),
-            "--plot", str(plot_path),
             "--devices", "cpu",
             "--batch-sizes", "10", "50",
             "--n-warmups", "1",
@@ -143,5 +141,4 @@ def test_script_writes_csv_and_plot(
     assert len(rows) == 2  # 1 device x 2 batch sizes
     assert rows[0]["device"] == "cpu"
     assert rows[0]["surrogate_id"] == "H-3"
-    assert plot_path.exists()
 

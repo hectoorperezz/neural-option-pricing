@@ -99,14 +99,13 @@ def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
     runpy.run_path("scripts/experiments/run_experiment_e1.py", run_name="__main__")
 
 
-def test_script_writes_csv_and_heatmaps_for_bs_only(
+def test_script_writes_csv_for_bs_only(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """E1 sobre solo BS produce CSV largo (25 filas) y los dos heatmaps PNG."""
+    """E1 sobre solo BS produce el CSV largo (25 filas)."""
     bs_checkpoint = tmp_path / "BS-3"
     bs_test = tmp_path / "bs_test.npz"
     output_csv = tmp_path / "e1.csv"
-    figures = tmp_path / "figures"
     _write_bs_checkpoint(bs_checkpoint)
     _write_bs_test_npz(bs_test)
 
@@ -116,7 +115,6 @@ def test_script_writes_csv_and_heatmaps_for_bs_only(
             "--bs-checkpoint", str(bs_checkpoint),
             "--bs-test", str(bs_test),
             "--output", str(output_csv),
-            "--figures-dir", str(figures),
             "--device", "cpu",
             "--batch-size", "32",
         ],
@@ -126,6 +124,4 @@ def test_script_writes_csv_and_heatmaps_for_bs_only(
     rows = list(csv.DictReader(output_csv.open(encoding="utf-8")))
     assert len(rows) == 25
     assert {row["surrogate_id"] for row in rows} == {"BS-3"}
-    pngs = list(figures.glob("*.png"))
-    assert len(pngs) == 2  # price + iv heatmap for BS-3
 

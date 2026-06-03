@@ -2,8 +2,7 @@
 
 Este script solo orquesta. Carga H-3 como baseline uniforme y H-5 como
 candidato enfocado, comparte el mismo test balanced, etiqueta cada input con
-su sampler, ejecuta ``SamplingStudy`` y escribe el CSV largo por bin junto
-con heatmaps de precio e IV.
+su sampler, ejecuta ``SamplingStudy`` y escribe el CSV largo por bin.
 
 Uso típico::
 
@@ -11,8 +10,7 @@ Uso típico::
         --uniform-checkpoint results/checkpoints/H-3 \\
         --focused-checkpoint results/checkpoints/H-5 \\
         --test               data/heston_test_125k_balanced_delta.npz \\
-        --output             results/metrics/e3_table.csv \\
-        --figures-dir        results/figures/e3
+        --output             results/metrics/e3_table.csv
 
 La métrica primaria del resumen es ``MAE_IV`` medio en los tres bins críticos
 ATM: weekly, short y medium-short. El veredicto sigue la clasificación
@@ -44,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Ejecuta E3 (H-3 uniforme frente a H-5 enfocado) y escribe "
-            "CSV por bin junto con heatmaps de precio e IV."
+            "CSV por bin."
         )
     )
     parser.add_argument(
@@ -73,12 +71,6 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         required=True,
         help="CSV de destino en formato largo, una fila por surrogate y bin.",
-    )
-    parser.add_argument(
-        "--figures-dir",
-        type=Path,
-        default=None,
-        help="Directorio opcional para heatmaps PNG de precio e IV.",
     )
     parser.add_argument("--device", default="auto")
     parser.add_argument("--batch-size", type=int, default=32768)
@@ -125,13 +117,12 @@ def _run(
     focused_checkpoint: Path,
     test_path: Path,
     output_csv: Path,
-    figures_dir: Path | None,
     device: str,
     batch_size: int,
     iv_workers: int,
     iv_progress: bool,
 ) -> ExperimentResult:
-    """Corre ``SamplingStudy`` y vuelca CSV + heatmaps de precio e IV."""
+    """Corre ``SamplingStudy`` y vuelca el CSV por bin."""
     dataset, bin_id = load_option_dataset_npz(test_path)
     evaluator = BinEvaluator(
         partition=BinPartition.default(),
@@ -170,10 +161,6 @@ def _run(
     result.to_csv(output_csv)
     print(f"CSV written: {output_csv}  (elapsed {elapsed:.2f}s)")
 
-    if figures_dir is not None:
-        figures = result.to_heatmaps(figures_dir, metrics=("price", "iv"))
-        print(f"Heatmaps:    {len(figures)} PNGs in {figures_dir}")
-
     print(result.summary)
     return result
 
@@ -188,15 +175,12 @@ def main() -> None:
     print(f"uniform      : {args.uniform_checkpoint}")
     print(f"focused      : {args.focused_checkpoint}")
     print(f"output       : {args.output}")
-    if args.figures_dir is not None:
-        print(f"figures_dir  : {args.figures_dir}")
 
     _run(
         uniform_checkpoint=args.uniform_checkpoint,
         focused_checkpoint=args.focused_checkpoint,
         test_path=args.test,
         output_csv=args.output,
-        figures_dir=args.figures_dir,
         device=device,
         batch_size=args.batch_size,
         iv_workers=args.iv_workers,

@@ -110,17 +110,16 @@ def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
     runpy.run_path("scripts/experiments/run_experiment_e3.py", run_name="__main__")
 
 
-def test_script_writes_csv_and_heatmaps(
+def test_script_writes_csv(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """E3 (uniforme vs focused) produce CSV largo con la columna ``sampler`` y heatmaps."""
+    """E3 (uniforme vs focused) produce el CSV largo con la columna ``sampler``."""
     ckpts = tmp_path / "ckpts"
     _write_heston_like_checkpoint(ckpts / "H-3")
     _write_heston_like_checkpoint(ckpts / "H-5")
     test_path = tmp_path / "heston_test.npz"
     _write_test_npz(test_path)
     output_csv = tmp_path / "metrics" / "e3_table.csv"
-    figures_dir = tmp_path / "figures"
 
     _run_script(
         monkeypatch,
@@ -129,7 +128,6 @@ def test_script_writes_csv_and_heatmaps(
             "--focused-checkpoint", str(ckpts / "H-5"),
             "--test", str(test_path),
             "--output", str(output_csv),
-            "--figures-dir", str(figures_dir),
             "--device", "cpu",
             "--batch-size", "32",
         ],
@@ -143,7 +141,4 @@ def test_script_writes_csv_and_heatmaps(
 
     surrogates_present = {row["surrogate_id"] for row in rows}
     assert surrogates_present == {"H-3", "H-5"}
-
-    figures = list(figures_dir.glob("*.png"))
-    assert len(figures) == 4  # 2 surrogates x 2 metrics (price + iv)
 

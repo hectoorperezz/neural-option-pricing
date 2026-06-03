@@ -2,8 +2,7 @@
 
 Este script solo orquesta. Carga H-3-small y H-6-small, opcionalmente H-3
 como baseline grande, comparte el mismo test balanced Heston, ejecuta
-``DMLStudy`` y escribe el CSV largo por bin junto con heatmaps de precio y
-Delta.
+``DMLStudy`` y escribe el CSV largo por bin.
 
 Uso típico::
 
@@ -12,8 +11,7 @@ Uso típico::
         --small-dml-checkpoint   results/checkpoints/H-6-small \\
         --baseline-checkpoint    results/checkpoints/H-3 \\
         --test                   data/heston_test_125k_balanced_delta.npz \\
-        --output                 results/metrics/e5_table.csv \\
-        --figures-dir            results/figures/e5
+        --output                 results/metrics/e5_table.csv
 
 ``--baseline-checkpoint`` es opcional. Sin él, el experimento mantiene su
 veredicto pre-registrado, que solo depende de H-3-small y H-6-small, pero no
@@ -45,7 +43,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Ejecuta E5: H-3-small frente a H-6-small, con H-3 opcional "
-            "como baseline, y escribe CSV por bin más heatmaps."
+            "como baseline, y escribe CSV por bin."
         )
     )
     parser.add_argument(
@@ -85,12 +83,6 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="CSV de destino en formato largo, una fila por surrogate y bin.",
     )
-    parser.add_argument(
-        "--figures-dir",
-        type=Path,
-        default=None,
-        help="Directorio opcional para heatmaps PNG de precio y Delta.",
-    )
     parser.add_argument("--device", default="auto")
     parser.add_argument("--batch-size", type=int, default=32768)
     return parser.parse_args()
@@ -127,11 +119,10 @@ def _run(
     baseline_checkpoint: Path | None,
     test_path: Path,
     output_csv: Path,
-    figures_dir: Path | None,
     device: str,
     batch_size: int,
 ) -> ExperimentResult:
-    """Corre ``DMLStudy`` y vuelca CSV + heatmaps de precio y Delta."""
+    """Corre ``DMLStudy`` y vuelca el CSV por bin."""
     dataset, bin_id = load_option_dataset_npz(test_path, require_delta=True)
     evaluator = BinEvaluator(
         partition=BinPartition.default(),
@@ -177,10 +168,6 @@ def _run(
     result.to_csv(output_csv)
     print(f"CSV written: {output_csv}  (elapsed {elapsed:.2f}s)")
 
-    if figures_dir is not None:
-        figures = result.to_heatmaps(figures_dir, metrics=("price", "delta"))
-        print(f"Heatmaps:    {len(figures)} PNGs in {figures_dir}")
-
     print(result.summary)
     return result
 
@@ -197,8 +184,6 @@ def main() -> None:
     if args.baseline_checkpoint is not None:
         print(f"baseline     : {args.baseline_checkpoint}")
     print(f"output       : {args.output}")
-    if args.figures_dir is not None:
-        print(f"figures_dir  : {args.figures_dir}")
 
     _run(
         small_price_checkpoint=args.small_price_checkpoint,
@@ -206,7 +191,6 @@ def main() -> None:
         baseline_checkpoint=args.baseline_checkpoint,
         test_path=args.test,
         output_csv=args.output,
-        figures_dir=args.figures_dir,
         device=device,
         batch_size=args.batch_size,
     )

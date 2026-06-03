@@ -10,8 +10,7 @@ Uso típico::
     python scripts/experiments/run_experiment_e4.py \\
         --checkpoint  results/checkpoints/H-3 \\
         --test        data/heston_test_125k_balanced_delta.npz \\
-        --output      results/metrics/e4_table.csv \\
-        --plot        results/figures/e4/speedup_vs_batch.png
+        --output      results/metrics/e4_table.csv
 
 Por defecto usa CPU y CUDA si hay GPU visible. ``--devices cpu`` fuerza solo
 CPU; ``--devices cpu cuda`` fuerza ambos.
@@ -66,12 +65,6 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         required=True,
         help="CSV de destino, una fila por par (device, batch_size).",
-    )
-    parser.add_argument(
-        "--plot",
-        type=Path,
-        default=None,
-        help="PNG opcional para la figura de speedup frente a tamaño de lote.",
     )
     parser.add_argument(
         "--devices",
@@ -135,8 +128,6 @@ def main() -> EfficiencyResult:
     print(f"checkpoint   : {args.checkpoint}")
     print(f"test         : {args.test}")
     print(f"output       : {args.output}")
-    if args.plot is not None:
-        print(f"plot         : {args.plot}")
     print(f"devices      : {', '.join(devices)}")
 
     features, raw_inputs, input_names = load_npz_features_and_raw_inputs(args.test)
@@ -184,9 +175,6 @@ def main() -> EfficiencyResult:
 
     result.to_csv(args.output)
     print(f"\nCSV written: {args.output}  (elapsed {elapsed:.2f}s)")
-    if args.plot is not None:
-        result.to_plot(args.plot)
-        print(f"Plot written: {args.plot}")
 
     print(result.summary)
     return result

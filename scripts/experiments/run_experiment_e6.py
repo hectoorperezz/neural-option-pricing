@@ -4,7 +4,7 @@ Este script solo orquesta. Carga H-3 como baseline (4x128 con `lr`
 fijo), H-7-shallow (2x128, `lr` fijo), H-8-deep (6x128, `lr` fijo) y
 H-9-lr-schedule (4x128 con `ReduceLROnPlateau`), comparte el mismo test
 balanced Heston, ejecuta ``ArchitectureStudy`` y escribe el CSV largo
-por bin junto con heatmaps de precio (y Delta cuando el test los trae).
+por bin.
 
 Uso típico::
 
@@ -14,8 +14,7 @@ Uso típico::
         --deep-checkpoint      results/checkpoints/H-8-deep \\
         --scheduler-checkpoint results/checkpoints/H-9-lr-schedule \\
         --test                 data/heston_test_125k_balanced_delta.npz \\
-        --output               results/metrics/e6_table.csv \\
-        --figures-dir          results/figures/e6
+        --output               results/metrics/e6_table.csv
 
 Los cuatro checkpoints son opcionales individualmente, pero al menos
 dos deben proporcionarse para que la comparación tenga sentido. El
@@ -49,7 +48,7 @@ def parse_args() -> argparse.Namespace:
         description=(
             "Ejecuta E6: H-3 frente a sus variantes de profundidad "
             "(H-7-shallow, H-8-deep) y de scheduler (H-9-lr-schedule), "
-            "y escribe CSV por bin más heatmaps."
+            "y escribe CSV por bin."
         )
     )
     parser.add_argument(
@@ -90,12 +89,6 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         required=True,
         help="CSV de destino en formato largo, una fila por surrogate y bin.",
-    )
-    parser.add_argument(
-        "--figures-dir",
-        type=Path,
-        default=None,
-        help="Directorio opcional para heatmaps PNG de precio (y Delta si el test los trae).",
     )
     parser.add_argument("--device", default="auto")
     parser.add_argument("--batch-size", type=int, default=32768)
@@ -142,11 +135,10 @@ def _run(
     scheduler_checkpoint: Path | None,
     test_path: Path,
     output_csv: Path,
-    figures_dir: Path | None,
     device: str,
     batch_size: int,
 ) -> ExperimentResult:
-    """Corre ``ArchitectureStudy`` y vuelca CSV + heatmaps."""
+    """Corre ``ArchitectureStudy`` y vuelca el CSV por bin."""
     dataset, bin_id = load_option_dataset_npz(test_path)
     evaluator = BinEvaluator(
         partition=BinPartition.default(),
@@ -192,15 +184,6 @@ def _run(
     result.to_csv(output_csv)
     print(f"CSV written: {output_csv}  (elapsed {elapsed:.2f}s)")
 
-    if figures_dir is not None:
-        metrics: tuple[str, ...]
-        if dataset.deltas is not None:
-            metrics = ("price", "delta")
-        else:
-            metrics = ("price",)
-        figures = result.to_heatmaps(figures_dir, metrics=metrics)
-        print(f"Heatmaps:    {len(figures)} PNGs in {figures_dir}")
-
     print(result.summary)
     return result
 
@@ -221,8 +204,6 @@ def main() -> None:
     if args.scheduler_checkpoint is not None:
         print(f"lr_schedule  : {args.scheduler_checkpoint}")
     print(f"output       : {args.output}")
-    if args.figures_dir is not None:
-        print(f"figures_dir  : {args.figures_dir}")
 
     _run(
         baseline_checkpoint=args.baseline_checkpoint,
@@ -231,7 +212,6 @@ def main() -> None:
         scheduler_checkpoint=args.scheduler_checkpoint,
         test_path=args.test,
         output_csv=args.output,
-        figures_dir=args.figures_dir,
         device=device,
         batch_size=args.batch_size,
     )

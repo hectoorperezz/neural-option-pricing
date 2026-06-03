@@ -98,39 +98,6 @@ class EfficiencyResult:
             for row in self.table:
                 writer.writerow(row)
 
-    def to_plot(self, path: str | Path) -> Path:
-        """Guarda el gráfico de speedup frente a tamaño de lote.
-
-        Se dibuja una línea por device y escala logarítmica en ambos ejes,
-        porque los lotes son potencias de diez y el speedup cambia por
-        órdenes de magnitud.
-        """
-        import matplotlib
-
-        matplotlib.use("Agg", force=True)
-        import matplotlib.pyplot as plt
-
-        output_path = Path(path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        fig, ax = plt.subplots(figsize=(6.0, 4.0))
-        for device, device_results in self.timings.items():
-            batch_sizes = [r.batch_size for r in device_results]
-            speedups = [r.speedup_median for r in device_results]
-            ax.plot(batch_sizes, speedups, marker="o", label=device)
-        ax.set_xscale("log")
-        ax.set_yscale("log")
-        ax.set_xlabel("Tamaño de lote")
-        ax.set_ylabel("Speedup (solver / surrogate)")
-        ax.set_title(f"E4 — Speedup por tamaño de lote ({self.surrogate_id})")
-        ax.grid(True, which="both", linestyle="--", alpha=0.4)
-        ax.legend()
-        fig.tight_layout()
-        fig.savefig(output_path, dpi=150)
-        plt.close(fig)
-        return output_path
-
-
 def _render_row(surrogate_id: str, result: TimingResult) -> dict[str, Any]:
     throughput = (
         float(result.batch_size) / result.surrogate_median_s

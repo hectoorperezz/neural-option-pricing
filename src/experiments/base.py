@@ -11,7 +11,7 @@ Este módulo define:
 * ``SurrogateInput``: empaqueta un surrogate, su dataset de test y el
   evaluador que debe usar.
 * ``ExperimentResult``: salida uniforme de los experimentos, con tabla,
-  resumen y reports internos para generar heatmaps.
+  resumen y reports internos con las métricas agregadas.
 * ``Experiment``: clase base abstracta con un único método obligatorio,
   ``run``.
 
@@ -60,8 +60,8 @@ class ExperimentResult:
     """Salida uniforme de ``Experiment.run``.
 
     ``table`` es la tabla larga por ``(surrogate, bin)`` que se escribe a
-    CSV. ``reports`` conserva los ``Report`` originales para poder generar
-    heatmaps sin recalcular métricas.
+    CSV. ``reports`` conserva los ``Report`` originales por si se necesitan
+    las métricas agregadas sin recalcularlas.
 
     ``verdict`` solo se rellena cuando la metodología define umbrales
     pre-registrados, como en E3 y E5. En E1 y E2 permanece en ``None``.
@@ -98,27 +98,6 @@ class ExperimentResult:
             writer.writeheader()
             for row in self.table:
                 writer.writerow(self._render_row(row))
-
-    def to_heatmaps(
-        self,
-        directory: str | Path,
-        metrics: tuple[str, ...] = ("price", "iv"),
-        statistic: str = "mean",
-    ) -> list[Path]:
-        """Guarda un heatmap PNG por ``(surrogate, metric)``.
-
-        Devuelve las rutas escritas. Por defecto genera precio e IV, que son
-        los dos heatmaps requeridos en E1.
-        """
-        output_dir = Path(directory)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        written: list[Path] = []
-        for surrogate_id, report in self.reports.items():
-            for metric in metrics:
-                output_path = output_dir / f"{surrogate_id}_{metric}_{statistic}.png"
-                report.to_heatmap(metric, output_path, statistic=statistic)
-                written.append(output_path)
-        return written
 
     @staticmethod
     def _render_row(row: dict[str, Any]) -> dict[str, Any]:

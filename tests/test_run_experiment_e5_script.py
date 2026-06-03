@@ -127,17 +127,16 @@ def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
     runpy.run_path("scripts/experiments/run_experiment_e5.py", run_name="__main__")
 
 
-def test_script_writes_csv_and_heatmaps_two_surrogates(
+def test_script_writes_csv_two_surrogates(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """E5 sobre H-3-small + H-6-small produce CSV con columnas ``role``/``loss`` y heatmaps."""
+    """E5 sobre H-3-small + H-6-small produce el CSV con columnas ``role``/``loss``."""
     ckpts = tmp_path / "ckpts"
     _write_heston_like_checkpoint(ckpts / "H-3-small", loss="price")
     _write_heston_like_checkpoint(ckpts / "H-6-small", loss="differential")
     test_path = tmp_path / "heston_test.npz"
     _write_test_npz_with_deltas(test_path)
     output_csv = tmp_path / "metrics" / "e5_table.csv"
-    figures_dir = tmp_path / "figures"
 
     _run_script(
         monkeypatch,
@@ -146,7 +145,6 @@ def test_script_writes_csv_and_heatmaps_two_surrogates(
             "--small-dml-checkpoint", str(ckpts / "H-6-small"),
             "--test", str(test_path),
             "--output", str(output_csv),
-            "--figures-dir", str(figures_dir),
             "--device", "cpu",
             "--batch-size", "32",
         ],
@@ -159,7 +157,4 @@ def test_script_writes_csv_and_heatmaps_two_surrogates(
     assert roles == {"small_price", "small_dml"}
     surrogates_present = {row["surrogate_id"] for row in rows}
     assert surrogates_present == {"H-3-small", "H-6-small"}
-
-    figures = list(figures_dir.glob("*.png"))
-    assert len(figures) == 4  # 2 surrogates x 2 metrics
 

@@ -2,11 +2,11 @@
 
 Este script solo orquesta. Carga BS-3 y/o H-3, construye el
 ``BinEvaluator`` de cada familia, ejecuta ``PriceVsIVStudy`` y escribe el CSV
-por bin junto con los heatmaps exigidos en la metodología::
+por bin::
 
     "El entregable debe incluir tabla por bin con MAE(C/K), MAE_IV,
     Vega media o proxy de Vega, percentiles altos y tasa de fallos de
-    inversión IV, además de heatmaps separados para precio e IV."
+    inversión IV."
 
 Uso típico con ambas familias::
 
@@ -15,8 +15,7 @@ Uso típico con ambas familias::
         --bs-test           data/bs_test_125k_balanced_delta.npz \\
         --heston-checkpoint results/checkpoints/H-3 \\
         --heston-test       data/heston_test_125k_balanced_delta.npz \\
-        --output            results/metrics/e1_table.csv \\
-        --figures-dir       results/figures/e1
+        --output            results/metrics/e1_table.csv
 
 Se puede omitir una familia; el script ejecuta solo los surrogates
 proporcionados y valida las rutas al inicio.
@@ -46,7 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Ejecuta E1 sobre los baseline BS-3 y/o H-3 y escribe el CSV "
-            "por bin junto con heatmaps de precio e IV."
+            "por bin."
         )
     )
     parser.add_argument("--bs-checkpoint", type=Path, default=None)
@@ -54,12 +53,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--heston-checkpoint", type=Path, default=None)
     parser.add_argument("--heston-test", type=Path, default=None)
     parser.add_argument("--output", type=Path, required=True, help="Ruta del CSV de salida; debe terminar en .csv.")
-    parser.add_argument(
-        "--figures-dir",
-        type=Path,
-        default=None,
-        help="Directorio opcional para escribir los heatmaps PNG de precio e IV.",
-    )
     parser.add_argument("--device", default="auto")
     parser.add_argument("--batch-size", type=int, default=32768)
     parser.add_argument(
@@ -111,7 +104,7 @@ def _build_input(
 
 
 def main() -> None:
-    """Entrada del script: corre ``PriceVsIVStudy`` y vuelca CSV + heatmaps."""
+    """Entrada del script: corre ``PriceVsIVStudy`` y vuelca el CSV por bin."""
     args = parse_args()
     if args.output.suffix.lower() != ".csv":
         raise ValueError("--output must end with .csv")
@@ -176,10 +169,6 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     result.to_csv(args.output)
     print(f"\nCSV written: {args.output}")
-
-    if args.figures_dir is not None:
-        figures = result.to_heatmaps(args.figures_dir)
-        print(f"Heatmaps:    {len(figures)} PNGs in {args.figures_dir}")
 
     print(f"\nElapsed: {elapsed:.2f}s")
     print()

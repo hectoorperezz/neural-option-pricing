@@ -95,17 +95,16 @@ def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
     runpy.run_path("scripts/experiments/run_experiment_e2.py", run_name="__main__")
 
 
-def test_script_writes_csv_and_heatmaps_for_bs_family(
+def test_script_writes_csv_for_bs_family(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """E2 sobre BS produce 50 filas (2 surrogates × 25 bins) y 4 PNG (precio + Delta)."""
+    """E2 sobre BS produce 50 filas (2 surrogates × 25 bins) en el CSV."""
     bs_dir = tmp_path / "ckpts"
     _write_bs_checkpoint(bs_dir / "BS-1", activation="relu")
     _write_bs_checkpoint(bs_dir / "BS-3", activation="swish")
     bs_test = tmp_path / "bs_test.npz"
     _write_bs_test_npz(bs_test)
     output_dir = tmp_path / "metrics"
-    figures_dir = tmp_path / "figures"
 
     _run_script(
         monkeypatch,
@@ -113,7 +112,6 @@ def test_script_writes_csv_and_heatmaps_for_bs_family(
             "--bs-checkpoints", str(bs_dir / "BS-1"), str(bs_dir / "BS-3"),
             "--bs-test", str(bs_test),
             "--output-dir", str(output_dir),
-            "--figures-dir", str(figures_dir),
             "--device", "cpu",
             "--batch-size", "32",
         ],
@@ -125,7 +123,4 @@ def test_script_writes_csv_and_heatmaps_for_bs_family(
     assert len(rows) == 50  # 2 surrogates x 25 bins
     activations = {row["activation"] for row in rows}
     assert activations == {"relu", "swish"}
-
-    bs_figures = list((figures_dir / "e2_bs").glob("*.png"))
-    assert len(bs_figures) == 4  # 2 surrogates x 2 metrics (price + delta)
 

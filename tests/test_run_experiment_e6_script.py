@@ -3,7 +3,7 @@
 Monta cuatro checkpoints sintéticos (con `hidden_layers` y
 `scheduler` distintos) sobre un test Heston con Delta y comprueba que
 el script emite el CSV largo con las columnas de ``role`` y
-``architecture``, más los heatmaps de precio y Delta.
+``architecture``.
 """
 
 import csv
@@ -118,10 +118,10 @@ def _run_script(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> None:
     )
 
 
-def test_script_writes_csv_and_heatmaps_four_surrogates(
+def test_script_writes_csv_four_surrogates(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """E6 sobre baseline + shallow + deep + lr_schedule produce CSV largo con roles y arquitecturas y heatmaps de precio y Delta."""
+    """E6 sobre baseline + shallow + deep + lr_schedule produce el CSV largo con roles y arquitecturas."""
     ckpts = tmp_path / "ckpts"
     _write_heston_like_checkpoint(ckpts / "H-3", hidden_layers=4, scheduler="none")
     _write_heston_like_checkpoint(ckpts / "H-7-shallow", hidden_layers=2, scheduler="none")
@@ -132,7 +132,6 @@ def test_script_writes_csv_and_heatmaps_four_surrogates(
     test_path = tmp_path / "heston_test.npz"
     _write_test_npz_with_deltas(test_path)
     output_csv = tmp_path / "metrics" / "e6_table.csv"
-    figures_dir = tmp_path / "figures"
 
     _run_script(
         monkeypatch,
@@ -143,7 +142,6 @@ def test_script_writes_csv_and_heatmaps_four_surrogates(
             "--scheduler-checkpoint", str(ckpts / "H-9-lr-schedule"),
             "--test", str(test_path),
             "--output", str(output_csv),
-            "--figures-dir", str(figures_dir),
             "--device", "cpu",
             "--batch-size", "32",
         ],
@@ -163,6 +161,3 @@ def test_script_writes_csv_and_heatmaps_four_surrogates(
     }
     architectures = {row["architecture"] for row in rows}
     assert architectures == {"4x8", "2x8", "6x8", "4x8+plateau"}
-
-    figures = list(figures_dir.glob("*.png"))
-    assert len(figures) == 8  # 4 surrogates x 2 metrics (price + delta)
