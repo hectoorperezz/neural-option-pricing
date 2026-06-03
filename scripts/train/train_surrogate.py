@@ -1,11 +1,16 @@
-"""Script de entrenamiento de un surrogate desde ``.npz``.
+"""Training script for a pricing surrogate from `.npz` datasets.
 
-Carga train + validation, construye un :class:`~src.models.MLP`, lo
-entrena con :class:`~src.training.Trainer` y guarda
-``checkpoint.pt``, ``config.json`` e historiales (CSV + JSON) en
-``--output-dir``. Soporta dos pérdidas (``price`` y ``differential``,
-esta última para E5) y dos rutas de carga: ``DataLoader`` clásico o
-``--preload-to-device`` para mantener tensores en VRAM.
+Loads train + validation sets, builds an :class:`~src.models.MLP`, trains it
+with :class:`~src.training.Trainer`, and saves ``checkpoint.pt``,
+``config.json`` and training histories (CSV + JSON) into ``--output-dir``.
+
+Supported losses:
+- ``price``
+- ``differential``
+
+Supported loading modes:
+- classic ``DataLoader``
+- ``--preload-to-device`` to keep tensors resident in VRAM
 """
 
 from __future__ import annotations
@@ -22,11 +27,10 @@ from torch.utils.data import DataLoader
 
 
 def _torch_compile_available() -> bool:
-    """Comprueba si ``torch.compile`` puede usarse en esta plataforma.
+    """Check whether ``torch.compile`` can be used on this platform.
 
-    El backend Inductor necesita Triton. En Windows no hay wheel oficial, así
-    que comprobamos la importación antes de pagar el coste de compilar y
-    fallar en el primer paso.
+    Inductor needs Triton. On Windows there is no official Triton wheel, so we
+    check the import before paying the compilation cost and failing at runtime.
     """
     if sys.platform == "win32":
         try:
@@ -40,10 +44,10 @@ def _torch_compile_available() -> bool:
 
 
 class GPUBatchIterator:
-    """Iterador de lotes para tensores ya cargados en el ``device``.
+    """Batch iterator for tensors already loaded onto the target ``device``.
 
-    Evita ``DataLoader`` y la transferencia host->device por lote cuando el
-    dataset cabe en VRAM. Devuelve diccionarios con las mismas claves que
+    Avoids ``DataLoader`` and host->device transfer at each batch when the full
+    dataset fits in VRAM. Yields dictionaries with the same keys as
     ``OptionDataset.__getitem__``.
     """
 
@@ -57,6 +61,7 @@ class GPUBatchIterator:
     ) -> None:
         if batch_size <= 0:
             raise ValueError("batch_size must be strictly positive")
+
         self.tensors = {name: value.to(device) for name, value in tensors.items()}
         self.batch_size = batch_size
         self.shuffle = shuffle
@@ -69,12 +74,14 @@ class GPUBatchIterator:
             indices = torch.randperm(self.n, device=self.device, generator=self._generator)
         else:
             indices = torch.arange(self.n, device=self.device)
+
         for start in range(0, self.n, self.batch_size):
             idx = indices[start : start + self.batch_size]
             yield {name: value[idx] for name, value in self.tensors.items()}
 
     def __len__(self) -> int:
         return (self.n + self.batch_size - 1) // self.batch_size
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -86,43 +93,89 @@ from src.utils import load_option_dataset_npz, resolve_torch_device, set_global_
 
 
 def parse_args() -> argparse.Namespace:
-    """Parser CLI; los ``help`` describen cada flag."""
-    parser = argparse.ArgumentParser(description="Entrena un surrogate de pricing desde datos NPZ.")
+    """CLI parser."""
+    parser = argparse.ArgumentParser(description="Train a pricing surrogate from NPZ data.")
+
     parser.add_argument("--train", type=Path, required=True)
     parser.add_argument("--validation", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--experiment-id", required=True)
+
     parser.add_argument("--loss", choices=("price", "differential"), default="price")
-    parser.add_argument("--activation", choices=("relu", "softplus", "swish", "tanh"), default="swish")
+    parser.add_argument(
+        "--activation",
+        choices=("relu", "softplus", "swish", "tanh"),
+        default="swish",
+    )
     parser.add_argument("--hidden-width", type=int, default=128)
     parser.add_argument("--hidden-layers", type=int, default=4)
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--batch-size", type=int, default=4096)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
+
+    parser.add_argument(
+        "--scheduler",
+        choices=("none", "plateau"),
+        default="none",
+        help="Learning-rate scheduler. 'plateau' uses ReduceLROnPlateau on validation_price_mae.",
+    )
+    parser.add_argument(
+        "--scheduler-factor",
+        type=float,
+        default=0.5,
+        help="Multiplicative LR factor when ReduceLROnPlateau triggers.",
+    )
+    parser.add_argument(
+        "--scheduler-patience",
+        type=int,
+        default=3,
+        help="Number of epochs without improvement before reducing LR.",
+    )
+    parser.add_argument(
+        "--scheduler-min-lr",
+        type=float,
+        default=1e-5,
+        help="Lower bound for LR when a scheduler is enabled.",
+    )
+
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--device", default="auto", help="'auto', 'cpu', 'cuda' o cualquier device válido de Torch.")
+    parser.add_argument(
+        "--device",
+        default="auto",
+        help="'auto', 'cpu', 'cuda' or any valid Torch device string.",
+    )
     parser.add_argument("--num-workers", type=int, default=0)
+
     parser.add_argument("--price-weight", type=float, default=1.0)
     parser.add_argument("--delta-weight", type=float, default=1.0)
     parser.add_argument("--moneyness-min", type=float, default=0.4)
     parser.add_argument("--moneyness-max", type=float, default=2.0)
+
     parser.add_argument(
         "--compile",
         action="store_true",
-        help="Envuelve el modelo con torch.compile() para fusionar kernels. Reduce overhead por paso a cambio de compilar en el primer paso.",
+        help=(
+            "Wrap the model with torch.compile() to fuse kernels. "
+            "This reduces per-step overhead at the cost of compile time."
+        ),
     )
     parser.add_argument(
         "--preload-to-device",
         action="store_true",
-        help="Carga train y validation completos en el device y usa un iterador nativo de GPU. Evita transferencias por lote si los datos caben en VRAM.",
+        help=(
+            "Load train and validation tensors fully onto the target device and "
+            "use a native GPU iterator. Avoids per-batch transfers if data fits in VRAM."
+        ),
     )
+
     return parser.parse_args()
 
 
 def make_loss(args: argparse.Namespace) -> torch.nn.Module:
-    """Devuelve ``PriceLoss`` o ``DifferentialLoss`` según ``--loss``."""
+    """Return ``PriceLoss`` or ``DifferentialLoss`` based on ``--loss``."""
     if args.loss == "price":
         return PriceLoss()
+
     return DifferentialLoss(
         price_weight=args.price_weight,
         delta_weight=args.delta_weight,
@@ -131,13 +184,15 @@ def make_loss(args: argparse.Namespace) -> torch.nn.Module:
 
 
 def write_history(output_dir: Path, history: list[dict[str, float]]) -> None:
-    """Vuelca el historial de métricas a ``history.json`` y ``history.csv``."""
+    """Persist training history to ``history.json`` and ``history.csv``."""
     (output_dir / "history.json").write_text(
         json.dumps(history, indent=2, sort_keys=True),
         encoding="utf-8",
     )
+
     if not history:
         return
+
     fieldnames = list(history[0].keys())
     with (output_dir / "history.csv").open("w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
@@ -146,7 +201,7 @@ def write_history(output_dir: Path, history: list[dict[str, float]]) -> None:
 
 
 def write_config(output_dir: Path, config: dict[str, Any]) -> None:
-    """Persiste la configuración del entrenamiento en ``config.json``."""
+    """Persist run configuration to ``config.json``."""
     (output_dir / "config.json").write_text(
         json.dumps(config, indent=2, sort_keys=True),
         encoding="utf-8",
@@ -154,17 +209,25 @@ def write_config(output_dir: Path, config: dict[str, Any]) -> None:
 
 
 def main() -> None:
-    """Entrada del script: ajusta el modelo y persiste checkpoint + métricas."""
+    """Main training entrypoint."""
     args = parse_args()
+
     if args.epochs <= 0:
         raise ValueError("--epochs must be strictly positive")
     if args.batch_size <= 0:
         raise ValueError("--batch-size must be strictly positive")
     if args.hidden_width <= 0 or args.hidden_layers <= 0:
         raise ValueError("--hidden-width and --hidden-layers must be strictly positive")
+    if args.scheduler_factor <= 0.0 or args.scheduler_factor >= 1.0:
+        raise ValueError("--scheduler-factor must be in the interval (0, 1)")
+    if args.scheduler_patience < 0:
+        raise ValueError("--scheduler-patience must be non-negative")
+    if args.scheduler_min_lr <= 0.0:
+        raise ValueError("--scheduler-min-lr must be strictly positive")
 
     set_global_seed(args.seed)
     device = resolve_torch_device(args.device, require_cuda=True)
+
     train_dataset, _ = load_option_dataset_npz(
         args.train,
         require_delta=args.loss == "differential",
@@ -172,12 +235,15 @@ def main() -> None:
     )
     validation_dataset, _ = load_option_dataset_npz(
         args.validation,
+        require_delta=args.loss == "differential",
         dataset_label="validation dataset",
     )
+
     if train_dataset.features.shape[1] != validation_dataset.features.shape[1]:
         raise ValueError("train and validation input dimensions do not match")
 
     pin_memory = device.startswith("cuda")
+
     if args.preload_to_device:
         train_tensors: dict[str, torch.Tensor] = {
             "features": train_dataset.features,
@@ -185,14 +251,23 @@ def main() -> None:
         }
         if train_dataset.deltas is not None:
             train_tensors["delta"] = train_dataset.deltas
+
+        validation_tensors: dict[str, torch.Tensor] = {
+            "features": validation_dataset.features,
+            "price": validation_dataset.prices,
+        }
+        if validation_dataset.deltas is not None:
+            validation_tensors["delta"] = validation_dataset.deltas
+
         train_loader = GPUBatchIterator(
-            train_tensors, args.batch_size, shuffle=True, device=device, seed=args.seed
+            train_tensors,
+            args.batch_size,
+            shuffle=True,
+            device=device,
+            seed=args.seed,
         )
         validation_loader = GPUBatchIterator(
-            {
-                "features": validation_dataset.features,
-                "price": validation_dataset.prices,
-            },
+            validation_tensors,
             args.batch_size,
             shuffle=False,
             device=device,
@@ -220,6 +295,7 @@ def main() -> None:
         hidden_layers=args.hidden_layers,
         activation=args.activation,
     )
+
     if args.compile:
         if _torch_compile_available():
             model = torch.compile(model)
@@ -230,8 +306,20 @@ def main() -> None:
                 flush=True,
             )
             args.compile = False
+
     loss_fn = make_loss(args)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+
+    scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau | None = None
+    if args.scheduler == "plateau":
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode="min",
+            factor=args.scheduler_factor,
+            patience=args.scheduler_patience,
+            min_lr=args.scheduler_min_lr,
+        )
+
     trainer = Trainer(
         model=model,
         loss_fn=loss_fn,
@@ -242,6 +330,7 @@ def main() -> None:
     )
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
+
     config = {
         "experiment_id": args.experiment_id,
         "train": str(args.train),
@@ -263,16 +352,26 @@ def main() -> None:
         "moneyness_range": [args.moneyness_min, args.moneyness_max],
         "compile": args.compile,
         "preload_to_device": args.preload_to_device,
+        "scheduler": args.scheduler,
+        "scheduler_factor": args.scheduler_factor,
+        "scheduler_patience": args.scheduler_patience,
+        "scheduler_min_lr": args.scheduler_min_lr,
     }
     write_config(args.output_dir, config)
 
-    def print_epoch(record: dict[str, float]) -> None:
+    def on_epoch_end(record: dict[str, float]) -> None:
+        if scheduler is not None:
+            scheduler.step(record["validation_price_mae"])
+
+        current_lr = optimizer.param_groups[0]["lr"]
+        record["learning_rate"] = float(current_lr)
+
         metrics = " ".join(
             f"{name}={value:.6g}" for name, value in record.items() if name != "epoch"
         )
         print(f"epoch={int(record['epoch'])} {metrics}", flush=True)
 
-    history = trainer.fit(args.epochs, on_epoch_end=print_epoch)
+    history = trainer.fit(args.epochs, on_epoch_end=on_epoch_end)
     trainer.load_best()
     write_history(args.output_dir, history)
 
@@ -285,6 +384,7 @@ def main() -> None:
         "history": history,
     }
     torch.save(checkpoint, args.output_dir / "checkpoint.pt")
+
     print(
         json.dumps(
             {
