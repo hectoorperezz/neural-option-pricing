@@ -1,4 +1,5 @@
 from src.experiments.activation_study import ActivationStudy
+from src.experiments.architecture_study import ArchitectureStudy
 from src.experiments.base import Experiment, ExperimentResult, SurrogateInput
 from src.experiments.dml_study import DMLStudy
 from src.experiments.efficiency_study import EfficiencyResult, EfficiencyStudy
@@ -7,6 +8,7 @@ from src.experiments.sampling_study import SamplingStudy
 
 __all__ = [
     "ActivationStudy",
+    "ArchitectureStudy",
     "DMLStudy",
     "EfficiencyResult",
     "EfficiencyStudy",
