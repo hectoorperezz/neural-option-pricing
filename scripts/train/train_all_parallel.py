@@ -42,17 +42,17 @@ class SurrogateSpec:
 
 
 SURROGATES: list[SurrogateSpec] = [
-    SurrogateSpec("BS-1",      "bs_train_200k_uniform_delta.npz",        "bs_validation_50k_uniform_delta.npz",     "price",        "relu",     32768, 101),
-    SurrogateSpec("BS-2",      "bs_train_200k_uniform_delta.npz",        "bs_validation_50k_uniform_delta.npz",     "price",        "softplus", 32768, 102),
-    SurrogateSpec("BS-3",      "bs_train_200k_uniform_delta.npz",        "bs_validation_50k_uniform_delta.npz",     "price",        "swish",    32768, 103),
-    SurrogateSpec("BS-4",      "bs_train_200k_uniform_delta.npz",        "bs_validation_50k_uniform_delta.npz",     "price",        "tanh",     32768, 104),
-    SurrogateSpec("H-1",       "heston_train_500k_uniform.npz",          "heston_validation_50k_uniform.npz",       "price",        "relu",     32768, 201),
-    SurrogateSpec("H-2",       "heston_train_500k_uniform.npz",          "heston_validation_50k_uniform.npz",       "price",        "softplus", 32768, 202),
-    SurrogateSpec("H-3",       "heston_train_500k_uniform.npz",          "heston_validation_50k_uniform.npz",       "price",        "swish",    32768, 203),
-    SurrogateSpec("H-4",       "heston_train_500k_uniform.npz",          "heston_validation_50k_uniform.npz",       "price",        "tanh",     32768, 204),
-    SurrogateSpec("H-5",       "heston_train_500k_focused.npz",          "heston_validation_50k_uniform.npz",       "price",        "swish",    32768, 205),
-    SurrogateSpec("H-3-small", "heston_train_100k_uniform.npz",          "heston_validation_50k_uniform.npz",       "price",        "swish",    16384, 206),
-    SurrogateSpec("H-6-small", "heston_train_100k_uniform_delta.npz",    "heston_validation_50k_uniform.npz",       "differential", "swish",    16384, 207),
+    SurrogateSpec("BS-1",      "bs_train_10M_uniform_delta.npz",         "bs_validation_2500k_uniform_delta.npz",   "price",        "relu",     32768, 101),
+    SurrogateSpec("BS-2",      "bs_train_10M_uniform_delta.npz",         "bs_validation_2500k_uniform_delta.npz",   "price",        "softplus", 32768, 102),
+    SurrogateSpec("BS-3",      "bs_train_10M_uniform_delta.npz",         "bs_validation_2500k_uniform_delta.npz",   "price",        "swish",    32768, 103),
+    SurrogateSpec("BS-4",      "bs_train_10M_uniform_delta.npz",         "bs_validation_2500k_uniform_delta.npz",   "price",        "tanh",     32768, 104),
+    SurrogateSpec("H-1",       "heston_train_25M_uniform.npz",           "heston_validation_2500k_uniform.npz",     "price",        "relu",     32768, 201),
+    SurrogateSpec("H-2",       "heston_train_25M_uniform.npz",           "heston_validation_2500k_uniform.npz",     "price",        "softplus", 32768, 202),
+    SurrogateSpec("H-3",       "heston_train_25M_uniform.npz",           "heston_validation_2500k_uniform.npz",     "price",        "swish",    32768, 203),
+    SurrogateSpec("H-4",       "heston_train_25M_uniform.npz",           "heston_validation_2500k_uniform.npz",     "price",        "tanh",     32768, 204),
+    SurrogateSpec("H-5",       "heston_train_25M_focused.npz",           "heston_validation_2500k_uniform.npz",     "price",        "swish",    32768, 205),
+    SurrogateSpec("H-3-small", "heston_train_5M_uniform_delta.npz",      "heston_validation_2500k_uniform.npz",     "price",        "swish",    16384, 207),
+    SurrogateSpec("H-6-small", "heston_train_5M_uniform_delta.npz",      "heston_validation_2500k_uniform.npz",     "differential", "swish",    16384, 207),
 ]
 
 

@@ -104,8 +104,8 @@ El entrenamiento individual se lanza así:
 
 ```bash
 python scripts/train/train_surrogate.py \
-  --train data/heston_train_500k_uniform.npz \
-  --validation data/heston_validation_50k_uniform.npz \
+  --train data/heston_train_25M_uniform.npz \
+  --validation data/heston_validation_2500k_uniform.npz \
   --experiment-id H-3 \
   --output-dir results/checkpoints/H-3 \
   --loss price \

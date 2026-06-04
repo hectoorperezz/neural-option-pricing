@@ -22,9 +22,9 @@ run_dataset() {
 
   echo "[$(timestamp)] START $name" | tee "$log_file"
   if [[ "$OVERWRITE" == "1" ]]; then
-    "$PYTHON_BIN" "$REPO_ROOT/scripts/generate_dataset.py" "$@" --overwrite 2>&1 | tee -a "$log_file"
+    "$PYTHON_BIN" "$REPO_ROOT/scripts/data/generate_dataset.py" "$@" --overwrite 2>&1 | tee -a "$log_file"
   else
-    "$PYTHON_BIN" "$REPO_ROOT/scripts/generate_dataset.py" "$@" 2>&1 | tee -a "$log_file"
+    "$PYTHON_BIN" "$REPO_ROOT/scripts/data/generate_dataset.py" "$@" 2>&1 | tee -a "$log_file"
   fi
   echo "[$(timestamp)] DONE $name" | tee -a "$log_file"
 }
@@ -35,26 +35,29 @@ run_dataset "heston_benchmark_5k_delta" \
   --n-samples 5000 \
   --batch-size 1000 \
   --seed 42 \
+  --workers 32 \
   --include-delta \
   --output "$DATA_DIR/heston_benchmark_5k_delta.npz"
 
-run_dataset "bs_train_200k_uniform_delta" \
+run_dataset "bs_train_10M_uniform_delta" \
   --family black_scholes \
   --sampler uniform \
-  --n-samples 200000 \
-  --batch-size 20000 \
+  --n-samples 10000000 \
+  --batch-size 100000 \
   --seed 45 \
+  --workers 32 \
   --include-delta \
-  --output "$DATA_DIR/bs_train_200k_uniform_delta.npz"
+  --output "$DATA_DIR/bs_train_10M_uniform_delta.npz"
 
-run_dataset "bs_validation_50k_uniform_delta" \
+run_dataset "bs_validation_2500k_uniform_delta" \
   --family black_scholes \
   --sampler uniform \
-  --n-samples 50000 \
-  --batch-size 20000 \
+  --n-samples 2500000 \
+  --batch-size 100000 \
   --seed 49 \
+  --workers 32 \
   --include-delta \
-  --output "$DATA_DIR/bs_validation_50k_uniform_delta.npz"
+  --output "$DATA_DIR/bs_validation_2500k_uniform_delta.npz"
 
 run_dataset "bs_test_125k_balanced_delta" \
   --family black_scholes \
@@ -62,49 +65,46 @@ run_dataset "bs_test_125k_balanced_delta" \
   --samples-per-bin 5000 \
   --batch-size 20000 \
   --seed 47 \
+  --workers 32 \
   --include-delta \
   --output "$DATA_DIR/bs_test_125k_balanced_delta.npz"
 
-run_dataset "heston_train_500k_uniform" \
+run_dataset "heston_train_25M_uniform" \
   --family heston \
   --sampler uniform \
-  --n-samples 500000 \
+  --n-samples 25000000 \
   --batch-size 5000 \
   --seed 42 \
-  --output "$DATA_DIR/heston_train_500k_uniform.npz"
+  --workers 32 \
+  --output "$DATA_DIR/heston_train_25M_uniform.npz"
 
-run_dataset "heston_train_500k_focused" \
+run_dataset "heston_train_25M_focused" \
   --family heston \
   --sampler focused \
-  --n-samples 500000 \
+  --n-samples 25000000 \
   --batch-size 5000 \
   --seed 44 \
-  --output "$DATA_DIR/heston_train_500k_focused.npz"
+  --workers 32 \
+  --output "$DATA_DIR/heston_train_25M_focused.npz"
 
-run_dataset "heston_train_100k_uniform" \
+run_dataset "heston_train_5M_uniform_delta" \
   --family heston \
   --sampler uniform \
-  --n-samples 100000 \
-  --batch-size 5000 \
-  --seed 48 \
-  --output "$DATA_DIR/heston_train_100k_uniform.npz"
-
-run_dataset "heston_train_100k_uniform_delta" \
-  --family heston \
-  --sampler uniform \
-  --n-samples 100000 \
+  --n-samples 5000000 \
   --batch-size 5000 \
   --seed 43 \
+  --workers 32 \
   --include-delta \
-  --output "$DATA_DIR/heston_train_100k_uniform_delta.npz"
+  --output "$DATA_DIR/heston_train_5M_uniform_delta.npz"
 
-run_dataset "heston_validation_50k_uniform" \
+run_dataset "heston_validation_2500k_uniform" \
   --family heston \
   --sampler uniform \
-  --n-samples 50000 \
+  --n-samples 2500000 \
   --batch-size 5000 \
   --seed 50 \
-  --output "$DATA_DIR/heston_validation_50k_uniform.npz"
+  --workers 32 \
+  --output "$DATA_DIR/heston_validation_2500k_uniform.npz"
 
 run_dataset "heston_test_125k_balanced_delta" \
   --family heston \
@@ -112,6 +112,7 @@ run_dataset "heston_test_125k_balanced_delta" \
   --samples-per-bin 5000 \
   --batch-size 1000 \
   --seed 46 \
+  --workers 32 \
   --include-delta \
   --output "$DATA_DIR/heston_test_125k_balanced_delta.npz"
 
