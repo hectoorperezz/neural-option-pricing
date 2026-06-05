@@ -293,7 +293,7 @@ Black-Scholes y Heston\par}
     {\color{uniyellow}\rule{0.12\textwidth}{1.4pt}}\par
     \vspace{6pt}
     \small\setlength{\parskip}{4pt}
-    Este trabajo estudia bajo qué condiciones una red neuronal profunda puede actuar como un surrogate preciso, rápido y diferenciable de una función de pricing de opciones, entendida como sustituto numérico de un solver matemático ya conocido. El objetivo es abaratar la evaluación de modelos cuya solución analítica no existe o es cara, una vez entrenada offline a partir de datos sintéticos generados por el propio solver, la red puede sustituir al modelo original en tareas que exigen millones de evaluaciones, como la calibración diaria, el cálculo de Greeks o la simulación por Montecarlo. Nuestro objeto de estudio son las opciones europeas vainilla bajo dos modelos: Black-Scholes como caso de validación con solución cerrada y Heston como caso principal, donde la integración por Fourier semi-cerrada es lo suficientemente costosa como para justificar el surrogate. El trabajo se articula en torno a cinco experimentos que tienen como objetivo evaluar la eficiencia de los surrogates desde distintas perspectivas del problema; métrica de evaluación, activación de la red, distribución del muestreo, eficiencia computacional y uso de información diferencial en la pérdida. Cada uno de los experimentos realizados conduce a diferentes conclusiones muy valiosas sobre las mejoras de eficiencia y las diferentes técnicas que hacen de los surrogates una opción muy atractiva para la industria financiera.
+    Este trabajo estudia bajo qué condiciones una red neuronal profunda puede actuar como un surrogate preciso, rápido y diferenciable de una función de pricing de opciones, entendida como sustituto numérico de un solver matemático ya conocido. El objetivo es abaratar la evaluación de modelos cuya solución analítica no existe o es cara, una vez entrenada offline a partir de datos sintéticos generados por el propio solver, la red puede sustituir al modelo original en tareas que exigen millones de evaluaciones, como la calibración diaria, el cálculo de Greeks o la simulación por Montecarlo. Nuestro objeto de estudio son las opciones europeas vainilla bajo dos modelos: Black-Scholes como caso de validación con solución cerrada y Heston como caso principal, donde la integración por Fourier semi-cerrada es lo suficientemente costosa como para justificar el surrogate. El trabajo se articula en torno a seis experimentos que tienen como objetivo evaluar la eficiencia de los surrogates desde distintas perspectivas del problema; métrica de evaluación, activación de la red, distribución del muestreo, eficiencia computacional, uso de información diferencial en la pérdida y profundidad de la red junto al scheduler de learning rate. Cada uno de los experimentos realizados conduce a diferentes conclusiones muy valiosas sobre las mejoras de eficiencia y las diferentes técnicas que hacen de los surrogates una opción muy atractiva para la industria financiera.
     \smallskip
     
     {\bfseries\scshape Palabras clave.}\enspace
@@ -363,9 +363,9 @@ Para Black-Scholes la fórmula cerrada ya es muy rápida y un surrogate no aport
 ¿Bajo qué condiciones una red neuronal profunda puede actuar como un surrogate preciso, rápido y diferenciable para funciones de pricing de opciones?
 \end{quote}
 
-Para responder esta pregunta en la práctica, hemos decidido segmentar el estudio en cinco preguntas más concretas que se traducen en cinco experimentos. Cada uno de estos experimentos ataca una perspectiva distinta de la pregunta. No solo nos interesa estudiar si un surrogate es preciso a la hora de imitar el modelo original, sino también estudiar bajo qué condiciones se puede exprimir la eficiencia y precisión de está herramienta.
+Para responder esta pregunta en la práctica, hemos decidido segmentar el estudio en seis preguntas más concretas que se traducen en seis experimentos. Cada uno de estos experimentos ataca una perspectiva distinta de la pregunta. No solo nos interesa estudiar si un surrogate es preciso a la hora de imitar el modelo original, sino también estudiar bajo qué condiciones se puede exprimir la eficiencia y precisión de está herramienta.
 
-El documento se organiza de la siguiente manera, la \autoref{sec:revision} sirve para sintetizar la revisión bibliográfica que ha guiado las decisiones metodológicas del trabajo, es además una sección fundamental para ganar contexto histórico sobre la bibliografía existente y poder afrontar la lectura del trabajo de una forma más contextualizada. La \autoref{sec:metodologia} fija los casos de estudio y la metodología experimental. La \autoref{sec:experimentos} describe los cinco experimentos y las características técnicas de los once surrogates que los sostienen. La \autoref{sec:resultados} reporta los resultados de cada experimento. La \autoref{sec:discusion} discute alcance, limitaciones y trabajo en curso.
+El documento se organiza de la siguiente manera, la \autoref{sec:revision} sirve para sintetizar la revisión bibliográfica que ha guiado las decisiones metodológicas del trabajo, es además una sección fundamental para ganar contexto histórico sobre la bibliografía existente y poder afrontar la lectura del trabajo de una forma más contextualizada. La \autoref{sec:metodologia} fija los casos de estudio y la metodología experimental. La \autoref{sec:experimentos} describe los seis experimentos y las características técnicas de los catorce surrogates que los sostienen. La \autoref{sec:resultados} reporta los resultados de cada experimento. La \autoref{sec:discusion} discute alcance, limitaciones y trabajo en curso.
 
 El código que implementa el pipeline completo solvers, generación de datos sintéticos, entrenamiento de los surrogates y evaluación por bins junto con los scripts que reproducen las tablas y figuras de este trabajo está disponible en \url{https://github.com/hectoorperezz/proyecto-final-metodos-numericos}.
 
@@ -704,92 +704,10 @@ m \sim \mathcal{N}_{[0.7,\,1.3]}\!\left(1.0,\, 0.15^2\right), \qquad \log T \sim
 \end{equation}
 Así, $p_{\text{foc}}$ conserva la cobertura global del dominio a través de su componente uniforme y añade densidad donde la aproximación es más difícil. La \autoref{fig:samplers} compara ambas distribuciones en el plano $(m, T)$.
 
-% --- FIGURA: sampler uniforme vs focused -------------------------------------
+% --- FIGURA: sampler uniforme vs focused (generada con los samplers del repo) -
 \begin{figure}[ht]
 \centering
-\begin{subfigure}[t]{0.46\textwidth}
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-  width=\textwidth, height=5.6cm,
-  xmin=0.4, xmax=2.0, ymin=0, ymax=2.0,
-  xlabel={$m = S/K$}, ylabel={$T$ (años)},
-  xtick={0.4,0.7,1.0,1.3,1.6,2.0}, ytick={0,0.5,1,1.5,2},
-  tick style={color=papergrey}, ticklabel style={font=\scriptsize},
-  every axis/.append style={font=\scriptsize, color=papergrey},
-  title={Sampler uniforme}, title style={font=\scriptsize\bfseries, color=paperblue}
-]
-  \addplot[only marks, mark=*, mark size=0.5pt, paperblue, opacity=0.55]
-    table[row sep=\\] {
-      x y \\ 0.55 1.42 \\ 0.62 0.31 \\ 0.78 1.85 \\ 0.71 0.55 \\ 0.84 1.21 \\
-      0.91 0.73 \\ 0.96 1.55 \\ 1.05 0.18 \\ 1.12 0.92 \\ 1.18 1.71 \\
-      1.24 0.41 \\ 1.33 1.08 \\ 1.41 1.79 \\ 1.48 0.27 \\ 1.55 0.88 \\
-      1.62 1.34 \\ 1.71 0.62 \\ 1.79 1.92 \\ 1.85 0.49 \\ 1.92 1.15 \\
-      0.46 0.91 \\ 0.59 0.65 \\ 0.73 1.42 \\ 0.83 0.34 \\ 0.93 1.78 \\
-      1.02 0.54 \\ 1.13 1.31 \\ 1.21 0.21 \\ 1.34 0.78 \\ 1.43 1.59 \\
-      1.52 0.41 \\ 1.61 1.04 \\ 1.74 1.66 \\ 1.83 0.61 \\ 1.93 1.42 \\
-      0.51 1.21 \\ 0.65 1.64 \\ 0.81 0.51 \\ 0.95 0.28 \\ 1.07 1.74 \\
-      1.16 0.49 \\ 1.27 1.15 \\ 1.38 1.85 \\ 1.46 0.71 \\ 1.57 1.46 \\
-      1.66 0.32 \\ 1.78 1.21 \\ 1.86 1.71 \\ 1.95 0.85 \\ 0.42 0.47 \\
-      0.58 1.05 \\ 0.69 1.78 \\ 0.85 0.65 \\ 0.99 1.28 \\ 1.09 0.39 \\
-      1.19 1.62 \\ 1.31 0.84 \\ 1.42 0.16 \\ 1.51 1.45 \\ 1.59 1.92 \\
-      1.69 0.74 \\ 1.81 1.31 \\ 1.89 0.55 \\ 1.97 1.65 \\ 0.49 0.78 \\
-      0.63 1.39 \\ 0.76 0.45 \\ 0.89 1.81 \\ 1.01 0.92 \\ 1.14 1.43 \\
-      1.23 0.28 \\ 1.36 1.51 \\ 1.45 0.95 \\ 1.56 0.18 \\ 1.65 1.68 \\
-      1.73 0.52 \\ 1.84 1.21 \\ 1.91 0.39 \\ 1.99 1.05 \\
-    };
-\end{axis}
-\end{tikzpicture}
-\caption{El muestreo uniforme cubre todo el hipercubo con densidad constante.}
-\end{subfigure}
-\hfill
-\begin{subfigure}[t]{0.46\textwidth}
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-  width=\textwidth, height=5.6cm,
-  xmin=0.4, xmax=2.0, ymin=0, ymax=2.0,
-  xlabel={$m = S/K$}, ylabel={$T$ (años)},
-  xtick={0.4,0.7,1.0,1.3,1.6,2.0}, ytick={0,0.5,1,1.5,2},
-  tick style={color=papergrey}, ticklabel style={font=\scriptsize},
-  every axis/.append style={font=\scriptsize, color=papergrey},
-  title={Sampler enfocado (mezcla 50/50)}, title style={font=\scriptsize\bfseries, color=paperred}
-]
-  % background uniform (faded)
-  \addplot[only marks, mark=*, mark size=0.5pt, papergrey, opacity=0.25]
-    table[row sep=\\] {
-      x y \\ 0.55 1.42 \\ 0.78 1.85 \\ 0.62 0.31 \\ 0.84 1.21 \\
-      0.91 0.73 \\ 1.12 0.92 \\ 1.18 1.71 \\ 1.33 1.08 \\
-      1.48 0.27 \\ 1.55 0.88 \\ 1.71 0.62 \\ 1.85 0.49 \\
-      1.92 1.15 \\ 0.59 0.65 \\ 0.73 1.42 \\ 0.93 1.78 \\
-      1.13 1.31 \\ 1.34 0.78 \\ 1.52 0.41 \\ 1.74 1.66 \\
-      1.93 1.42 \\ 0.65 1.64 \\ 0.95 0.28 \\ 1.27 1.15 \\
-      1.46 0.71 \\ 1.66 0.32 \\ 1.86 1.71 \\ 0.69 1.78 \\
-      0.85 0.65 \\ 1.09 0.39 \\ 1.31 0.84 \\ 1.51 1.45 \\
-      1.69 0.74 \\ 1.97 1.65 \\
-    };
-  % focused: tight around (1.0, 0.05) and short T
-  \addplot[only marks, mark=*, mark size=0.5pt, paperred, opacity=0.75]
-    table[row sep=\\] {
-      x y \\ 0.92 0.04 \\ 0.97 0.08 \\ 1.02 0.05 \\ 1.06 0.11 \\
-      1.10 0.06 \\ 0.93 0.09 \\ 1.00 0.12 \\ 0.95 0.07 \\
-      1.03 0.18 \\ 0.99 0.03 \\ 1.07 0.05 \\ 1.01 0.21 \\
-      0.94 0.14 \\ 1.05 0.06 \\ 0.91 0.16 \\ 1.08 0.19 \\
-      1.04 0.10 \\ 0.96 0.22 \\ 0.98 0.15 \\ 1.09 0.08 \\
-      1.11 0.04 \\ 0.89 0.06 \\ 0.93 0.19 \\ 1.02 0.07 \\
-      1.06 0.17 \\ 0.97 0.10 \\ 1.00 0.06 \\ 1.04 0.14 \\
-      0.95 0.05 \\ 1.07 0.13 \\ 0.99 0.20 \\ 1.03 0.04 \\
-      1.05 0.09 \\ 1.01 0.16 \\ 0.92 0.11 \\ 1.08 0.12 \\
-      1.10 0.07 \\ 0.94 0.18 \\ 0.96 0.13 \\ 1.02 0.06 \\
-      1.01 0.09 \\ 0.99 0.15 \\ 1.05 0.10 \\ 1.07 0.21 \\
-    };
-  % highlight focus region
-  \draw[paperred, thick, dashed] (axis cs:0.7, 0) rectangle (axis cs:1.3, 0.25);
-  \node[paperred, font=\scriptsize\itshape] at (axis cs:1.0, 0.45) {zona ATM corta};
-\end{axis}
-\end{tikzpicture}
-\caption{El muestreo enfocado concentra masa en at-the-money y vencimientos cortos sin perder cobertura del resto.}
-\end{subfigure}
+\includegraphics[width=0.95\textwidth]{assets/samplers.png}
 \caption{Comparación del sampler uniforme (H-3) y del sampler enfocado (H-5). Ambos surrogates se evalúan sobre el mismo test set balanceado para que la comparación E3 mida dónde gana y dónde pierde el enfoque local.}
 \label{fig:samplers}
 \end{figure}
@@ -851,7 +769,7 @@ Por último, dentro de este apartdo metodológico es importante mencionar la té
 \end{figure}
 
 \paragraph{Volumen de datos.}
-Los tamaños de entrenamiento y validación de la \autoref{tab:surrogates} corresponden al formato final del proyecto y son consecuencia de una decisión de escalado tomada durante el desarrollo. El diseño inicial era un orden de magnitud menor (200k puntos para Black-Scholes, 500k para Heston, 100k para las variantes small y 50k de validación). Sobre ese diseño todos los surrogates se estancaban en un $\text{MAE}(C/K)$ de validación del orden de $10^{-2}$. Tras realizar este primer proceso de generación del dataset y entrenamiento de las redes, pudimos sacar métricas de rendimiento de nuestro hardware disponible (CPU Intel i9-14900K, 64\,GB de RAM y GPU NVIDIA RTX 4060), las métricas obtenidas nos permitieron plantear un escalado del dataset de 50 veces el tamaño incial. Manteniendo fijos arquitectura, optimizador, pérdida, número de épocas y semillas, se redujo el $\text{MAE}(C/K)$ de validación entre un 37\,\% y un 91\,\% en los once surrogates, hasta el orden de $10^{-3}$. La generación de los datasets costó alrededor de ocho horas de cómputo y reentrenar los once surrogates algo más de una hora.
+Los tamaños de entrenamiento y validación de la \autoref{tab:surrogates} corresponden al formato final del proyecto y son consecuencia de una decisión de escalado tomada durante el desarrollo. El diseño inicial era un orden de magnitud menor (200k puntos para Black-Scholes, 500k para Heston, 100k para las variantes small y 50k de validación). Sobre ese diseño todos los surrogates se estancaban en un $\text{MAE}(C/K)$ de validación del orden de $10^{-2}$. Tras realizar este primer proceso de generación del dataset y entrenamiento de las redes, pudimos sacar métricas de rendimiento de nuestro hardware disponible (CPU Intel i9-14900K, 64\,GB de RAM y GPU NVIDIA RTX 4060), las métricas obtenidas nos permitieron plantear un escalado del dataset de 50 veces el tamaño incial. Manteniendo fijos arquitectura, optimizador, pérdida, número de épocas y semillas, se redujo el $\text{MAE}(C/K)$ de validación entre un 37\,\% y un 91\,\% en los once surrogates pre-registrados, hasta el orden de $10^{-3}$. La generación de los datasets costó alrededor de ocho horas de cómputo y reentrenarlos algo más de una hora.
 
 \newpage
 
@@ -859,25 +777,26 @@ Los tamaños de entrenamiento y validación de la \autoref{tab:surrogates} corre
 \section{Experimentos}\label{sec:experimentos}
 % =============================================================================
 
-El trabajo se estructura a través de 5 experimentos, cada uno responde a una pregunta distinta. Este diseño nos permite hacer una atribución limpia de los cambios observados, si se cambia activación no se cambia dataset, si se cambia sampler no se cambia arquitectura, si se cambia pérdida se conservan tamaño, muestra y parámetros de entrenamiento. Las semillas de generación y entrenamiento quedan fijadas por configuración y registradas para asegurar reproducibilidad.
+El trabajo se estructura a través de 6 experimentos, cada uno responde a una pregunta distinta. Este diseño nos permite hacer una atribución limpia de los cambios observados, si se cambia activación no se cambia dataset, si se cambia sampler no se cambia arquitectura, si se cambia pérdida se conservan tamaño, muestra y parámetros de entrenamiento. Las semillas de generación y entrenamiento quedan fijadas por configuración y registradas para asegurar reproducibilidad.
 
 \newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{#1}}
 \begin{table}[ht]
 \centering
 \small
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{R{0.5cm} R{4.0cm} R{2.5cm} R{2.5cm} R{4.2cm}}
+\begin{tabular}{R{0.6cm} R{6.5cm} R{3.0cm} R{3.4cm}}
 \toprule
-ID & Pregunta & Lo que varía & Surrogates & Resultado esperado \\
+ID & Pregunta & Lo que varía & Surrogates \\
 \midrule
-\textbf{E1} & ¿Un error bajo en precio implica un error bajo en IV? & Métrica de evaluación & BS-3, H-3 & Bins donde el MAE de precio es bajo pero el de IV no lo es. \\
-\textbf{E2} & ¿Qué activación produce mejores Greeks sin degradar el precio? & Activación & BS-1..4, H-1..4 & MAE de precio similar, MAE de Delta mayor en ReLU. \\
-\textbf{E3} & ¿El muestreo enfocado reduce el error en bins críticos? & Distribución de muestreo & H-3 vs H-5 & H-5 mejor en ATM y vencimiento corto, posiblemente peor en wings. \\
-\textbf{E4} & ¿Qué speedup ofrece el surrogate vs el solver? & Tamaño de lote & H-3 & Speedup creciente con el lote, especialmente en GPU. \\
-\textbf{E5} & ¿Entrenar con Delta diferencial mejora la eficiencia muestral? & Targets de entrenamiento & H-3-small, H-6-small, H-3 & H-6-small con mejor Delta y precio comparable a H-3-small. \\
+\textbf{E1} & ¿Un error bajo en precio implica un error bajo en IV? & Métrica de evaluación & BS-3, H-3 \\
+\textbf{E2} & ¿Qué activación produce mejores Greeks sin degradar el precio? & Activación & BS-1..4, H-1..4 \\
+\textbf{E3} & ¿El muestreo enfocado reduce el error en bins críticos? & Distribución de muestreo & H-3 vs H-5 \\
+\textbf{E4} & ¿Qué speedup ofrece el surrogate vs el solver? & Tamaño de lote & H-3 \\
+\textbf{E5} & ¿Entrenar con Delta diferencial mejora la eficiencia muestral? & Targets de entrenamiento & H-3-small, H-6-small, H-3 \\
+\textbf{E6} & ¿Aumentar la profundidad de la red o añadir un scheduler de learning rate mejora el baseline? & Profundidad / scheduler & H-3, H-7, H-8, H-9 \\
 \bottomrule
 \end{tabular}
-\caption{Los cinco experimentos del trabajo. Cada uno responde a una pregunta única, se altera una única variable y se mantiene todo lo demás fijo.}
+\caption{Los seis experimentos del trabajo. Cada uno responde a una pregunta única, se altera una única variable y se mantiene todo lo demás fijo.}
 \label{tab:experimentos}
 \end{table}
 
@@ -952,9 +871,12 @@ El experimento 3 ataca una idea recurrente en métodos numéricos transferida al
 
 El experimento 4 es de medición, el objetivo es cuantificar la mejora de rendimiento de los surrogates frente a los solvers. Para ello, se cronometran evaluaciones de H-3 contra el solver original de Heston en lotes de tamaño creciente. Reportar la mejora de rendimiento como función del tamaño de lote es más representativo que dar un único número que dependería arbitrariamente del tamaño de lote elegido.
 
-Por último, el experimento 5 prueba la hipótesis central del paper de Huge y Savine aplicada a nuestro dominio. Si además de precios generamos la Delta verdadera, ¿puede el surrogate aprender mejor la forma local de la función de pricing con menos datos? La Delta es el target diferencial natural de este experimento. Con $y = C/K$ y $m = S/K$ se cumple $\Delta = \partial y / \partial m$, de modo que es la derivada de la salida respecto a una sola entrada, de primer orden y sin más reescalado que el de la normalización. Además, disponemos de su valor verdadero de forma analítica ($N(d_1)$ en Black-Scholes y $P_1$ en Heston), lo que da un objetivo fiable contra el que entrenar.
+El experimento 5 prueba la hipótesis central del paper de Huge y Savine aplicada a nuestro dominio. Si además de precios generamos la Delta verdadera, ¿puede el surrogate aprender mejor la forma local de la función de pricing con menos datos? La Delta es el target diferencial natural de este experimento. Con $y = C/K$ y $m = S/K$ se cumple $\Delta = \partial y / \partial m$, de modo que es la derivada de la salida respecto a una sola entrada, de primer orden y sin más reescalado que el de la normalización. Además, disponemos de su valor verdadero de forma analítica ($N(d_1)$ en Black-Scholes y $P_1$ en Heston), lo que da un objetivo fiable contra el que entrenar.
 
-Para llevar a cabo los cinco experimentos se han entrenado once surrogates, recogidos en la \autoref{tab:surrogates}. La nomenclatura distingue la familia de modelo, BS para Black-Scholes y H para Heston, y el sufijo small marca las variantes de muestra reducida que usa E5. H-3 en particular es la referencia que atraviesa los cinco experimentos, de modo que las comparaciones parten siempre del mismo punto y solo cambia la variable que cada experimento aísla.
+% --- E6: presentación (borrador, a editar) ----------------------------------
+El experimento 6 cierra el estudio explorando dos vías de mejora sobre el baseline H-3 que surgieron del diagnóstico de escalado y que no formaban parte del protocolo inicial. La primera es la profundidad de la red, comparando el baseline de cuatro capas con una variante más superficial (H-7-shallow, dos capas) y otra más profunda (H-8-deep, seis capas). La segunda es un scheduler de learning rate que reduce el paso cuando la validación deja de mejorar (H-9-lr-schedule, con \texttt{ReduceLROnPlateau}). Las cuatro variantes comparten dataset, semilla del entrenador, batch, activación y pérdida, de modo que la única variable que cambia es la profundidad o la presencia del scheduler. La lectura es observacional y se ordena por la reducción del error de precio frente al baseline.
+
+Para llevar a cabo los seis experimentos se han entrenado catorce surrogates, recogidos en la \autoref{tab:surrogates}. La nomenclatura distingue la familia de modelo, BS para Black-Scholes y H para Heston, y el sufijo small marca las variantes de muestra reducida que usa E5. H-3 en particular es la referencia que atraviesa los seis experimentos, de modo que las comparaciones parten siempre del mismo punto y solo cambia la variable que cada experimento aísla.
 
 \begin{table}[ht]
 \centering
@@ -970,14 +892,17 @@ BS-2 & Black-Scholes & Softplus  & $L_1(\text{precio})$ & 10M uniforme & E2 \\
 BS-4 & Black-Scholes & tanh      & $L_1(\text{precio})$ & 10M uniforme & E2 \\
 H-1  & Heston        & ReLU      & $L_1(\text{precio})$ & 25M uniforme & E2 \\
 H-2  & Heston        & Softplus  & $L_1(\text{precio})$ & 25M uniforme & E2 \\
-\textbf{H-3} & \textbf{Heston} & \textbf{Swish} & $\boldsymbol{L_1(\text{precio})}$ & \textbf{25M uniforme} & \textbf{E1--E5} \\
+\textbf{H-3} & \textbf{Heston} & \textbf{Swish} & $\boldsymbol{L_1(\text{precio})}$ & \textbf{25M uniforme} & \textbf{E1--E6} \\
 H-4  & Heston        & tanh      & $L_1(\text{precio})$ & 25M uniforme & E2 \\
 H-5  & Heston        & Swish     & $L_1(\text{precio})$ & 25M \textbf{enfocado} & E3 \\
 H-3-small & Heston   & Swish     & $L_1(\text{precio})$ & 5M uniforme & E5 \\
 H-6-small & Heston   & Swish     & $L_1(\text{precio}) + L_1(\Delta)$ & 5M uniforme + $\Delta$ & E5 \\
+H-7-shallow     & Heston        & Swish     & $L_1(\text{precio})$ & 25M uniforme & E6 \\
+H-8-deep        & Heston        & Swish     & $L_1(\text{precio})$ & 25M uniforme & E6 \\
+H-9-lr-schedule & Heston        & Swish     & $L_1(\text{precio})$ & 25M uniforme & E6 \\
 \bottomrule
 \end{tabular}
-\caption{Los once surrogates del trabajo. Todos los comparados dentro de un mismo experimento comparten arquitectura, optimizador, hiperparámetros y protocolo de evaluación; las semillas quedan fijadas por configuración para garantizar reproducibilidad.}
+\caption{Los catorce surrogates del trabajo. Todos los comparados dentro de un mismo experimento comparten arquitectura, optimizador, hiperparámetros y protocolo de evaluación; las semillas quedan fijadas por configuración para garantizar reproducibilidad.}
 \label{tab:surrogates}
 \end{table}
 
@@ -990,7 +915,7 @@ H-6-small & Heston   & Swish     & $L_1(\text{precio}) + L_1(\Delta)$ & 5M unifo
 \section{Resultados}\label{sec:resultados}
 % =============================================================================
 
-Esta sección presenta los resultados de los cinco experimentos, en el mismo orden en que se plantearon en la \autoref{sec:experimentos}. Cada subsección retoma la pregunta del experimento correspondiente y presenta las métricas observadas a través de gráficos y tablas.
+Esta sección presenta los resultados de los seis experimentos, en el mismo orden en que se plantearon en la \autoref{sec:experimentos}. Cada subsección retoma la pregunta del experimento correspondiente y presenta las métricas observadas a través de gráficos y tablas.
 
 \subsection{E1 --- Precio frente a volatilidad implícita}\label{sec:res-e1}
 
@@ -1237,10 +1162,45 @@ H-3 & $L_1(\text{precio})$ & 25M & $1{,}11\times 10^{-2}$ & $1{,}28\times 10^{-3
 En cifras, el término diferencial reduce el error de Delta de H-6-small frente a H-3-small en un 58,9\,\%, una mejora muy grande, y el error de precio no solo no empeora sino que mejora un 40,6\,\%. La mejora es además homogénea: H-6-small supera a H-3-small en Delta en los 25 bins. Frente al baseline grande H-3, H-6-small reduce el error de Delta un 35,8\,\% usando cinco veces menos datos, ganando en 24 de los 25 bins con la única excepción de deep ITM de vencimiento medio, mientras que en precio H-3 conserva una ventaja del 17,5\,\% que confirma que el mayor volumen de datos sigue ayudando al nivel de la función. La lectura conjunta reproduce en nuestro entorno el resultado central de Huge y Savine~\cite{huge2020}: añadir la derivada verdadera al objetivo de entrenamiento enseña a la red la forma local de la función de pricing, lo que se traduce en mejores Greeks y en una eficiencia muestral tangible, ya que un surrogate diferencial entrenado con 5M de muestras supera en Delta a uno de precio entrenado con 25M.
 
 % =============================================================================
+\subsection{E6 --- Profundidad de la red y scheduler de learning rate}\label{sec:res-e6}
+% =============================================================================
+
+% --- E6: resultados (borrador, a editar y ampliar) --------------------------
+La \autoref{fig:e6} y la \autoref{tab:e6} resumen el experimento, comparando las cuatro variantes en error de precio y de Delta promediados sobre los 25 bins del test balanceado. % TEXTO ORIENTATIVO --- redactar y ampliar.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.95\textwidth]{assets/e6_summary.png}
+\caption{E6: MAE$(C/K)$ y MAE$_\Delta$ medios por bin de las cuatro variantes sobre el test balanceado. El baseline H-3 ($4\times128$) se resalta en dorado; H-7-shallow ($2\times128$) y H-8-deep ($6\times128$) cambian la profundidad y H-9-lr-schedule añade un scheduler \texttt{ReduceLROnPlateau}.}
+\label{fig:e6}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{llccc}
+\toprule
+Surrogate & Arquitectura & MAE$(C/K)$ & MAE$_\Delta$ & Reducción precio \\
+\midrule
+\textbf{H-9-lr-schedule} & $4\times128$ + plateau & $\mathbf{1{,}15\times10^{-3}}$ & $1{,}18\times10^{-2}$ & \textbf{+10,6\,\%} \\
+H-3 (baseline) & $4\times128$ & $1{,}29\times10^{-3}$ & $1{,}11\times10^{-2}$ & --- \\
+H-8-deep & $6\times128$ & $2{,}01\times10^{-3}$ & $1{,}17\times10^{-2}$ & $-56{,}8$\,\% \\
+H-7-shallow & $2\times128$ & $3{,}57\times10^{-3}$ & $3{,}03\times10^{-2}$ & $-178{,}2$\,\% \\
+\bottomrule
+\end{tabular}
+\caption{E6: error medio de precio y de Delta por bin de las cuatro variantes, y reducción del error de precio frente al baseline H-3. Un valor positivo indica mejora sobre el baseline.}
+\label{tab:e6}
+\end{table}
+
+El scheduler de learning rate (H-9-lr-schedule) es la única variante que mejora al baseline, con una reducción del error de precio en torno al 10\,\%, mientras que alterar la profundidad lo empeora, de forma moderada al ampliarla (H-8-deep) y acusada al reducirla (H-7-shallow). En Delta el patrón es parecido, con H-7-shallow claramente peor que el resto. % TEXTO ORIENTATIVO --- redactar y ampliar con la informacion necesaria.
+
+
+% =============================================================================
 \section{Discusión y trabajo futuro}\label{sec:discusion}
 % =============================================================================
 
-Los cinco experimentos, leídos en conjunto, dejan una idea clara de cuándo y cómo una red puede sustituir a un solver de pricing. Lo primero que muestran es que la forma de medir el error no es neutral: una red que parece muy buena cuando se la juzga por el precio puede ser inservible en volatilidad implícita justo en las opciones más delicadas, las muy fuera del dinero y de vencimiento corto. Lo segundo es que decisiones que parecen menores tienen un efecto grande sobre la calidad de las derivadas: la función de activación de la red determina si las Greeks que se obtienen de ella son fiables o ruidosas, y las activaciones suaves como Swish son claramente preferibles. Lo tercero es que concentrar el esfuerzo de muestreo en las zonas donde la superficie de precios es más difícil mejora precisamente las regiones que más importan en el día a día del mercado. A todo ello se añade que el surrogate, una vez entrenado, evalúa muchísimo más rápido que el solver cuando hay que valorar muchas opciones a la vez, y que entrenar también con la derivada verdadera, y no solo con el precio, produce mejores Greeks con bastante menos datos.
+Los seis experimentos, leídos en conjunto, dejan una idea clara de cuándo y cómo una red puede sustituir a un solver de pricing. Lo primero que muestran es que la forma de medir el error no es neutral: una red que parece muy buena cuando se la juzga por el precio puede ser inservible en volatilidad implícita justo en las opciones más delicadas, las muy fuera del dinero y de vencimiento corto. Lo segundo es que decisiones que parecen menores tienen un efecto grande sobre la calidad de las derivadas: la función de activación de la red determina si las Greeks que se obtienen de ella son fiables o ruidosas, y las activaciones suaves como Swish son claramente preferibles. Lo tercero es que concentrar el esfuerzo de muestreo en las zonas donde la superficie de precios es más difícil mejora precisamente las regiones que más importan en el día a día del mercado. A todo ello se añade que el surrogate, una vez entrenado, evalúa muchísimo más rápido que el solver cuando hay que valorar muchas opciones a la vez, y que entrenar también con la derivada verdadera, y no solo con el precio, produce mejores Greeks con bastante menos datos. Por último, sobre el propio baseline, ni aumentar ni reducir la profundidad de la red mejora la aproximación, mientras que reducir el learning rate cuando la validación se estanca aporta una ganancia pequeña pero consistente.
 
 Estos resultados apuntan a usos concretos en la industria. El surrogate no tiene sentido para valorar una opción suelta, donde el solver original ya es rápido, sino para las tareas que exigen millones de evaluaciones: la calibración diaria de un modelo a los precios de mercado, el cálculo de riesgo y de Greeks sobre carteras grandes, o la simulación masiva de escenarios. En todas ellas la red, entrenada una sola vez de forma offline, reemplaza a un cálculo lento y convierte minutos en milisegundos, con la ventaja añadida de que sus sensibilidades se obtienen casi gratis al derivar la propia red, que es justo lo que necesitan la cobertura y la gestión de riesgo.
 
