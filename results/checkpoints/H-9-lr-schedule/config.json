@@ -1,0 +1,38 @@
+{
+  "activation": "swish",
+  "batch_size": 32768,
+  "compile": false,
+  "delta_weight": 1.0,
+  "device": "cuda",
+  "epochs": 100,
+  "experiment_id": "H-9-lr-schedule",
+  "hidden_layers": 4,
+  "hidden_width": 128,
+  "input_dim": 8,
+  "input_names": [
+    "moneyness",
+    "maturity",
+    "rate",
+    "v0",
+    "theta",
+    "kappa",
+    "xi",
+    "rho"
+  ],
+  "learning_rate": 0.001,
+  "loss": "price",
+  "moneyness_range": [
+    0.4,
+    2.0
+  ],
+  "num_workers": 0,
+  "preload_to_device": true,
+  "price_weight": 1.0,
+  "scheduler": "plateau",
+  "scheduler_factor": 0.5,
+  "scheduler_min_lr": 1e-05,
+  "scheduler_patience": 3,
+  "seed": 203,
+  "train": "data\\heston_train_25M_uniform.npz",
+  "validation": "data\\heston_validation_2500k_uniform.npz"
+}

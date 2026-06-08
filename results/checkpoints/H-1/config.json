@@ -1,0 +1,34 @@
+{
+  "activation": "relu",
+  "batch_size": 32768,
+  "compile": false,
+  "delta_weight": 1.0,
+  "device": "cuda",
+  "epochs": 100,
+  "experiment_id": "H-1",
+  "hidden_layers": 4,
+  "hidden_width": 128,
+  "input_dim": 8,
+  "input_names": [
+    "moneyness",
+    "maturity",
+    "rate",
+    "v0",
+    "theta",
+    "kappa",
+    "xi",
+    "rho"
+  ],
+  "learning_rate": 0.001,
+  "loss": "price",
+  "moneyness_range": [
+    0.4,
+    2.0
+  ],
+  "num_workers": 0,
+  "preload_to_device": true,
+  "price_weight": 1.0,
+  "seed": 201,
+  "train": "C:\\Users\\Jorge\\Desktop\\proyecto-final-metodos-numericos\\data\\heston_train_25M_uniform.npz",
+  "validation": "C:\\Users\\Jorge\\Desktop\\proyecto-final-metodos-numericos\\data\\heston_validation_2500k_uniform.npz"
+}

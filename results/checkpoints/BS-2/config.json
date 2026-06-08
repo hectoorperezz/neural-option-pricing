@@ -1,0 +1,30 @@
+{
+  "activation": "softplus",
+  "batch_size": 32768,
+  "compile": false,
+  "delta_weight": 1.0,
+  "device": "cuda",
+  "epochs": 100,
+  "experiment_id": "BS-2",
+  "hidden_layers": 4,
+  "hidden_width": 128,
+  "input_dim": 4,
+  "input_names": [
+    "moneyness",
+    "maturity",
+    "rate",
+    "volatility"
+  ],
+  "learning_rate": 0.001,
+  "loss": "price",
+  "moneyness_range": [
+    0.4,
+    2.0
+  ],
+  "num_workers": 0,
+  "preload_to_device": true,
+  "price_weight": 1.0,
+  "seed": 102,
+  "train": "C:\\Users\\Jorge\\Desktop\\proyecto-final-metodos-numericos\\data\\bs_train_10M_uniform_delta.npz",
+  "validation": "C:\\Users\\Jorge\\Desktop\\proyecto-final-metodos-numericos\\data\\bs_validation_2500k_uniform_delta.npz"
+}

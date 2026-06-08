@@ -1,0 +1,702 @@
+[
+  {
+    "epoch": 1.0,
+    "learning_rate": 0.001,
+    "loss": 0.03939014386837006,
+    "price_loss": 0.03939014386837006,
+    "validation_price_mae": 0.013961303149414062
+  },
+  {
+    "epoch": 2.0,
+    "learning_rate": 0.001,
+    "loss": 0.013383620573935509,
+    "price_loss": 0.013383620573935509,
+    "validation_price_mae": 0.012918176568603515
+  },
+  {
+    "epoch": 3.0,
+    "learning_rate": 0.001,
+    "loss": 0.01254490203154564,
+    "price_loss": 0.01254490203154564,
+    "validation_price_mae": 0.01201694112854004
+  },
+  {
+    "epoch": 4.0,
+    "learning_rate": 0.001,
+    "loss": 0.011596748511686326,
+    "price_loss": 0.011596748511686326,
+    "validation_price_mae": 0.010869472259521484
+  },
+  {
+    "epoch": 5.0,
+    "learning_rate": 0.001,
+    "loss": 0.010707845786087513,
+    "price_loss": 0.010707845786087513,
+    "validation_price_mae": 0.010336080087280274
+  },
+  {
+    "epoch": 6.0,
+    "learning_rate": 0.001,
+    "loss": 0.01016738712481022,
+    "price_loss": 0.01016738712481022,
+    "validation_price_mae": 0.009638638101196289
+  },
+  {
+    "epoch": 7.0,
+    "learning_rate": 0.001,
+    "loss": 0.009610767402665615,
+    "price_loss": 0.009610767402665615,
+    "validation_price_mae": 0.009092165942382812
+  },
+  {
+    "epoch": 8.0,
+    "learning_rate": 0.001,
+    "loss": 0.008978979604446888,
+    "price_loss": 0.008978979604446888,
+    "validation_price_mae": 0.009256178649902344
+  },
+  {
+    "epoch": 9.0,
+    "learning_rate": 0.001,
+    "loss": 0.008307820473279952,
+    "price_loss": 0.008307820473279952,
+    "validation_price_mae": 0.008096146899414063
+  },
+  {
+    "epoch": 10.0,
+    "learning_rate": 0.001,
+    "loss": 0.00765193478890419,
+    "price_loss": 0.00765193478890419,
+    "validation_price_mae": 0.0072937726531982425
+  },
+  {
+    "epoch": 11.0,
+    "learning_rate": 0.001,
+    "loss": 0.007128894442654848,
+    "price_loss": 0.007128894442654848,
+    "validation_price_mae": 0.0066712406127929684
+  },
+  {
+    "epoch": 12.0,
+    "learning_rate": 0.001,
+    "loss": 0.006744495370810032,
+    "price_loss": 0.006744495370810032,
+    "validation_price_mae": 0.0065388163024902345
+  },
+  {
+    "epoch": 13.0,
+    "learning_rate": 0.001,
+    "loss": 0.006394089224948883,
+    "price_loss": 0.006394089224948883,
+    "validation_price_mae": 0.005947671066284179
+  },
+  {
+    "epoch": 14.0,
+    "learning_rate": 0.001,
+    "loss": 0.006060141357808113,
+    "price_loss": 0.006060141357808113,
+    "validation_price_mae": 0.00598028858795166
+  },
+  {
+    "epoch": 15.0,
+    "learning_rate": 0.001,
+    "loss": 0.0057627208018004895,
+    "price_loss": 0.0057627208018004895,
+    "validation_price_mae": 0.00576476580657959
+  },
+  {
+    "epoch": 16.0,
+    "learning_rate": 0.001,
+    "loss": 0.0055023659253048895,
+    "price_loss": 0.0055023659253048895,
+    "validation_price_mae": 0.005228515147399903
+  },
+  {
+    "epoch": 17.0,
+    "learning_rate": 0.001,
+    "loss": 0.005302765498672724,
+    "price_loss": 0.005302765498672724,
+    "validation_price_mae": 0.00541110251159668
+  },
+  {
+    "epoch": 18.0,
+    "learning_rate": 0.001,
+    "loss": 0.005113560569857359,
+    "price_loss": 0.005113560569857359,
+    "validation_price_mae": 0.005047827223205566
+  },
+  {
+    "epoch": 19.0,
+    "learning_rate": 0.001,
+    "loss": 0.0049574332907104494,
+    "price_loss": 0.0049574332907104494,
+    "validation_price_mae": 0.004665927267456055
+  },
+  {
+    "epoch": 20.0,
+    "learning_rate": 0.001,
+    "loss": 0.004815595624676943,
+    "price_loss": 0.004815595624676943,
+    "validation_price_mae": 0.004714833087158203
+  },
+  {
+    "epoch": 21.0,
+    "learning_rate": 0.001,
+    "loss": 0.0046719515380215645,
+    "price_loss": 0.0046719515380215645,
+    "validation_price_mae": 0.004517598245239258
+  },
+  {
+    "epoch": 22.0,
+    "learning_rate": 0.001,
+    "loss": 0.004533851858170033,
+    "price_loss": 0.004533851858170033,
+    "validation_price_mae": 0.004517926745605469
+  },
+  {
+    "epoch": 23.0,
+    "learning_rate": 0.001,
+    "loss": 0.004381443081866503,
+    "price_loss": 0.004381443081866503,
+    "validation_price_mae": 0.004159481401062011
+  },
+  {
+    "epoch": 24.0,
+    "learning_rate": 0.001,
+    "loss": 0.004215798889448643,
+    "price_loss": 0.004215798889448643,
+    "validation_price_mae": 0.004000097354125976
+  },
+  {
+    "epoch": 25.0,
+    "learning_rate": 0.001,
+    "loss": 0.00402609937345624,
+    "price_loss": 0.00402609937345624,
+    "validation_price_mae": 0.003947301275634765
+  },
+  {
+    "epoch": 26.0,
+    "learning_rate": 0.001,
+    "loss": 0.0038491163885682822,
+    "price_loss": 0.0038491163885682822,
+    "validation_price_mae": 0.0035386376846313476
+  },
+  {
+    "epoch": 27.0,
+    "learning_rate": 0.001,
+    "loss": 0.0036841837552392485,
+    "price_loss": 0.0036841837552392485,
+    "validation_price_mae": 0.003611765855407715
+  },
+  {
+    "epoch": 28.0,
+    "learning_rate": 0.001,
+    "loss": 0.0035437983929628132,
+    "price_loss": 0.0035437983929628132,
+    "validation_price_mae": 0.00345467041015625
+  },
+  {
+    "epoch": 29.0,
+    "learning_rate": 0.001,
+    "loss": 0.0034275868922549486,
+    "price_loss": 0.0034275868922549486,
+    "validation_price_mae": 0.003460584375
+  },
+  {
+    "epoch": 30.0,
+    "learning_rate": 0.001,
+    "loss": 0.003332439642317891,
+    "price_loss": 0.003332439642317891,
+    "validation_price_mae": 0.0032617629371643067
+  },
+  {
+    "epoch": 31.0,
+    "learning_rate": 0.001,
+    "loss": 0.003249675273246765,
+    "price_loss": 0.003249675273246765,
+    "validation_price_mae": 0.002929930560302734
+  },
+  {
+    "epoch": 32.0,
+    "learning_rate": 0.001,
+    "loss": 0.003184025778901577,
+    "price_loss": 0.003184025778901577,
+    "validation_price_mae": 0.0032222815826416016
+  },
+  {
+    "epoch": 33.0,
+    "learning_rate": 0.001,
+    "loss": 0.003118579962002039,
+    "price_loss": 0.003118579962002039,
+    "validation_price_mae": 0.003071610843658447
+  },
+  {
+    "epoch": 34.0,
+    "learning_rate": 0.001,
+    "loss": 0.00305864561686337,
+    "price_loss": 0.00305864561686337,
+    "validation_price_mae": 0.0029511116744995116
+  },
+  {
+    "epoch": 35.0,
+    "learning_rate": 0.001,
+    "loss": 0.0030067025317049027,
+    "price_loss": 0.0030067025317049027,
+    "validation_price_mae": 0.0031024229690551756
+  },
+  {
+    "epoch": 36.0,
+    "learning_rate": 0.001,
+    "loss": 0.0029593548576420546,
+    "price_loss": 0.0029593548576420546,
+    "validation_price_mae": 0.0030509362205505372
+  },
+  {
+    "epoch": 37.0,
+    "learning_rate": 0.001,
+    "loss": 0.0029114254931211473,
+    "price_loss": 0.0029114254931211473,
+    "validation_price_mae": 0.002935232386779785
+  },
+  {
+    "epoch": 38.0,
+    "learning_rate": 0.001,
+    "loss": 0.0028717433495271207,
+    "price_loss": 0.0028717433495271207,
+    "validation_price_mae": 0.0027685276626586916
+  },
+  {
+    "epoch": 39.0,
+    "learning_rate": 0.001,
+    "loss": 0.0028296338233667613,
+    "price_loss": 0.0028296338233667613,
+    "validation_price_mae": 0.0028979390228271486
+  },
+  {
+    "epoch": 40.0,
+    "learning_rate": 0.001,
+    "loss": 0.00279397742022872,
+    "price_loss": 0.00279397742022872,
+    "validation_price_mae": 0.0027409263816833497
+  },
+  {
+    "epoch": 41.0,
+    "learning_rate": 0.001,
+    "loss": 0.0027562599924278257,
+    "price_loss": 0.0027562599924278257,
+    "validation_price_mae": 0.0028842100524902343
+  },
+  {
+    "epoch": 42.0,
+    "learning_rate": 0.001,
+    "loss": 0.0027248038163000345,
+    "price_loss": 0.0027248038163000345,
+    "validation_price_mae": 0.0028272217666625975
+  },
+  {
+    "epoch": 43.0,
+    "learning_rate": 0.001,
+    "loss": 0.0026905614566504954,
+    "price_loss": 0.0026905614566504954,
+    "validation_price_mae": 0.0027003622817993165
+  },
+  {
+    "epoch": 44.0,
+    "learning_rate": 0.001,
+    "loss": 0.002661092903404236,
+    "price_loss": 0.002661092903404236,
+    "validation_price_mae": 0.0024771905715942383
+  },
+  {
+    "epoch": 45.0,
+    "learning_rate": 0.001,
+    "loss": 0.002636573025355935,
+    "price_loss": 0.002636573025355935,
+    "validation_price_mae": 0.002620339630126953
+  },
+  {
+    "epoch": 46.0,
+    "learning_rate": 0.001,
+    "loss": 0.002603705613526702,
+    "price_loss": 0.002603705613526702,
+    "validation_price_mae": 0.0027125822998046874
+  },
+  {
+    "epoch": 47.0,
+    "learning_rate": 0.001,
+    "loss": 0.0025768479096776246,
+    "price_loss": 0.0025768479096776246,
+    "validation_price_mae": 0.0024699830459594726
+  },
+  {
+    "epoch": 48.0,
+    "learning_rate": 0.001,
+    "loss": 0.0025490539198052883,
+    "price_loss": 0.0025490539198052883,
+    "validation_price_mae": 0.0025976768508911134
+  },
+  {
+    "epoch": 49.0,
+    "learning_rate": 0.001,
+    "loss": 0.0025254079237389563,
+    "price_loss": 0.0025254079237389563,
+    "validation_price_mae": 0.002502673878479004
+  },
+  {
+    "epoch": 50.0,
+    "learning_rate": 0.001,
+    "loss": 0.002500848808310628,
+    "price_loss": 0.002500848808310628,
+    "validation_price_mae": 0.002565780436706543
+  },
+  {
+    "epoch": 51.0,
+    "learning_rate": 0.001,
+    "loss": 0.0024781133135539295,
+    "price_loss": 0.0024781133135539295,
+    "validation_price_mae": 0.002529511589050293
+  },
+  {
+    "epoch": 52.0,
+    "learning_rate": 0.001,
+    "loss": 0.0024527550191402437,
+    "price_loss": 0.0024527550191402437,
+    "validation_price_mae": 0.002329613777923584
+  },
+  {
+    "epoch": 53.0,
+    "learning_rate": 0.001,
+    "loss": 0.002431784346032143,
+    "price_loss": 0.002431784346032143,
+    "validation_price_mae": 0.0024212551223754884
+  },
+  {
+    "epoch": 54.0,
+    "learning_rate": 0.001,
+    "loss": 0.002410405158843398,
+    "price_loss": 0.002410405158843398,
+    "validation_price_mae": 0.0023451521286010743
+  },
+  {
+    "epoch": 55.0,
+    "learning_rate": 0.001,
+    "loss": 0.002384643492549658,
+    "price_loss": 0.002384643492549658,
+    "validation_price_mae": 0.00270592875289917
+  },
+  {
+    "epoch": 56.0,
+    "learning_rate": 0.001,
+    "loss": 0.002372048666359186,
+    "price_loss": 0.002372048666359186,
+    "validation_price_mae": 0.002386240187072754
+  },
+  {
+    "epoch": 57.0,
+    "learning_rate": 0.001,
+    "loss": 0.0023480179397219417,
+    "price_loss": 0.0023480179397219417,
+    "validation_price_mae": 0.002331396465301514
+  },
+  {
+    "epoch": 58.0,
+    "learning_rate": 0.001,
+    "loss": 0.0023288629127210378,
+    "price_loss": 0.0023288629127210378,
+    "validation_price_mae": 0.0023191235961914063
+  },
+  {
+    "epoch": 59.0,
+    "learning_rate": 0.001,
+    "loss": 0.0023096541204839943,
+    "price_loss": 0.0023096541204839943,
+    "validation_price_mae": 0.0022999143196105955
+  },
+  {
+    "epoch": 60.0,
+    "learning_rate": 0.001,
+    "loss": 0.002292399812425375,
+    "price_loss": 0.002292399812425375,
+    "validation_price_mae": 0.002297584511566162
+  },
+  {
+    "epoch": 61.0,
+    "learning_rate": 0.001,
+    "loss": 0.0022732749199426174,
+    "price_loss": 0.0022732749199426174,
+    "validation_price_mae": 0.0023742430755615235
+  },
+  {
+    "epoch": 62.0,
+    "learning_rate": 0.001,
+    "loss": 0.0022574006470006706,
+    "price_loss": 0.0022574006470006706,
+    "validation_price_mae": 0.002238096343231201
+  },
+  {
+    "epoch": 63.0,
+    "learning_rate": 0.001,
+    "loss": 0.0022389159943282605,
+    "price_loss": 0.0022389159943282605,
+    "validation_price_mae": 0.002280621346282959
+  },
+  {
+    "epoch": 64.0,
+    "learning_rate": 0.001,
+    "loss": 0.0022218611270713806,
+    "price_loss": 0.0022218611270713806,
+    "validation_price_mae": 0.002194821608734131
+  },
+  {
+    "epoch": 65.0,
+    "learning_rate": 0.001,
+    "loss": 0.0022098979254716634,
+    "price_loss": 0.0022098979254716634,
+    "validation_price_mae": 0.002113140005493164
+  },
+  {
+    "epoch": 66.0,
+    "learning_rate": 0.001,
+    "loss": 0.002190351486310959,
+    "price_loss": 0.002190351486310959,
+    "validation_price_mae": 0.002255234122467041
+  },
+  {
+    "epoch": 67.0,
+    "learning_rate": 0.001,
+    "loss": 0.0021769587426656483,
+    "price_loss": 0.0021769587426656483,
+    "validation_price_mae": 0.0022019695678710937
+  },
+  {
+    "epoch": 68.0,
+    "learning_rate": 0.001,
+    "loss": 0.002162076658703089,
+    "price_loss": 0.002162076658703089,
+    "validation_price_mae": 0.002120079801940918
+  },
+  {
+    "epoch": 69.0,
+    "learning_rate": 0.001,
+    "loss": 0.0021464218365156652,
+    "price_loss": 0.0021464218365156652,
+    "validation_price_mae": 0.0021523615684509276
+  },
+  {
+    "epoch": 70.0,
+    "learning_rate": 0.001,
+    "loss": 0.0021352486569327115,
+    "price_loss": 0.0021352486569327115,
+    "validation_price_mae": 0.0021784558547973632
+  },
+  {
+    "epoch": 71.0,
+    "learning_rate": 0.001,
+    "loss": 0.0021196021373999117,
+    "price_loss": 0.0021196021373999117,
+    "validation_price_mae": 0.0020148670944213866
+  },
+  {
+    "epoch": 72.0,
+    "learning_rate": 0.001,
+    "loss": 0.0021067472734606265,
+    "price_loss": 0.0021067472734606265,
+    "validation_price_mae": 0.0021122665100097656
+  },
+  {
+    "epoch": 73.0,
+    "learning_rate": 0.001,
+    "loss": 0.00209459866422236,
+    "price_loss": 0.00209459866422236,
+    "validation_price_mae": 0.0021530434661865233
+  },
+  {
+    "epoch": 74.0,
+    "learning_rate": 0.001,
+    "loss": 0.00208050814399302,
+    "price_loss": 0.00208050814399302,
+    "validation_price_mae": 0.002117998846435547
+  },
+  {
+    "epoch": 75.0,
+    "learning_rate": 0.001,
+    "loss": 0.0020703222783279417,
+    "price_loss": 0.0020703222783279417,
+    "validation_price_mae": 0.002030969191741943
+  },
+  {
+    "epoch": 76.0,
+    "learning_rate": 0.001,
+    "loss": 0.0020566771591967346,
+    "price_loss": 0.0020566771591967346,
+    "validation_price_mae": 0.002061259732055664
+  },
+  {
+    "epoch": 77.0,
+    "learning_rate": 0.001,
+    "loss": 0.002045644057543874,
+    "price_loss": 0.002045644057543874,
+    "validation_price_mae": 0.0020606145904541015
+  },
+  {
+    "epoch": 78.0,
+    "learning_rate": 0.001,
+    "loss": 0.002034059502556324,
+    "price_loss": 0.002034059502556324,
+    "validation_price_mae": 0.0020124363670349123
+  },
+  {
+    "epoch": 79.0,
+    "learning_rate": 0.001,
+    "loss": 0.002023208238195181,
+    "price_loss": 0.002023208238195181,
+    "validation_price_mae": 0.002046347243499756
+  },
+  {
+    "epoch": 80.0,
+    "learning_rate": 0.001,
+    "loss": 0.002011127784771025,
+    "price_loss": 0.002011127784771025,
+    "validation_price_mae": 0.0019467016647338868
+  },
+  {
+    "epoch": 81.0,
+    "learning_rate": 0.001,
+    "loss": 0.0020015165751230716,
+    "price_loss": 0.0020015165751230716,
+    "validation_price_mae": 0.0019860814361572264
+  },
+  {
+    "epoch": 82.0,
+    "learning_rate": 0.001,
+    "loss": 0.001990701248371601,
+    "price_loss": 0.001990701248371601,
+    "validation_price_mae": 0.002023965717315674
+  },
+  {
+    "epoch": 83.0,
+    "learning_rate": 0.001,
+    "loss": 0.0019802251681977513,
+    "price_loss": 0.0019802251681977513,
+    "validation_price_mae": 0.002034997339630127
+  },
+  {
+    "epoch": 84.0,
+    "learning_rate": 0.001,
+    "loss": 0.001976525723089576,
+    "price_loss": 0.001976525723089576,
+    "validation_price_mae": 0.001997211033630371
+  },
+  {
+    "epoch": 85.0,
+    "learning_rate": 0.001,
+    "loss": 0.0019593115386861565,
+    "price_loss": 0.0019593115386861565,
+    "validation_price_mae": 0.0019778202674865723
+  },
+  {
+    "epoch": 86.0,
+    "learning_rate": 0.001,
+    "loss": 0.0019491545449444652,
+    "price_loss": 0.0019491545449444652,
+    "validation_price_mae": 0.0019294222007751466
+  },
+  {
+    "epoch": 87.0,
+    "learning_rate": 0.001,
+    "loss": 0.001940633501327634,
+    "price_loss": 0.001940633501327634,
+    "validation_price_mae": 0.001891162439727783
+  },
+  {
+    "epoch": 88.0,
+    "learning_rate": 0.001,
+    "loss": 0.0019370107152539492,
+    "price_loss": 0.0019370107152539492,
+    "validation_price_mae": 0.0019892762977600097
+  },
+  {
+    "epoch": 89.0,
+    "learning_rate": 0.001,
+    "loss": 0.001922356506934762,
+    "price_loss": 0.001922356506934762,
+    "validation_price_mae": 0.0018870051086425782
+  },
+  {
+    "epoch": 90.0,
+    "learning_rate": 0.001,
+    "loss": 0.0019122886056873202,
+    "price_loss": 0.0019122886056873202,
+    "validation_price_mae": 0.0019404328399658204
+  },
+  {
+    "epoch": 91.0,
+    "learning_rate": 0.001,
+    "loss": 0.0019044396933710576,
+    "price_loss": 0.0019044396933710576,
+    "validation_price_mae": 0.0019109083236694335
+  },
+  {
+    "epoch": 92.0,
+    "learning_rate": 0.001,
+    "loss": 0.0019020188269656896,
+    "price_loss": 0.0019020188269656896,
+    "validation_price_mae": 0.0019333928955078126
+  },
+  {
+    "epoch": 93.0,
+    "learning_rate": 0.001,
+    "loss": 0.0018853514271569252,
+    "price_loss": 0.0018853514271569252,
+    "validation_price_mae": 0.0020125498733520506
+  },
+  {
+    "epoch": 94.0,
+    "learning_rate": 0.001,
+    "loss": 0.0018795243023514748,
+    "price_loss": 0.0018795243023514748,
+    "validation_price_mae": 0.0019055249153137207
+  },
+  {
+    "epoch": 95.0,
+    "learning_rate": 0.001,
+    "loss": 0.001871010071336031,
+    "price_loss": 0.001871010071336031,
+    "validation_price_mae": 0.0019453850448608399
+  },
+  {
+    "epoch": 96.0,
+    "learning_rate": 0.001,
+    "loss": 0.0018623695784574746,
+    "price_loss": 0.0018623695784574746,
+    "validation_price_mae": 0.0018576054260253905
+  },
+  {
+    "epoch": 97.0,
+    "learning_rate": 0.001,
+    "loss": 0.0018608945190957188,
+    "price_loss": 0.0018608945190957188,
+    "validation_price_mae": 0.001770687922668457
+  },
+  {
+    "epoch": 98.0,
+    "learning_rate": 0.001,
+    "loss": 0.001844789540669918,
+    "price_loss": 0.001844789540669918,
+    "validation_price_mae": 0.0018236578994750977
+  },
+  {
+    "epoch": 99.0,
+    "learning_rate": 0.001,
+    "loss": 0.0018396025545182825,
+    "price_loss": 0.0018396025545182825,
+    "validation_price_mae": 0.0017866703964233399
+  },
+  {
+    "epoch": 100.0,
+    "learning_rate": 0.001,
+    "loss": 0.00183710954801023,
+    "price_loss": 0.00183710954801023,
+    "validation_price_mae": 0.0017735404525756836
+  }
+]
