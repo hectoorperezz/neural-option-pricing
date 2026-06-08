@@ -12,7 +12,7 @@ export function Eyebrow({ children, delay = 0 }: EyebrowProps) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="eyebrow"
+      className="eyebrow mb-4"
     >
       <span className="inline-flex items-center gap-2">
         <span
@@ -71,7 +71,7 @@ export function Body({ children, delay = 0.18, className = "" }: BodyProps) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-      className={`max-w-[68ch] text-[clamp(1rem,1.25vw,1.2rem)] leading-[1.6] text-[var(--color-ink-soft)] ${className}`}
+      className={`mt-5 max-w-[68ch] text-[clamp(1rem,1.25vw,1.2rem)] leading-[1.6] text-[var(--color-ink-soft)] ${className}`}
     >
       {children}
     </motion.p>

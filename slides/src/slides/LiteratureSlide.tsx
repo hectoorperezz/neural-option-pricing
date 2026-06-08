@@ -21,12 +21,12 @@ export function LiteratureSlide() {
         {content.body}
       </Body>
 
-      <Stagger className="mt-10 flex flex-1 flex-col gap-3" delay={0.32}>
+      <Stagger className="mt-7 flex flex-1 flex-col gap-3" delay={0.32}>
         {content.papers.map((paper, idx) => (
           <motion.div
             key={paper.authors}
             variants={fadeUp}
-            className={`grid grid-cols-[3.2rem_minmax(0,1fr)_minmax(0,2.2fr)_minmax(0,11rem)] items-center gap-5 rounded-xl border px-4 py-3 ${
+            className={`grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,2.2fr)_minmax(0,12rem)] items-center gap-5 rounded-2xl border px-5 py-3.5 ${
               paper.central
                 ? "border-[var(--color-uni-black)] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.05)]"
                 : "border-black/10 bg-white"
@@ -47,7 +47,7 @@ export function LiteratureSlide() {
 
             {/* Autores + año */}
             <div>
-              <div className="font-display text-[17px] font-medium leading-tight text-[var(--color-uni-black)]">
+              <div className="font-display text-[18px] font-medium leading-tight text-[var(--color-uni-black)]">
                 {paper.authors}
               </div>
               <div className="mt-0.5 font-mono text-[12px] text-[var(--color-ink-muted)]">
@@ -57,10 +57,10 @@ export function LiteratureSlide() {
 
             {/* Título + contribución */}
             <div>
-              <div className="text-[15px] font-medium leading-snug text-[var(--color-uni-black)]">
+              <div className="text-[16px] font-medium leading-snug text-[var(--color-uni-black)]">
                 {paper.title}
               </div>
-              <div className="mt-1 text-[13.5px] leading-snug text-[var(--color-ink-soft)]">
+              <div className="mt-1 text-[14px] leading-snug text-[var(--color-ink-soft)]">
                 <InlineMathText>{paper.contribution}</InlineMathText>
               </div>
             </div>

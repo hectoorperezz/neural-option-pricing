@@ -1,5 +1,5 @@
 {
-  "eyebrow": "Cinco experimentos",
+  "eyebrow": "Seis experimentos",
   "headline": "Cada uno aísla una sola dimensión.",
   "experiments": [
     {
@@ -31,6 +31,12 @@
       "title": "Differential ML",
       "summary": "¿Añadir Delta como target diferencial mejora la eficiencia muestral?",
       "metric": "Mejora de $\\mathrm{MAE}_{\\Delta}$ a igual precio"
+    },
+    {
+      "id": "E6",
+      "title": "Profundidad y scheduler",
+      "summary": "¿Aumentar la profundidad o añadir un scheduler de learning rate mejora el baseline?",
+      "metric": "$\\mathrm{MAE}(C/K)$ por bin"
     }
   ]
 }

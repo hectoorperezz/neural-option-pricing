@@ -5,11 +5,7 @@
     " ",
     { "text": "", "italic": true }
   ],
-  "takeaways": [
-    "Surrogate = aproximador numérico, no predicción de mercado.",
-    "Métrica primaria de selección: $\\mathrm{MAE}(C/K)$ sobre validación.",
-    "Evaluación obligatoria por bins ($5 \\times 5$ moneyness × vencimiento)."
-  ],
+  "takeaways": [],
   "footer": {
     "institution": "Universidad de las Hespérides",
     "subject": "Métodos numéricos y simulación estocástica · Curso 2025/2026"

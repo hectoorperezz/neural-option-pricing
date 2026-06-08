@@ -12,7 +12,7 @@ export function TitleSlide() {
       <Mosaic className="absolute right-[5%] top-[8%] z-0 h-[140px]" />
 
       {/* Red neuronal estilizada como acento temático, banda central derecha */}
-      <NeuralNetDiagram className="title-neural-net absolute right-[3%] top-[28%] z-0 h-[38%] w-[42%]" />
+      <NeuralNetDiagram className="title-neural-net absolute right-[3%] top-[28%] z-0 h-[38%] w-[34%]" />
 
       {/* Banda negra inferior a sangre como cierre */}
       <div
@@ -43,7 +43,7 @@ export function TitleSlide() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
-            className="title-heading font-display text-[clamp(2.4rem,5.6vw,5.2rem)] font-medium leading-[1.04] tracking-tight text-[var(--color-uni-black)]"
+            className="title-heading max-w-[60%] font-display text-[clamp(2.4rem,5.6vw,5.2rem)] font-medium leading-[1.04] tracking-tight text-[var(--color-uni-black)]"
           >
             {content.title.lineOne}
             <br />

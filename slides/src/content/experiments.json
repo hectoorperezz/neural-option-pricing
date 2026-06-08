@@ -37,7 +37,7 @@
     },
     "findings": [
       "Swish domina en las dos familias: la mejor Delta y un precio igual o inferior al resto.",
-      "BS: Swish $1.8\\times 10^{-2}$ vs ReLU $2.7\\times 10^{-2}$ ($-34\\%$); Heston: $1.1$ vs $1.6\\times 10^{-2}$ ($-32\\%$).",
+      "BS: Swish $1.8\\times 10^{-2}$ vs ReLU $2.7\\times 10^{-2}$ ($-34\\%$); Heston: $1.1\\times 10^{-2}$ vs $1.6\\times 10^{-2}$ ($-32\\%$).",
       "El error de precio apenas varía: la activación gobierna la derivada, no el nivel de la función.",
       "Matiz: 'suave $>$ ReLU' no es limpio — tanh, también suave, da la peor Delta en Heston."
     ],
@@ -116,6 +116,30 @@
     "notes": {
       "setup": "Importante: ninguna red predice la Delta directamente; todas la obtienen por autograd del precio. Lo único que cambia en H-6-small es que la pérdida penaliza esa Delta.",
       "results": "Leer el plano: H-6-small (verde) domina a H-3-small en ambas métricas, y queda por debajo de H-3 en Delta pese a usar 5× menos datos. El precio es lo único donde más datos siguen ganando."
+    }
+  },
+  {
+    "id": "E6",
+    "title": "Profundidad de red y scheduler de learning rate",
+    "question": "H-3 (baseline $4\\times 128$) frente a H-7-shallow ($2\\times 128$), H-8-deep ($6\\times 128$) y H-9-lr-schedule ($4\\times 128$ con $\\mathrm{ReduceLROnPlateau}$). ¿Ayuda más profundidad o un scheduler de learning rate sobre el baseline?",
+    "metric": "$\\mathrm{MAE}(C/K)$ por bin",
+    "surrogates": ["H-3", "H-7-shallow", "H-8-deep", "H-9-lr-schedule"],
+    "hypothesis": "Dos vías de mejora sobre el baseline que no estaban en el protocolo inicial, variar la profundidad de la red o reducir el learning rate cuando la validación se estanca. Las cuatro variantes comparten dataset (25M), semilla, batch, activación y pérdida, y lo único que cambia es la profundidad o el scheduler.",
+    "figure": {
+      "src": "/e6_summary.png",
+      "alt": "MAE de precio y de Delta medios por bin de las cuatro variantes",
+      "caption": "$\\mathrm{MAE}(C/K)$ y $\\mathrm{MAE}_{\\Delta}$ medios por bin. El baseline H-3 en dorado; H-7 y H-8 cambian la profundidad, H-9 añade el scheduler."
+    },
+    "findings": [
+      "Solo el scheduler (H-9-lr-schedule) mejora el baseline, con una reducción del $\\mathrm{MAE}(C/K)$ en torno al $10\\%$.",
+      "Alterar la profundidad lo empeora, moderado al ampliarla (H-8-deep, $-56.8\\%$) y acusado al reducirla (H-7-shallow, $-178.2\\%$).",
+      "En Delta el patrón es parecido, con H-7-shallow claramente peor que el resto.",
+      "Lectura observacional, ordenada por la reducción del error frente al baseline."
+    ],
+    "conclusion": "Sobre el baseline ya consolidado, ni más ni menos profundidad ayudan, mientras que un scheduler que baja el learning rate al estancarse la validación aporta una mejora pequeña pero consistente.",
+    "notes": {
+      "setup": "E6 se añadió tras el diagnóstico de escalado y no formaba parte del protocolo inicial. Las cuatro variantes comparten dataset 25M, semilla 203, batch, Swish y pérdida de precio.",
+      "results": "Orden de mejor a peor por error de precio, H-9-lr-schedule, H-3, H-8-deep, H-7-shallow."
     }
   }
 ]

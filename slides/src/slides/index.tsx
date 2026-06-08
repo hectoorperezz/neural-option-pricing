@@ -1,16 +1,13 @@
 import type { ReactNode } from "react";
-import { CasesSlide } from "./CasesSlide";
 import { ClosingSlide } from "./ClosingSlide";
 import { ExperimentSlide } from "./ExperimentSlide";
 import { ExperimentResultsSlide } from "./ExperimentResultsSlide";
 import { ExperimentsOverviewSlide } from "./ExperimentsOverviewSlide";
 import { LiteratureSlide } from "./LiteratureSlide";
-import { MethodologySlide } from "./MethodologySlide";
-import { MotivationSlide } from "./MotivationSlide";
-import { QuestionSlide } from "./QuestionSlide";
-import { SurrogateSlide } from "./SurrogateSlide";
+import { MethodologyTrainingSlide } from "./MethodologyTrainingSlide";
+import { QuestionMotivationSlide } from "./QuestionMotivationSlide";
+import { SurrogateCasesSlide } from "./SurrogateCasesSlide";
 import { TitleSlide } from "./TitleSlide";
-import { TrainingSlide } from "./TrainingSlide";
 import { experiments } from "../content";
 
 export interface Slide {
@@ -73,18 +70,11 @@ export const slides: Slide[] = [
       "Presentación del trabajo: redes neuronales como surrogates de funciones de pricing de opciones. Caso de validación Black-Scholes, caso principal Heston.",
   },
   {
-    id: "question",
-    label: "Pregunta",
-    render: () => <QuestionSlide />,
+    id: "question-motivation",
+    label: "Pregunta y motivación",
+    render: () => <QuestionMotivationSlide />,
     notes:
-      "La pregunta de investigación: bajo qué condiciones una red puede ser un surrogate preciso, rápido y diferenciable. No predecimos el mercado, sustituimos un solver caro.",
-  },
-  {
-    id: "motivation",
-    label: "Motivación",
-    render: () => <MotivationSlide />,
-    notes:
-      "El cuello de botella: los modelos realistas (Heston, Bates) son caros y hay que evaluarlos millones de veces (calibración, Greeks, simulación). Ahí entra el surrogate.",
+      "La pregunta de investigación (¿una red puede ser un surrogate preciso, rápido y diferenciable?) y el porqué: cuanto más realista el modelo, más cara la evaluación, y hay que evaluarlo millones de veces (calibración, Greeks, simulación). No predecimos el mercado, sustituimos un solver caro.",
   },
   {
     id: "literature",
@@ -94,41 +84,26 @@ export const slides: Slide[] = [
       "Cinco referencias núcleo. Chen et al. (deep surrogates) es la ancla; Huge y Savine aportan el differential ML que usamos en E5 (entrenar con derivadas verdaderas).",
   },
   {
-    id: "surrogate",
-    label: "Deep surrogate",
-    render: () => <SurrogateSlide />,
+    id: "surrogate-cases",
+    label: "Deep surrogate y casos",
+    render: () => <SurrogateCasesSlide />,
     notes:
-      "El esquema: el modelo genera datos sintéticos, la red los aprende offline y luego sustituye al solver. La ventaja: derivadas exactas y baratas por autograd.",
+      "El esquema: el modelo genera datos sintéticos, la red los aprende offline y luego sustituye al solver (diferenciable por autograd). Y los dos casos: Black-Scholes como validación con solución cerrada y Heston como caso principal, con Fourier semi-cerrado y volatilidad estocástica.",
   },
   {
-    id: "cases",
-    label: "Casos de estudio",
-    render: () => <CasesSlide />,
-    notes:
-      "Black-Scholes como entorno de control (solución cerrada, validamos todo) y Heston como caso real (Fourier semi-cerrado, costoso).",
-  },
-  {
-    id: "methodology",
-    label: "Metodología",
+    id: "methodology-training",
+    label: "Metodología y entrenamiento",
     steps: 3,
-    render: () => <MethodologySlide />,
+    render: () => <MethodologyTrainingSlide />,
     notes:
-      "El pipeline común: dominio e hipercubo, muestreo (uniforme vs enfocado), targets y métricas (precio, IV, Delta por autograd) y evaluación por bins 5x5 sobre el test balanceado.",
+      "El pipeline común: dominio e hipercubo, muestreo (uniforme vs enfocado), targets y métricas (precio, IV, Delta por autograd) y evaluación por bins 5x5 sobre el test balanceado. Y el montaje físico: todo corrió en una estación con i9-14900K, 64 GB y RTX 4060; con el argumento de muestras por parámetro escalamos los datasets x50 y el error cayó de 1e-2 a 1e-3.",
   },
   {
     id: "experiments-overview",
-    label: "Cinco experimentos",
+    label: "Seis experimentos",
     render: () => <ExperimentsOverviewSlide />,
     notes:
-      "Cinco experimentos, cada uno varía una sola dimensión: métrica (E1), activación (E2), muestreo (E3), eficiencia (E4) e información diferencial (E5).",
-  },
-  {
-    id: "training",
-    label: "Entrenamiento",
-    steps: 3,
-    render: () => <TrainingSlide />,
-    notes:
-      "Antes de los resultados: todo corrió en una estación con i9-14900K, 64 GB de RAM y RTX 4060. Régimen común (MLP 4x128 Swish, Adam, 100 épocas). Y el experimento de escalado: el diseño inicial se estancaba en 1e-2; con el argumento de muestras por parámetro escalamos los datasets x50 (generación de ~10 h, fotos), y el error cayó hasta ~1e-3.",
+      "Seis experimentos, cada uno varía una sola dimensión, métrica (E1), activación (E2), muestreo (E3), eficiencia (E4), información diferencial (E5) y profundidad/scheduler (E6).",
   },
   ...experimentSlides,
   {

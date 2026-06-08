@@ -29,8 +29,8 @@ export function ExperimentSlide({
         <Headline delay={0.08} size="lg">
           {title}
         </Headline>
-        <Body delay={0.18} className="mt-4 max-w-[80ch] text-[clamp(1.05rem,1.4vw,1.45rem)]">
-          {question}
+        <Body delay={0.18} className="max-w-[80ch] text-[clamp(1.05rem,1.4vw,1.45rem)]">
+          <InlineMathText>{question}</InlineMathText>
         </Body>
 
         <Reveal at={1} className="mt-8 flex flex-wrap items-center gap-3">

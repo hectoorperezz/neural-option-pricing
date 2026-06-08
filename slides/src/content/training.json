@@ -5,7 +5,7 @@
     { "text": "entrenamiento y escalado", "highlight": true },
     " de las redes"
   ],
-  "body": "Los once surrogates comparten arquitectura y régimen de entrenamiento. Todo el pipeline —generación, entrenamiento y evaluación— se ejecutó en una sola estación de trabajo, lo que nos permitió escalar los datasets de forma sustancial.",
+  "body": "Los catorce surrogates comparten el régimen de entrenamiento. Once de ellos, los pre-registrados, usan la arquitectura MLP de 4×128, y las tres variantes de E6 alteran la profundidad o el scheduler. Todo el pipeline —generación, entrenamiento y evaluación— se ejecutó en una sola estación de trabajo, lo que nos permitió escalar los datasets de forma sustancial.",
   "photos": [
     {
       "src": "/train_rig.jpeg",
@@ -15,7 +15,7 @@
     {
       "src": "/train_pipeline.jpeg",
       "alt": "Pantalla del pipeline de generación de datasets 50x",
-      "caption": "Generación del dataset escalado 50×: 9 datasets, 32 workers en paralelo, $\\approx$10 h de cómputo."
+      "caption": "Generación del dataset escalado 50×: 9 datasets, 32 workers en paralelo, $\\approx$8 h de cómputo."
     }
   ],
   "blocks": [
@@ -29,9 +29,9 @@
     {
       "title": "Proceso de entrenamiento",
       "bullets": [
-        "MLP $4\\times 128$ con Swish; Adam $\\mathrm{lr}=10^{-3}$; 100 épocas, sin scheduler ni regularización.",
+        "MLP $4\\times 128$ con Swish; Adam $\\mathrm{lr}=10^{-3}$; 100 épocas, sin regularización (el baseline no usa scheduler, E6 lo evalúa).",
         "Batch 32 768 (16 384 en variantes small); checkpoint por menor $\\mathrm{MAE}(C/K)$ en validación.",
-        "Los 11 surrogates entrenados en $\\approx$63 min (RTX 4060, dos en paralelo)."
+        "Los once surrogates pre-registrados en $\\approx$63 min (RTX 4060, dos en paralelo); E6 se entrenó aparte."
       ]
     },
     {

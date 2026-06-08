@@ -33,7 +33,7 @@
       "year": "2025",
       "title": "Deep surrogates for finance",
       "contribution": "Surrogate de Bates 13-D entrenado con $10^9$ muestras. Decisiones clave: Swish, evaluación en IV, recorte de bordes.",
-      "role": "Núcleo de la metodología",
+      "role": "Referencia central",
       "central": true
     },
     {
@@ -41,7 +41,7 @@
       "year": "2020",
       "title": "Differential machine learning",
       "contribution": "Añadir derivadas verdaderas al training set mejora Greeks y reduce el tamaño de muestra requerido.",
-      "role": "Motiva el experimento E5",
+      "role": "Aprendizaje diferencial",
       "central": true
     }
   ]
