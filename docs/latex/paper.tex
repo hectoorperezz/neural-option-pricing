@@ -490,6 +490,9 @@ Para nuestro trabajo es una referencia clave ya que tiene una motivación matem�
 \label{fig:hermite}
 \end{figure}
 
+
+Aunque nuestro trabajo no adopta esquemas cíclicos ni reinicios cálidos como política general de entrenamiento, sí incorporamos en el experimento E6 una variante con scheduler para estudiar si una adaptación sencilla del learning rate mejora el surrogate baseline. Esta decisión está motivada por la literatura de optimización, donde Smith~\cite{smith2015} muestra que variar el learning rate durante el entrenamiento puede mejorar la precisión y reducir el número de iteraciones necesarias frente a una tasa constante, y Loshchilov y Hutter~\cite{loshchilov2017} documentan que los schedules con reinicios también mejoran el rendimiento durante el entrenamiento. En nuestro caso no se pretende reproducir exactamente esos esquemas, sino contrastar si una política adaptativa más simple, \texttt{ReduceLROnPlateau}, aporta una mejora marginal una vez fijados arquitectura, pérdida y dataset.
+
 \subsection{Otras líneas complementarias}
 
 Más allá de estos cinco pilares, hemos revisado otros trabajos que ayudan a entender que la aplicación de redes neuronales a derivados ha avanzado en varias direcciones complementarias. Una primera línea ataca de frente el problema de resolver las ecuaciones diferenciales parciales que aparecen en el pricing de derivados de alta dimensión, donde los métodos de mallado tradicionales chocan con la maldición de la dimensionalidad: en esa familia se inscribe el \emph{Deep Galerkin Method} de Sirignano y Spiliopoulos~\cite{sirignano2018}, que entrena una red profunda para satisfacer el operador diferencial sobre puntos muestreados al azar y prescinde por completo de la malla, así como el \emph{Deep BSDE Solver} de Han, Jentzen y E~\cite{han2018}, que reformula la PDE como una ecuación diferencial estocástica retrógrada y aproxima el gradiente de la solución mediante redes neuronales, demostrando viabilidad incluso en problemas de cien dimensiones.
@@ -628,7 +631,7 @@ La arquitectura se fija como un MLP de cuatro capas ocultas y 128 unidades por c
 
 Swish se usa como activación de referencia por su suavidad y por la evidencia del paper de Chen et al., donde se observa que ReLU puede dar errores de precio comparables pero Deltas peores al no ser diferenciable en cero.
 
-El optimizador es Adam con learning rate fijo. Esta elección no busca tampoco optimizar al máximo el entrenamiento, sino mantener una referencia simple y común a todos los surrogates. No usamos scheduler porque introduciría otra decisión de ajuste y dificultaría atribuir las diferencias observadas a la variable experimental principal.
+El optimizador de referencia es Adam con learning rate fijo. Esta elección no busca optimizar al máximo el entrenamiento, sino mantener una base simple y común a todos los surrogates del catálogo baseline. La única excepción es el experimento E6, donde se introduce de forma controlada una variante con scheduler para medir su efecto aislado sobre el baseline. Fuera de ese caso, mantener el learning rate fijo evita añadir otra decisión de ajuste y facilita atribuir las diferencias observadas a la variable experimental principal.
 
 Las cien épocas se entienden como un presupuesto fijo de entrenamiento, común a todos los modelos. Esta decisión nos ofrece un estándar homogéneo para comparar los surrogates sin introducir reglas de parada distintas entre experimentos. Por último, la semilla se fija por configuración para que cada surrogate sea reproducible y para que las comparaciones dentro de un experimento no dependan de la suerte de la inicialización.
 
@@ -1168,8 +1171,7 @@ En cifras, el término diferencial reduce el error de Delta de H-6-small frente 
 \subsection{E6 --- Profundidad de la red y scheduler de learning rate}\label{sec:res-e6}
 % =============================================================================
 
-% --- E6: resultados (borrador, a editar y ampliar) --------------------------
-La \autoref{fig:e6} y la \autoref{tab:e6} resumen el experimento, comparando las cuatro variantes en error de precio y de Delta promediados sobre los 25 bins del test balanceado. % TEXTO ORIENTATIVO --- redactar y ampliar.
+La \autoref{fig:e6} y la \autoref{tab:e6} resumen el experimento, comparando las cuatro variantes en error de precio y de Delta promediados sobre los 25 bins del test balanceado.
 
 \begin{figure}[ht]
 \centering
@@ -1196,7 +1198,7 @@ H-7-shallow & $2\times128$ & $3{,}57\times10^{-3}$ & $3{,}03\times10^{-2}$ & $-1
 \label{tab:e6}
 \end{table}
 
-El scheduler de learning rate (H-9-lr-schedule) es la única variante que mejora al baseline, con una reducción del error de precio en torno al 10\,\%, mientras que alterar la profundidad lo empeora, de forma moderada al ampliarla (H-8-deep) y acusada al reducirla (H-7-shallow). En Delta el patrón es parecido, con H-7-shallow claramente peor que el resto. % TEXTO ORIENTATIVO --- redactar y ampliar con la informacion necesaria.
+El scheduler de learning rate (H-9-lr-schedule) es la única variante que mejora al baseline, con una reducción del error de precio en torno al 10\,\%, mientras que alterar la profundidad lo empeora, de forma moderada al ampliarla (H-8-deep) y acusada al reducirla (H-7-shallow). En Delta el patrón es parecido, con H-7-shallow claramente peor que el resto. 
 
 
 % =============================================================================
@@ -1277,6 +1279,17 @@ A.~R. Barron.
 P. Grohs, F. Hornung, A. Jentzen y P. von Wurstemberger.
 \newblock A proof that artificial neural networks overcome the curse of dimensionality in the numerical approximation of Black-Scholes partial differential equations.
 \newblock \emph{arXiv preprint arXiv:1809.02362}, 2018.
+
+
+\bibitem{smith2015}
+L. N. Smith.
+\newblock Cyclical learning rates for training neural networks.
+\newblock \emph{arXiv preprint arXiv:1506.01186}, 2015.
+
+\bibitem{loshchilov2017}
+I. Loshchilov y F. Hutter.
+\newblock SGDR: Stochastic gradient descent with warm restarts.
+\newblock \emph{arXiv preprint arXiv:1608.03983}, 2017.
 
 \end{thebibliography}
 
