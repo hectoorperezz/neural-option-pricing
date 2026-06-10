@@ -876,7 +876,6 @@ El experimento 4 es de medición, el objetivo es cuantificar la mejora de rendim
 
 El experimento 5 prueba la hipótesis central del paper de Huge y Savine aplicada a nuestro dominio. Si además de precios generamos la Delta verdadera, ¿puede el surrogate aprender mejor la forma local de la función de pricing con menos datos? La Delta es el target diferencial natural de este experimento. Con $y = C/K$ y $m = S/K$ se cumple $\Delta = \partial y / \partial m$, de modo que es la derivada de la salida respecto a una sola entrada, de primer orden y sin más reescalado que el de la normalización. Además, disponemos de su valor verdadero de forma analítica ($N(d_1)$ en Black-Scholes y $P_1$ en Heston), lo que da un objetivo fiable contra el que entrenar.
 
-% --- E6: presentación (borrador, a editar) ----------------------------------
 El experimento 6 cierra el estudio explorando dos vías de mejora sobre el baseline H-3 que surgieron del diagnóstico de escalado y que no formaban parte del protocolo inicial. La primera es la profundidad de la red, comparando el baseline de cuatro capas con una variante más superficial (H-7-shallow, dos capas) y otra más profunda (H-8-deep, seis capas). La segunda es un scheduler de learning rate que reduce el paso cuando la validación deja de mejorar (H-9-lr-schedule, con \texttt{ReduceLROnPlateau}). Las cuatro variantes comparten dataset, semilla del entrenador, batch, activación y pérdida, de modo que la única variable que cambia es la profundidad o la presencia del scheduler. La lectura es observacional y se ordena por la reducción del error de precio frente al baseline.
 
 Para llevar a cabo los seis experimentos se han entrenado catorce surrogates, recogidos en la \autoref{tab:surrogates}. La nomenclatura distingue la familia de modelo, BS para Black-Scholes y H para Heston, y el sufijo small marca las variantes de muestra reducida que usa E5. H-3 en particular es la referencia que atraviesa los seis experimentos, de modo que las comparaciones parten siempre del mismo punto y solo cambia la variable que cada experimento aísla.
@@ -1171,7 +1170,7 @@ En cifras, el término diferencial reduce el error de Delta de H-6-small frente 
 \subsection{E6 --- Profundidad de la red y scheduler de learning rate}\label{sec:res-e6}
 % =============================================================================
 
-La \autoref{fig:e6} y la \autoref{tab:e6} resumen el experimento, comparando las cuatro variantes en error de precio y de Delta promediados sobre los 25 bins del test balanceado.
+La \autoref{fig:e6} y la \autoref{tab:e6} resumen el experimento, comparando las cuatro variantes en error de precio y de Delta promediados sobre los 25 bins del test balanceado. El objetivo de E6 era acotar si dos modificaciones locales sobre el baseline H-3 --- cambiar la profundidad de la red o introducir un scheduler de learning rate --- podían mejorar el surrogate manteniendo fijo el resto del pipeline.
 
 \begin{figure}[ht]
 \centering
@@ -1189,7 +1188,7 @@ La \autoref{fig:e6} y la \autoref{tab:e6} resumen el experimento, comparando las
 Surrogate & Arquitectura & MAE$(C/K)$ & MAE$_\Delta$ & Reducción precio \\
 \midrule
 \textbf{H-9-lr-schedule} & $4\times128$ + plateau & $\mathbf{1{,}15\times10^{-3}}$ & $1{,}18\times10^{-2}$ & \textbf{+10,6\,\%} \\
-H-3 (baseline) & $4\times128$ & $1{,}29\times10^{-3}$ & $1{,}11\times10^{-2}$ & --- \\
+H-3 (baseline) & $4\times128$ & $1{,}28\times10^{-3}$ & $1{,}11\times10^{-2}$ & --- \\
 H-8-deep & $6\times128$ & $2{,}01\times10^{-3}$ & $1{,}17\times10^{-2}$ & $-56{,}8$\,\% \\
 H-7-shallow & $2\times128$ & $3{,}57\times10^{-3}$ & $3{,}03\times10^{-2}$ & $-178{,}2$\,\% \\
 \bottomrule
@@ -1198,7 +1197,13 @@ H-7-shallow & $2\times128$ & $3{,}57\times10^{-3}$ & $3{,}03\times10^{-2}$ & $-1
 \label{tab:e6}
 \end{table}
 
-El scheduler de learning rate (H-9-lr-schedule) es la única variante que mejora al baseline, con una reducción del error de precio en torno al 10\,\%, mientras que alterar la profundidad lo empeora, de forma moderada al ampliarla (H-8-deep) y acusada al reducirla (H-7-shallow). En Delta el patrón es parecido, con H-7-shallow claramente peor que el resto. 
+El resultado principal es que el scheduler es la única modificación que mejora la métrica primaria. H-9-lr-schedule reduce el error medio de precio frente al baseline H-3 en un 10,6\,\%, pasando de $1{,}28\times10^{-3}$ a $1{,}15\times10^{-3}$. Ninguna de las dos modificaciones de profundidad consigue una mejora comparable: H-8-deep empeora hasta $2{,}01\times10^{-3}$ y H-7-shallow hasta $3{,}57\times10^{-3}$.
+
+Sin embargo, esa mejora del scheduler no se transfiere al resto de diagnósticos. En Delta, H-9-lr-schedule queda ligeramente por detrás del baseline ($1{,}18\times10^{-2}$ frente a $1{,}11\times10^{-2}$), lo que sugiere que el ajuste fino del learning rate beneficia sobre todo a la aproximación media del precio, pero no mejora la sensibilidad local de la red. La variante profunda H-8-deep presenta un comportamiento intermedio: no mejora al baseline ni en precio ni en Delta, pero queda relativamente cerca de H-3 en ambas métricas. La interpretación natural es que una mayor profundidad no aporta por sí sola una ganancia neta bajo el mismo presupuesto de épocas y con el mismo learning rate fijo.
+
+La variante superficial H-7-shallow es, con diferencia, la peor de las cuatro. Su error medio de precio casi triplica el del baseline y su error de Delta es también claramente superior, lo que apunta a una capacidad insuficiente para aproximar la función de pricing de Heston en el dominio amplio del proyecto.
+
+En conjunto, E6 sugiere que el baseline H-3 ya se encontraba en una región razonable del espacio de arquitecturas. Reducir profundidad perjudica claramente el surrogate, aumentarla no aporta una mejora neta con el mismo régimen de entrenamiento, y la única mejora marginal útil proviene del scheduler, pero solo en la métrica primaria de precio.
 
 
 % =============================================================================
