@@ -367,13 +367,13 @@ Para responder esta pregunta en la práctica, hemos decidido segmentar el estudi
 
 El documento se organiza de la siguiente manera, la \autoref{sec:revision} sirve para sintetizar la revisión bibliográfica que ha guiado las decisiones metodológicas del trabajo, es además una sección fundamental para ganar contexto histórico sobre la bibliografía existente y poder afrontar la lectura del trabajo de una forma más contextualizada. La \autoref{sec:metodologia} fija los casos de estudio y la metodología experimental. La \autoref{sec:experimentos} describe los seis experimentos y las características técnicas de los catorce surrogates que los sostienen. La \autoref{sec:resultados} reporta los resultados de cada experimento. La \autoref{sec:discusion} discute alcance, limitaciones y trabajo en curso.
 
-El código que implementa el pipeline completo solvers, generación de datos sintéticos, entrenamiento de los surrogates y evaluación por bins junto con los scripts que reproducen las tablas y figuras de este trabajo está disponible en \url{https://github.com/hectoorperezz/proyecto-final-metodos-numericos}.
+El código que implementa el pipeline completo: solvers, generación de datos sintéticos, entrenamiento de los surrogates y evaluación por bins, junto con los scripts que reproducen las tablas y figuras de este trabajo está disponible en \url{https://github.com/hectoorperezz/proyecto-final-metodos-numericos}.
 
 % =============================================================================
 \section{Revisión bibliográfica}\label{sec:revision}
 % =============================================================================
 
-La primera fase de nuestro trabajo ha consistido en una investigación bibliográfica profunda para tener una visión global de los temas relevantes y situar nuestra propuesta dentro del panorama existente. Hay cinco artículos que hemos trabajado a fondo y que forman el núcleo de la revisión: los tres primeros eran una recomendación de los profesores como punto de partida, un cuarto, el de deep surrogates, lo encontramos buscando trabajos más recientes en la línea de aproximación numérica de modelos de pricing, y un quinto, el de differential machine learning de Huge y Savine, , que incorporamos como complemento al anterior porque aporta una técnica, que hemos utilizado como inspiración para diseñar el último experimento.
+La primera fase de nuestro trabajo ha consistido en una investigación bibliográfica profunda para tener una visión global de los temas relevantes y situar nuestra propuesta dentro del panorama existente. Hay cinco artículos que hemos trabajado a fondo y que forman el núcleo de la revisión: los tres primeros eran una recomendación de los profesores como punto de partida, un cuarto, el de deep surrogates, lo encontramos buscando trabajos más recientes en la línea de aproximación numérica de modelos de pricing, y un quinto, el de differential machine learning de Huge y Savine, que incorporamos como complemento al anterior porque aporta una técnica, que hemos utilizado como inspiración para diseñar el último experimento.
 
 \subsection{Hutchinson, Lo y Poggio (1994): el punto de partida histórico}
 
@@ -527,7 +527,7 @@ C = S\,e^{-qT} N(d_1) - K\,e^{-rT} N(d_2), \qquad
 d_{1,2} = \frac{\ln(S/K) + \left(r - q \pm \tfrac{1}{2}\sigma^2\right)T}{\sigma\sqrt{T}},
 \label{eq:bs-price}
 \end{equation}
-con $d_2 = d_1 - \sigma\sqrt{T}$, de donde la Delta es $\Delta = e^{-qT} N(d_1)$ . El único parámetro de modelo es la volatilidad $\sigma$, que junto con la moneyness $m = S/K$, el vencimiento $T$ y el tipo $r$ forma el espacio de entradas. Esta solución exacta es la que usamos como referencia para validar el pipeline.
+con $d_2 = d_1 - \sigma\sqrt{T}$, de donde la Delta es $\Delta = e^{-qT} N(d_1)$. El único parámetro de modelo es la volatilidad $\sigma$, que junto con la moneyness $m = S/K$, el vencimiento $T$ y el tipo $r$ forma el espacio de entradas. Esta solución exacta es la que usamos como referencia para validar el pipeline.
 
 Heston añade volatilidad estocástica, la varianza instantánea $v_t$ sigue un proceso de reversión a la media correlacionado con el subyacente,
 \begin{equation}
@@ -687,6 +687,9 @@ $\rho$ & $[-0.95,\ -0.05]$ & Heston, skew negativo típico de equity \\
 \end{table}
 
 La elección de $v_0$ y $\theta$ se expresa en varianza pero se interpreta a través de su raíz cuadrada porque esa es la escala financiera natural. El rango cubre desde volatilidades bajas hasta episodios de estrés severo. No imponemos la condición de Feller $2\kappa\theta \geq \xi^2$ como restricción de muestreo. Tratarla como filtro obligatorio haría el problema más limpio pero menos representativo de calibraciones reales, donde muchas violaciones aparecen en condiciones de mercado normales.
+
+ 
+El dominio amplio obliga al solver de Heston a trabajar en esquinas numéricamente exigentes~\cite{lordkahl2007}, donde la integración de Fourier puede devolver precios con un error diminuto que viola las cotas de no arbitraje de una call europea, el valor intrínseco descontado como suelo y el subyacente como techo. El pipeline lo trata en dos capas. Si la violación es menor que una tolerancia de $10^{-7}$, un orden de magnitud por encima del error admitido a la cuadratura, el precio se recorta a la cota, que es además el valor al que esas opciones cotizan en la práctica, pues una call muy dentro del dinero vale su intrínseco y una muy fuera del dinero vale cero. Si la violación es mayor, el punto se descarta y se vuelve a muestrear, de modo que cada dataset alcanza exactamente su tamaño nominal solo con datos válidos. El coste del filtro es marginal, en el peor caso se rechaza un 0,15\,\% de los puntos intentados y la tasa queda registrada en los metadatos de cada dataset. En Black-Scholes, con fórmula cerrada, el rechazo es exactamente cero. El resultado es un dato de entrenamiento libre de arbitraje por construcción.
 
 El muestreo baseline es uniforme en la escala financiera elegida. Formalmente, el dominio de inputs es el hipercubo $\mathcal{D} = \prod_{k=1}^{d} [l_k, u_k]$, y el sampler uniforme genera cada punto con coordenadas independientes, de densidad
 \begin{equation}
@@ -981,7 +984,7 @@ La amplificación es, por tanto, inversamente proporcional a la Vega del bin, m�
 
 Cada punto del plano es un bin y su altura relativa a la abscisa mide la amplificación del error, a un mismo error de precio los bins se reparten sobre diagonales de razón muy distintas, desde la identidad hasta más de mil, lo que confirma que el error de precio no determina el error de IV. El color ordena la dispersión, porque los puntos que ascienden hacia las diagonales altas son sistemáticamente los de Vega baja.
 
-La conclusión de E1 es principalmente metodológica. Un $\text{MAE}(C/K)$ bajo no implica un $\text{MAE}_{\text{IV}}$ bajo, porque en las regiones de Vega baja, que son las operativamente delicadas, dos surrogates con error de precio indistinguible pueden diferir por varios órdenes de magnitud en la IV. Esas mismas regiones acumulan un segundo problema, porque ahí la inversión a volatilidad implícita no solo amplifica el error sino que con frecuencia ni siquiera converge, con tasas de fallo que de media por bin alcanzan el $24{,}1\%$ en BS-3 y el $14{,}5\%$ en H-3. Son, además, las opciones más ilíquidas, donde el propio mercado cotiza la volatilidad implícita con menos fiabilidad, de modo que el surrogate falla justo donde el dato de referencia también es más frágil.
+La conclusión de E1 es principalmente metodológica. Un $\text{MAE}(C/K)$ bajo no implica un $\text{MAE}_{\text{IV}}$ bajo, porque en las regiones de Vega baja, que son las operativamente delicadas, dos surrogates con error de precio indistinguible pueden diferir por varios órdenes de magnitud en la IV. Esas mismas regiones acumulan un segundo problema, porque ahí la inversión a volatilidad implícita no solo amplifica el error sino que con frecuencia ni siquiera converge, con tasas de fallo que de media por bin alcanzan el $24{,}1\%$ en BS-3 y el $14{,}5\%$ en H-3. Un fallo de inversión significa que el precio predicho por el surrogate cae fuera del intervalo de no arbitraje, de modo que su volatilidad implícita ni siquiera existe. Ocurre precisamente donde el precio verdadero está pegado a la cota y el error absoluto de la red, aunque pequeño, basta para cruzarla. Son, además, las opciones más ilíquidas, donde el propio mercado cotiza la volatilidad implícita con menos fiabilidad, de modo que el surrogate falla justo donde el dato de referencia también es más frágil.
 
 \newpage
 
@@ -1018,7 +1021,7 @@ BS-4 & tanh     & $2{,}59\times 10^{-2}$ & $2{,}52\times 10^{-1}$ & $2{,}78\time
 BS-1 & ReLU     & $2{,}69\times 10^{-2}$ & $1{,}57\times 10^{-1}$ & $1{,}97\times 10^{-3}$ \\
 \midrule
 \multicolumn{5}{l}{Heston} \\
-H-3 & Swish    & $1{,}11\times 10^{-2}$ & $1{,}76\times 10^{-1}$ & $1{,}29\times 10^{-3}$ \\
+H-3 & Swish    & $1{,}11\times 10^{-2}$ & $1{,}76\times 10^{-1}$ & $1{,}28\times 10^{-3}$ \\
 H-2 & Softplus & $1{,}58\times 10^{-2}$ & $1{,}82\times 10^{-1}$ & $2{,}63\times 10^{-3}$ \\
 H-1 & ReLU     & $1{,}64\times 10^{-2}$ & $1{,}22\times 10^{-1}$ & $1{,}27\times 10^{-3}$ \\
 H-4 & tanh     & $1{,}72\times 10^{-2}$ & $2{,}07\times 10^{-1}$ & $1{,}91\times 10^{-3}$ \\
@@ -1074,7 +1077,7 @@ La \autoref{tab:e3} cuantifica la métrica primaria, que es el $\text{MAE}_{\tex
 \quad p75     & $9{,}11\times 10^{-2}$ & $6{,}08\times 10^{-2}$ & $+33{,}2\%$ \\
 \midrule
 \multicolumn{4}{l}{\textbf{Global --- $\text{MAE}(C/K)$}} \\
-\quad media   & $1{,}29\times 10^{-3}$ & $9{,}11\times 10^{-4}$ & $+29{,}1\%$ \\
+\quad media   & $1{,}28\times 10^{-3}$ & $9{,}11\times 10^{-4}$ & $+29{,}1\%$ \\
 \quad mediana & $1{,}08\times 10^{-3}$ & $7{,}93\times 10^{-4}$ & $+26{,}8\%$ \\
 \quad p75     & $1{,}61\times 10^{-3}$ & $1{,}05\times 10^{-3}$ & $+34{,}6\%$ \\
 \bottomrule
@@ -1295,6 +1298,11 @@ L. N. Smith.
 I. Loshchilov y F. Hutter.
 \newblock SGDR: Stochastic gradient descent with warm restarts.
 \newblock \emph{arXiv preprint arXiv:1608.03983}, 2017.
+
+\bibitem{lordkahl2007}
+R. Lord y C. Kahl.
+\newblock Optimal Fourier inversion in semi-analytical option pricing.
+\newblock \emph{Journal of Computational Finance}, 10(4):1--30, 2007.
 
 \end{thebibliography}
 
