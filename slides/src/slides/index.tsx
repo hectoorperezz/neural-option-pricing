@@ -96,7 +96,7 @@ export const slides: Slide[] = [
     steps: 3,
     render: () => <MethodologyTrainingSlide />,
     notes:
-      "El pipeline común: dominio e hipercubo, muestreo (uniforme vs enfocado), targets y métricas (precio, IV, Delta por autograd) y evaluación por bins 5x5 sobre el test balanceado. Y el montaje físico: todo corrió en una estación con i9-14900K, 64 GB y RTX 4060; con el argumento de muestras por parámetro escalamos los datasets x50 y el error cayó de 1e-2 a 1e-3.",
+      "El pipeline común: dominio e hipercubo, muestreo (uniforme vs enfocado), targets y métricas (precio, IV, Delta por autograd) y evaluación por bins 5x5 sobre el test balanceado. Y el montaje físico: todo corrió en un PC con i9-14900K, 64 GB y RTX 4060; con el argumento de muestras por parámetro escalamos los datasets x50 y el error cayó de 1e-2 a 1e-3.",
   },
   {
     id: "experiments-overview",

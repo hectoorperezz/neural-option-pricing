@@ -5,12 +5,12 @@
     { "text": "entrenamiento y escalado", "highlight": true },
     " de las redes"
   ],
-  "body": "Los catorce surrogates comparten el régimen de entrenamiento. Once de ellos, los pre-registrados, usan la arquitectura MLP de 4×128, y las tres variantes de E6 alteran la profundidad o el scheduler. Todo el pipeline —generación, entrenamiento y evaluación— se ejecutó en una sola estación de trabajo, lo que nos permitió escalar los datasets de forma sustancial.",
+  "body": "Los catorce surrogates comparten el régimen de entrenamiento. Once de ellos, los pre-registrados, usan la arquitectura MLP de 4×128, y las tres variantes de E6 alteran la profundidad o el scheduler. Todo el pipeline —generación, entrenamiento y evaluación— se ejecutó en un solo ordenador, lo que nos permitió escalar los datasets de forma sustancial.",
   "photos": [
     {
       "src": "/train_rig.jpeg",
-      "alt": "Interior de la estación de trabajo",
-      "caption": "Estación de trabajo: CPU Intel i9-14900K, 64 GB de RAM y GPU NVIDIA RTX 4060, con refrigeración líquida."
+      "alt": "Interior del PC del proyecto",
+      "caption": "El PC del proyecto: CPU Intel i9-14900K, 64 GB de RAM y GPU NVIDIA RTX 4060, con refrigeración líquida."
     },
     {
       "src": "/train_pipeline.jpeg",

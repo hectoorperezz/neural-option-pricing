@@ -2,7 +2,7 @@
   {
     "id": "E1",
     "title": "Precio frente a volatilidad implícita",
-    "question": "Recalculamos métricas sobre BS-3 y H-3 por bin para ver si dos surrogates con MAE de precio similar pueden tener errores muy distintos en IV.",
+    "question": "¿Un error bajo en precio garantiza un error bajo en volatilidad implícita? Recalculamos las métricas de BS-3 y H-3 bin a bin para comprobarlo.",
     "metric": "$\\mathrm{MAE}(C/K)$ vs $\\mathrm{MAE}_{\\mathrm{IV}}$",
     "surrogates": ["BS-3", "H-3"],
     "hypothesis": "En bins de Vega baja el error de precio se amplifica al pasar a IV: dos surrogates con $\\mathrm{MAE}(C/K)$ comparable pueden tener $\\mathrm{MAE}_{\\mathrm{IV}}$ muy distintos.",
@@ -12,9 +12,9 @@
       "caption": "Cada punto es un bin. Eje X: error de precio; eje Y: error de IV (log-log). Color: Vega del bin. Diagonales: razón constante $\\mathrm{MAE}_{\\mathrm{IV}}/\\mathrm{MAE}(C/K)$."
     },
     "findings": [
-      "El $\\mathrm{MAE}(C/K)$ es casi uniforme por bin; el $\\mathrm{MAE}_{\\mathrm{IV}}$ recorre tres órdenes de magnitud.",
-      "Mecanismo: $\\delta\\sigma \\approx \\delta C / \\mathcal{V}$ — al caer la Vega, el error de IV se dispara.",
-      "Peor bin (H-3, deep OTM weekly): $\\mathrm{MAE}(C/K)\\approx 1.1\\times 10^{-3}$ pero $\\mathrm{MAE}_{\\mathrm{IV}}\\approx 1.57$ (razón $\\approx 1400$).",
+      "El error de precio es casi uniforme por bin; el de IV recorre tres órdenes de magnitud.",
+      "El mecanismo es la Vega: donde el precio apenas responde a la volatilidad, la inversión amplifica cualquier error.",
+      "En el peor bin (deep OTM semanal) el mismo error de precio se amplifica más de mil veces al pasar a IV.",
       "El patrón es idéntico en BS-3 y H-3: es una propiedad de la métrica, no del solver."
     ],
     "conclusion": "La métrica de evaluación no es neutral: un MAE de precio bajo no garantiza un MAE de IV bajo. Validar y reportar en IV es parte del diseño.",
@@ -26,7 +26,7 @@
   {
     "id": "E2",
     "title": "Activaciones y calidad de Delta",
-    "question": "Comparamos ReLU, Softplus, Swish y tanh con arquitectura, optimizador y semilla fijos: ¿qué activación da mejores Greeks sin degradar el precio?",
+    "question": "¿Qué activación produce mejores Greeks sin degradar el precio? Comparamos ReLU, Softplus, Swish y tanh con todo lo demás fijo.",
     "metric": "$\\mathrm{MAE}_{\\Delta}\\ \\text{por bin}$",
     "surrogates": ["BS-1..4", "H-1..4"],
     "hypothesis": "La discontinuidad de $\\mathrm{ReLU}'$ en $0$ se propaga a la Delta por autograd. Las activaciones suaves dan derivadas más estables a $\\mathrm{MAE}(C/K)$ comparable.",
@@ -37,9 +37,9 @@
     },
     "findings": [
       "Swish domina en las dos familias: la mejor Delta y un precio igual o inferior al resto.",
-      "BS: Swish $1.8\\times 10^{-2}$ vs ReLU $2.7\\times 10^{-2}$ ($-34\\%$); Heston: $1.1\\times 10^{-2}$ vs $1.6\\times 10^{-2}$ ($-32\\%$).",
+      "Frente a ReLU, Swish recorta el error de Delta en torno a un tercio en las dos familias.",
       "El error de precio apenas varía: la activación gobierna la derivada, no el nivel de la función.",
-      "Matiz: 'suave $>$ ReLU' no es limpio — tanh, también suave, da la peor Delta en Heston."
+      "El matiz honesto: tanh también es suave y aun así da la peor Delta en Heston. La suavidad no es toda la historia."
     ],
     "conclusion": "Entre las cuatro, Swish es la única elección que mejora las derivadas sin coste apreciable en precio.",
     "notes": {
@@ -50,7 +50,7 @@
   {
     "id": "E3",
     "title": "Muestreo uniforme vs enfocado",
-    "question": "H-3 frente a H-5: misma arquitectura, mismo dataset total, único cambio el sampler. ¿Concentrar masa cerca del ATM mejora los bins críticos?",
+    "question": "¿Sembrar más puntos en ATM y vencimientos cortos reduce el error justo donde más duele? H-3 y H-5 solo difieren en el sampler.",
     "metric": "$\\mathrm{MAE}_{\\mathrm{IV}}\\ \\text{en ATM} \\times \\{\\text{weekly, short, m-short}\\}$",
     "surrogates": ["H-3", "H-5"],
     "hypothesis": "Concentrar masa en zonas de mayor curvatura (ATM y vencimientos cortos) reduce el error donde más importa para trading.",
@@ -60,10 +60,10 @@
       "caption": "Mejora relativa $(\\mathrm{MAE}^{\\mathrm{H\\text{-}3}} - \\mathrm{MAE}^{\\mathrm{H\\text{-}5}})/\\mathrm{MAE}^{\\mathrm{H\\text{-}3}}$ por bin. Verde: el muestreo enfocado reduce el error; rojo: lo aumenta."
     },
     "findings": [
-      "Mejora en los bins críticos ATM: $+79.7\\%$ en $\\mathrm{MAE}_{\\mathrm{IV}}$.",
-      "El error global no empeora; mejora $+21\\%$ en media y $+32\\%$ en mediana.",
-      "Control en precio (sin amplificación de Vega) lo confirma: gana en ATM/corto, cuesta en alas OTM largas.",
-      "H-5 mejor en 19 de 25 bins; el deterioro se confina a las alas de baja liquidez."
+      "En los bins críticos ATM el error de IV cae casi un 80 %.",
+      "El error global no empeora; de hecho también mejora, tanto en media como en mediana.",
+      "El control en precio (sin amplificación de Vega) lo confirma: gana en ATM y corto, cuesta en las alas OTM largas.",
+      "H-5 mejora en 19 de los 25 bins; el deterioro se confina a las alas de baja liquidez."
     ],
     "conclusion": "Concentrar el muestreo donde la curvatura es alta mejora la calidad donde más importa, a cambio de un deterioro acotado en las alas.",
     "notes": {
@@ -74,7 +74,7 @@
   {
     "id": "E4",
     "title": "Eficiencia computacional",
-    "question": "Cronometramos H-3 frente al solver de Heston en lotes crecientes: tres warmups, diez repeticiones medidas, mediana y rango intercuartílico, CPU y GPU por separado.",
+    "question": "¿Cuánto más rápido es el surrogate que el solver? Cronometramos lotes crecientes en CPU y GPU, con la mediana de diez medidas por lote.",
     "metric": "$s(B) = t_{\\text{solver}} / t_{\\text{surrogate}}$",
     "surrogates": ["H-3"],
     "hypothesis": "El speedup crece con el tamaño de lote: la red amortiza el coste fijo de la pasada al procesar muchos puntos en paralelo, especialmente en GPU.",
@@ -84,9 +84,9 @@
       "caption": "Izquierda: tiempo mediano por lote (log-log, solver / surrogate CPU / GPU). Derecha: speedup frente al solver."
     },
     "findings": [
-      "Speedup creciente con el lote: CPU de $\\times 66$ a $\\times 748$; GPU de $\\times 175$ a $\\times 6434$ ($10^2 \\to 10^5$).",
-      "El solver escala $\\sim$lineal (punto a punto); el surrogate amortiza el coste fijo.",
-      "A lote $10^5$: la GPU evalúa $\\sim 12$M opciones/s frente a $\\sim 2$k del solver con 22 núcleos."
+      "El speedup no es un número sino una curva: crece sin parar con el tamaño del lote.",
+      "El solver valora punto a punto y escala casi lineal con el lote; el surrogate lo procesa entero de una vez y amortiza su coste fijo.",
+      "En el lote más grande, donde el solver evalúa miles de opciones por segundo, la GPU del surrogate evalúa millones."
     ],
     "conclusion": "La ventaja se materializa en el régimen de lotes grandes: calibración diaria, Greeks masivas, simulación de escenarios.",
     "notes": {
@@ -97,7 +97,7 @@
   {
     "id": "E5",
     "title": "Differential ML con Delta",
-    "question": "H-3-small frente a H-6-small (la única diferencia es añadir $\\mathrm{MAE}(\\Delta)$ a la pérdida), con H-3 como referencia de muestra grande. ¿Mejora la información diferencial la eficiencia muestral?",
+    "question": "¿Aprende mejor la red si también le enseñamos la pendiente? H-3-small y H-6-small comparten datos y semilla. Solo cambia que la pérdida penaliza también la Delta.",
     "metric": "Mejora de $\\mathrm{MAE}_{\\Delta}$ a precio comparable",
     "surrogates": ["H-3-small", "H-6-small", "H-3"],
     "hypothesis": "Análogo a Hermite frente a Lagrange: añadir la derivada al objetivo reconstruye mejor la forma local de $f$ con menos muestras.",
@@ -107,10 +107,10 @@
       "caption": "Tres surrogates en el plano precio↔Delta. H-3-small y H-6-small comparten datos (5M) y solo difieren en la pérdida; H-3 es el baseline de 25M."
     },
     "findings": [
-      "El término diferencial mejora la Delta de H-6-small sobre H-3-small en $+58.9\\%$...",
-      "...y el precio también mejora ($-40.6\\%$): la ganancia no se paga en precio.",
-      "Eficiencia muestral: con 5$\\times$ menos datos, H-6-small bate a H-3 en Delta ($-35.8\\%$), aunque H-3 gana en precio.",
-      "H-6-small mejor en Delta en 25 de 25 bins frente a H-3-small."
+      "El término diferencial reduce el error de Delta a menos de la mitad frente al gemelo entrenado solo en precio.",
+      "Y el precio, lejos de empeorar, también mejora.",
+      "Eficiencia muestral: con cinco veces menos datos, H-6-small bate en Delta al baseline de 25M, aunque este conserva la ventaja en precio.",
+      "La mejora es homogénea: H-6-small gana en Delta en los 25 bins."
     ],
     "conclusion": "Añadir la derivada verdadera al entrenamiento mejora las Greeks y la eficiencia muestral: Huge & Savine reproducido en nuestro entorno.",
     "notes": {
@@ -121,20 +121,20 @@
   {
     "id": "E6",
     "title": "Profundidad de red y scheduler de learning rate",
-    "question": "H-3 (baseline $4\\times 128$) frente a H-7-shallow ($2\\times 128$), H-8-deep ($6\\times 128$) y H-9-lr-schedule ($4\\times 128$ con $\\mathrm{ReduceLROnPlateau}$). ¿Ayuda más profundidad o un scheduler de learning rate sobre el baseline?",
+    "question": "¿Se puede mejorar un baseline ya consolidado tocando la profundidad o el learning rate? Cuatro variantes que solo difieren en eso.",
     "metric": "$\\mathrm{MAE}(C/K)$ por bin",
     "surrogates": ["H-3", "H-7-shallow", "H-8-deep", "H-9-lr-schedule"],
-    "hypothesis": "Dos vías de mejora sobre el baseline que no estaban en el protocolo inicial, variar la profundidad de la red o reducir el learning rate cuando la validación se estanca. Las cuatro variantes comparten dataset (25M), semilla, batch, activación y pérdida, y lo único que cambia es la profundidad o el scheduler.",
+    "hypothesis": "Variar la profundidad ($2\\times 128$, $6\\times 128$) o adaptar el learning rate cuando la validación se estanca ($\\mathrm{ReduceLROnPlateau}$) puede mejorar el baseline sin tocar nada más. Las cuatro variantes comparten dataset (25M), semilla, batch, activación y pérdida.",
     "figure": {
       "src": "/e6_summary.png",
       "alt": "MAE de precio y de Delta medios por bin de las cuatro variantes",
       "caption": "$\\mathrm{MAE}(C/K)$ y $\\mathrm{MAE}_{\\Delta}$ medios por bin. El baseline H-3 en dorado; H-7 y H-8 cambian la profundidad, H-9 añade el scheduler."
     },
     "findings": [
-      "Solo el scheduler (H-9-lr-schedule) mejora el baseline, con una reducción del $\\mathrm{MAE}(C/K)$ en torno al $10\\%$.",
-      "Alterar la profundidad lo empeora, moderado al ampliarla (H-8-deep, $-56.8\\%$) y acusado al reducirla (H-7-shallow, $-178.2\\%$).",
-      "En Delta el patrón es parecido, con H-7-shallow claramente peor que el resto.",
-      "Lectura observacional, ordenada por la reducción del error frente al baseline."
+      "Solo el scheduler mejora el baseline, con una reducción modesta pero real del error de precio (en torno al 10 %).",
+      "Alterar la profundidad lo empeora: de forma moderada al ampliarla y acusada al reducirla.",
+      "La mejora del scheduler no se transfiere a la Delta, donde queda ligeramente por detrás del baseline.",
+      "H-7-shallow casi triplica el error de precio del baseline: dos capas no bastan para el dominio amplio de Heston."
     ],
     "conclusion": "Sobre el baseline ya consolidado, ni más ni menos profundidad ayudan, mientras que un scheduler que baja el learning rate al estancarse la validación aporta una mejora pequeña pero consistente.",
     "notes": {

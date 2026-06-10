@@ -24,9 +24,5 @@
       "cost": "≈ s",
       "accent": false
     }
-  ],
-  "callout": {
-    "kicker": "Speedup documentado en el paper de referencia",
-    "body": "Calibración diaria de Bates: 125 h vía FFT → ≈ 2 h en CPU y decenas de minutos en GPU usando el surrogate."
-  }
+  ]
 }

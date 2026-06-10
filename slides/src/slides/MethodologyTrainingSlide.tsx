@@ -8,7 +8,7 @@ import { methodology, training } from "../content";
 /**
  * Slide combinada: el pipeline metodológico (dominio y muestreo, targets y
  * métricas, evaluación por bins) y, debajo, el montaje físico con el que se
- * entrenó y escaló todo (hardware + fotos de la estación de trabajo).
+ * entrenó y escaló todo (hardware + fotos del PC del proyecto).
  */
 export function MethodologyTrainingSlide() {
   return (
@@ -93,7 +93,7 @@ export function MethodologyTrainingSlide() {
         >
           {training.photos.map((photo) => (
             <figure key={photo.src} className="m-0 flex flex-col">
-              <div className="flex-1 overflow-hidden rounded-2xl border border-black/10 bg-white p-2">
+              <div className="max-h-[26vh] flex-1 overflow-hidden rounded-2xl border border-black/10 bg-white p-2">
                 <img
                   src={photo.src}
                   alt={photo.alt}
@@ -114,11 +114,11 @@ export function MethodologyTrainingSlide() {
           className="flex flex-1 flex-col justify-center gap-3"
         >
           <div className="eyebrow">Hardware y escalado</div>
-          <ul className="space-y-2 text-[14px] leading-relaxed text-[var(--color-ink-soft)]">
+          <ul className="space-y-2.5 text-[15px] leading-relaxed text-[var(--color-ink-soft)]">
             {[
-              "Estación única: CPU Intel i9-14900K (32 workers), 64 GB de RAM y GPU NVIDIA RTX 4060.",
-              "Régimen común: MLP $4\\times 128$ con Swish, Adam $\\mathrm{lr}=10^{-3}$, 100 épocas; los once pre-registrados en $\\approx$63 min.",
-              "Escalado $\\times 50$ (datasets de hasta 25M): el error cayó de $\\approx 10^{-2}$ a $\\approx 10^{-3}$ con la arquitectura fija.",
+              "Todo el pipeline —generación, entrenamiento y evaluación— corrió en un único PC con una GPU de consumo.",
+              "Los catorce surrogates comparten régimen: misma arquitectura, mismo optimizador y mismo presupuesto de épocas. Solo cambia lo que cada experimento aísla.",
+              "La decisión clave fue escalar los datos, no la red: con cincuenta veces más muestras y la arquitectura fija, el error cayó un orden de magnitud.",
             ].map((item, i) => (
               <li key={i} className="flex gap-2.5">
                 <span

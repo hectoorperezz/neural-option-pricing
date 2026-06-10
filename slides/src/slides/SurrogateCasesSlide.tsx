@@ -35,7 +35,7 @@ export function SurrogateCasesSlide() {
                 duration: 0.55,
                 ease: [0.22, 1, 0.36, 1],
               }}
-              className="rounded-2xl border border-black/10 bg-white p-4"
+              className="rounded-2xl border border-black/10 bg-white p-5 shadow-[0_2px_14px_rgba(0,0,0,0.04)]"
             >
               <div className="mb-2 flex items-center gap-2">
                 <span
@@ -51,10 +51,10 @@ export function SurrogateCasesSlide() {
                   {String(idx + 1).padStart(2, "0")}
                 </span>
               </div>
-              <div className="font-display text-[15px] font-medium leading-tight text-[var(--color-uni-black)]">
+              <div className="font-display text-[17px] font-medium leading-tight text-[var(--color-uni-black)]">
                 {step.title}
               </div>
-              <div className="mt-1 text-[13px] italic text-[var(--color-ink-muted)]">
+              <div className="mt-1.5 text-[13.5px] italic text-[var(--color-ink-muted)]">
                 <InlineMathText>{step.subtitle}</InlineMathText>
               </div>
             </motion.div>
@@ -79,12 +79,12 @@ export function SurrogateCasesSlide() {
       </div>
 
       {/* Casos de estudio */}
-      <div className="mt-7 flex flex-1 flex-col justify-center border-t border-black/10 pt-5">
+      <div className="mt-8 flex flex-1 flex-col justify-center border-t border-black/10 pt-6">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9, duration: 0.5 }}
-          className="font-display text-[clamp(1rem,1.4vw,1.35rem)] leading-snug text-[var(--color-uni-black)]"
+          className="font-display text-[clamp(1.15rem,1.7vw,1.65rem)] leading-snug text-[var(--color-uni-black)]"
         >
           <RichText fragments={cases.headline} />
         </motion.div>
@@ -136,7 +136,7 @@ export function SurrogateCasesSlide() {
                 </div>
               )}
               <ul
-                className={`mt-5 space-y-2.5 text-[14.5px] leading-relaxed ${
+                className={`mt-5 space-y-3 text-[15.5px] leading-relaxed ${
                   card.accent
                     ? "text-[var(--color-uni-black)]/85"
                     : "text-[var(--color-ink-soft)]"

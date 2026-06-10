@@ -50,7 +50,7 @@ export function ExperimentResultsSlide({
           <div className="text-[12px] font-semibold uppercase tracking-[0.22em] text-[var(--color-ink-muted)]">
             Hallazgos
           </div>
-          <ul className="mt-4 space-y-4 text-[clamp(1rem,1.25vw,1.2rem)] leading-snug text-[var(--color-uni-black)]">
+          <ul className="mt-4 space-y-[1.15rem] text-[clamp(1rem,1.3vw,1.25rem)] leading-[1.45] text-[var(--color-uni-black)]">
             {findings.map((item, i) => (
               <Reveal at={i + 1} key={i}>
                 <li className="flex gap-3">
@@ -74,7 +74,7 @@ export function ExperimentResultsSlide({
             <div className="text-[12px] font-semibold uppercase tracking-[0.22em] text-[var(--color-uni-black)]/70">
               Conclusión
             </div>
-            <div className="mt-2 text-[clamp(1rem,1.25vw,1.2rem)] leading-snug text-[var(--color-uni-black)]">
+            <div className="mt-2 text-[clamp(1rem,1.3vw,1.25rem)] leading-[1.45] text-[var(--color-uni-black)]">
               <InlineMathText>{conclusion}</InlineMathText>
             </div>
           </Reveal>

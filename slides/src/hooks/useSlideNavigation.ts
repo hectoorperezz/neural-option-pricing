@@ -23,7 +23,7 @@ interface NavigationState {
 export function useSlideNavigation(stepsPerSlide: number[]): NavigationState {
   const total = stepsPerSlide.length;
   const [index, setIndex] = useState<number>(() => readHashIndex(total));
-  const [step, setStep] = useState<number>(0);
+  const [step, setStep] = useState<number>(() => readInitialStep());
   const [direction, setDirection] = useState<Direction>(1);
 
   const goTo = useCallback(
@@ -130,4 +130,13 @@ function readHashIndex(total: number): number {
   const parsed = parseInt(raw, 10);
   if (Number.isNaN(parsed)) return 0;
   return Math.max(0, Math.min(total - 1, parsed - 1));
+}
+
+/** Paso inicial opcional vía `?step=N` (deep-link a una slide ya revelada). */
+function readInitialStep(): number {
+  if (typeof window === "undefined") return 0;
+  const raw = new URLSearchParams(window.location.search).get("step");
+  if (raw === null) return 0;
+  const parsed = parseInt(raw, 10);
+  return Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
 }

@@ -26,7 +26,7 @@ export function LiteratureSlide() {
           <motion.div
             key={paper.authors}
             variants={fadeUp}
-            className={`grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,2.2fr)_minmax(0,12rem)] items-center gap-5 rounded-2xl border px-5 py-3.5 ${
+            className={`grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,2.6fr)] items-center gap-5 rounded-2xl border px-5 py-3.5 ${
               paper.central
                 ? "border-[var(--color-uni-black)] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.05)]"
                 : "border-black/10 bg-white"
@@ -65,16 +65,6 @@ export function LiteratureSlide() {
               </div>
             </div>
 
-            {/* Rol */}
-            <div
-              className={`justify-self-end rounded-full px-3 py-1 text-center text-[11px] font-semibold uppercase tracking-[0.18em] ${
-                paper.central
-                  ? "bg-[var(--color-uni-yellow)] text-[var(--color-uni-black)]"
-                  : "bg-black/5 text-[var(--color-ink-soft)]"
-              }`}
-            >
-              {paper.role}
-            </div>
           </motion.div>
         ))}
       </Stagger>

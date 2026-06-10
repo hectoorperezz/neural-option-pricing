@@ -32,7 +32,7 @@
       "authors": "Chen, Didisheim y Scheidegger",
       "year": "2025",
       "title": "Deep surrogates for finance",
-      "contribution": "Surrogate de Bates 13-D entrenado con $10^9$ muestras. Decisiones clave: Swish, evaluación en IV, recorte de bordes.",
+      "contribution": "Surrogate del modelo de Bates entrenado con mil millones de muestras. Decisiones clave: Swish, evaluación en IV, recorte de bordes.",
       "role": "Referencia central",
       "central": true
     },

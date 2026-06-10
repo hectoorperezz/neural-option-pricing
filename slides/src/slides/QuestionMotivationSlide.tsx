@@ -34,7 +34,7 @@ export function QuestionMotivationSlide() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5, duration: 0.6 }}
-        className="mt-4 max-w-[66ch] text-[clamp(0.92rem,1.05vw,1.02rem)] leading-[1.55] text-[var(--color-ink-muted)]"
+        className="mt-5 max-w-[62ch] text-[clamp(1rem,1.2vw,1.2rem)] leading-[1.6] text-[var(--color-ink-soft)]"
       >
         {question.body}
       </motion.p>
@@ -51,10 +51,21 @@ export function QuestionMotivationSlide() {
             className="mt-2 inline-block h-[7px] w-[7px] shrink-0"
             style={{ background: "var(--color-uni-yellow)" }}
           />
-          <span className="font-display text-[clamp(1.05rem,1.55vw,1.5rem)] leading-snug text-[var(--color-uni-black)]">
+          <span className="font-display text-[clamp(1.15rem,1.75vw,1.7rem)] leading-snug text-[var(--color-uni-black)]">
             <RichText fragments={motivation.headline} />
           </span>
         </motion.div>
+
+        {motivation.body && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8, duration: 0.6 }}
+            className="mt-3 max-w-[70ch] pl-5 text-[clamp(0.98rem,1.15vw,1.15rem)] leading-[1.6] text-[var(--color-ink-soft)]"
+          >
+            {motivation.body}
+          </motion.p>
+        )}
 
         {/* Escala de coste por modelo */}
         <motion.div
@@ -86,15 +97,15 @@ export function QuestionMotivationSlide() {
             >
               <div>
                 <div className="eyebrow mb-1.5">{item.note}</div>
-                <div className="font-display text-[19px] font-medium leading-tight text-[var(--color-uni-black)]">
+                <div className="font-display text-[21px] font-medium leading-tight text-[var(--color-uni-black)]">
                   {item.title}
                 </div>
               </div>
               <div className="ml-3 shrink-0 text-right">
-                <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--color-ink-muted)]">
+                <div className="text-[10.5px] uppercase tracking-[0.2em] text-[var(--color-ink-muted)]">
                   evaluación
                 </div>
-                <div className="font-mono text-lg tabular-nums text-[var(--color-uni-black)]">
+                <div className="font-mono text-xl tabular-nums text-[var(--color-uni-black)]">
                   {item.cost}
                 </div>
               </div>
@@ -113,7 +124,7 @@ export function QuestionMotivationSlide() {
             <div className="max-w-[15rem] shrink-0 text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--color-ink-muted)]">
               {motivation.callout.kicker}
             </div>
-            <div className="text-[15px] leading-snug text-[var(--color-uni-black)]">
+            <div className="text-[clamp(0.98rem,1.15vw,1.15rem)] leading-snug text-[var(--color-uni-black)]">
               {motivation.callout.body}
             </div>
           </motion.div>
