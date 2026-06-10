@@ -20,21 +20,6 @@ from torch.utils.data import DataLoader
 from src.training.losses import LossOutput
 
 
-@dataclass(frozen=True)
-class TrainConfig:
-    """Hiperparámetros generales del entrenamiento.
-
-    Sirve como contrato común entre los scripts ``train_*.py`` y el
-    :class:`Trainer`. Los valores por defecto son los de E1.
-    """
-
-    epochs: int = 10
-    batch_size: int = 256
-    learning_rate: float = 1e-3
-    seed: int = 42
-    device: str = "cpu"
-
-
 @dataclass
 class Trainer:
     """Trainer mínimo con selección de mejor checkpoint por validación.

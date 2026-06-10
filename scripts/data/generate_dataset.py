@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -683,6 +684,7 @@ def main() -> None:
 
     flush_memmaps(arrays)
     save_npz(args.output, arrays, domain.input_names, args.compression)
+    shutil.rmtree(temp_dir, ignore_errors=True)
     metadata = {
         "family": args.family,
         "sampler": args.sampler,
