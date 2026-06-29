@@ -12,11 +12,6 @@ Usamos **Black-Scholes como banco de validación** —tiene solución cerrada, a
 
 El estudio se articula en **seis experimentos** sobre **catorce surrogates**, cada uno aislando una variable: métrica de evaluación, activación, distribución del muestreo, eficiencia computacional, información diferencial en la pérdida, y profundidad junto al scheduler de *learning rate*.
 
-## Tres ideas que salen del trabajo
-
-- **Precio ≠ volatilidad implícita.** Un surrogate uniformemente bueno en precio puede ser pésimo en IV donde la **vega** es baja (alas profundas, vencimiento corto), porque el error de precio se amplifica por `1/vega`. Evaluar solo con el MAE de precio engaña.
-- **Escala los datos, no la red.** Con la arquitectura fija y unas cincuenta veces más muestras, el error cae un orden de magnitud.
-- **Gradientes baratos.** La Delta sale por *autograd*, así que el surrogate calibra Heston cientos de veces más rápido que el solver y con gradientes analíticos en lugar de diferencias finitas.
 
 ## Estructura
 
