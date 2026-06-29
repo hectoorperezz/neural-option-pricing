@@ -1,18 +1,35 @@
-# Redes neuronales como aproximadores para pricing
+# Surrogates neuronales para el pricing de opciones: precisión, volatilidad implícita y calibración bajo Heston
 
-Usar redes neuronales para aprender la función de pricing $f(\theta) \to P$ directamente, evitando el coste de resolver el modelo (MC o PDE) cada vez. Investigar si una red entrenada offline puede reemplazar al solver numérico en tiempo real.
+> Proyecto final de **Métodos Numéricos y Simulación Estocástica**
+> Máster en Finanzas Cuantitativas y Métodos Computacionales · **Universidad de las Hespérides** · Curso 2025/2026
+> Ángel Fernández Sánchez · Jorge Alfageme Sotillos · Héctor Pérez Ledesma
 
-## Cuestiones a investigar
+Una red neuronal puede aprender la **función de pricing** de un modelo —el mapa de parámetros a precio— e imitar al solver que la genera. Entrenada *offline* con datos sintéticos, sustituye al solver justo donde hace falta valorar millones de veces (calibración diaria, Greeks, Montecarlo), siendo órdenes de magnitud más rápida y, por construcción, diferenciable.
 
-- ¿Cómo se plantea el problema de pricing como aprendizaje supervisado?
-- ¿Qué arquitectura usar? ¿Cuántos datos de entrenamiento se necesitan?
-- Entrenar una red para aproximar Black–Scholes (validación) y luego para Heston (donde el solver es caro).
-- Medir error de aproximación, velocidad de inferencia y capacidad de generalización fuera de la muestra de entrenamiento.
+Usamos **Black-Scholes como banco de validación** —tiene solución cerrada, así que podemos medir el error exacto en precio, Delta y volatilidad implícita— y **Heston como caso principal**, donde el precio es una integral de Fourier costosa y el surrogate empieza a tener sentido práctico.
 
-## Referencias
+> **Pregunta de investigación.** ¿Bajo qué condiciones una red profunda actúa como un surrogate preciso, rápido y diferenciable de una función de pricing?
 
-- Hutchinson, Lo y Poggio (1994), *"A nonparametric approach to pricing and hedging derivative securities"*.
-- Bayer et al. (2019), *"Deep optimal stopping"*.
-- Ruf y Wang (2020), *"Neural networks for option pricing and hedging"*.
+El estudio se articula en **seis experimentos** sobre **catorce surrogates**, cada uno aislando una variable: métrica de evaluación, activación, distribución del muestreo, eficiencia computacional, información diferencial en la pérdida, y profundidad junto al scheduler de *learning rate*.
 
-Los PDFs de estas tres referencias están en `papers/`. En `papers/others/` hay papers adicionales de interés sobre el tema.
+## Tres ideas que salen del trabajo
+
+- **Precio ≠ volatilidad implícita.** Un surrogate uniformemente bueno en precio puede ser pésimo en IV donde la **vega** es baja (alas profundas, vencimiento corto), porque el error de precio se amplifica por `1/vega`. Evaluar solo con el MAE de precio engaña.
+- **Escala los datos, no la red.** Con la arquitectura fija y unas cincuenta veces más muestras, el error cae un orden de magnitud.
+- **Gradientes baratos.** La Delta sale por *autograd*, así que el surrogate calibra Heston cientos de veces más rápido que el solver y con gradientes analíticos en lugar de diferencias finitas.
+
+## Estructura
+
+| Carpeta | Contenido |
+|---|---|
+| `src/` | Solvers (Black-Scholes, Heston), generación de datos, modelos, entrenamiento y evaluación por bins |
+| `scripts/` | Pipelines que reproducen tablas y figuras |
+| `docs/` | Paper en LaTeX, metodología y notas de los experimentos |
+| `playground/` | Laboratorio interactivo (FastAPI + React) para probar los surrogates reales |
+| `papers/` | Bibliografía consultada |
+
+## Para empezar
+
+- El **paper** completo está en `docs/latex/` (PDF).
+- El **playground** (`playground/`) es un laboratorio interactivo para valorar, ver dónde falla la extrapolación y calibrar con los surrogates reales.
+- La **bibliografía completa** está en el paper; los PDFs de las referencias núcleo están en `papers/`.
